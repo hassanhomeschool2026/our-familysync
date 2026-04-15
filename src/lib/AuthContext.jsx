@@ -19,8 +19,9 @@ export const AuthProvider = ({ children }) => {
       setUser(session?.user ?? null);
       setIsAuthenticated(!!session?.user);
       setIsLoadingAuth(false);
-      if (event === 'SIGNED_IN' && session?.user && window.location.pathname === '/login') {
-        window.location.href = '/';
+
+      if (event === 'SIGNED_OUT') {
+        window.location.href = '/login';
       }
     });
 
