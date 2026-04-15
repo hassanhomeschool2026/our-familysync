@@ -1,0 +1,9 @@
+This is a React + Vite app being migrated from Base44 to Supabase.
+- Use @supabase/supabase-js for all data and auth operations
+- Use TanStack Query (useQuery, useMutation) for data fetching
+- Use toast from 'sonner' for all user feedback
+- Use existing UI components from @/components/ui
+- Use Tailwind CSS for all styling
+- Do not install new dependencies unless explicitly asked
+- Keep changes minimal and scoped to what is asked
+- Never rewrite entire files — only modify what is needed

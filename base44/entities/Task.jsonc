@@ -1,0 +1,48 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "family_id": {
+      "type": "string",
+      "description": "Family group ID"
+    },
+    "title": {
+      "type": "string",
+      "description": "Task title"
+    },
+    "assigned_to": {
+      "type": "string",
+      "description": "User ID of assigned member"
+    },
+    "due_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Due date"
+    },
+    "priority": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "default": "medium"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes"
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "completed_at": {
+      "type": "string",
+      "description": "Completion timestamp"
+    }
+  },
+  "required": [
+    "family_id",
+    "title"
+  ]
+}

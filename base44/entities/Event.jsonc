@@ -1,0 +1,57 @@
+{
+  "name": "Event",
+  "type": "object",
+  "properties": {
+    "family_id": {
+      "type": "string",
+      "description": "Family group ID"
+    },
+    "title": {
+      "type": "string",
+      "description": "Event title"
+    },
+    "assigned_to": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of user IDs assigned to this event"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "Event date"
+    },
+    "start_time": {
+      "type": "string",
+      "description": "Start time HH:MM"
+    },
+    "end_time": {
+      "type": "string",
+      "description": "End time HH:MM"
+    },
+    "location": {
+      "type": "string",
+      "description": "Optional location"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Optional notes"
+    },
+    "repeat": {
+      "type": "string",
+      "enum": [
+        "none",
+        "daily",
+        "weekly",
+        "monthly"
+      ],
+      "default": "none"
+    }
+  },
+  "required": [
+    "family_id",
+    "title",
+    "date"
+  ]
+}

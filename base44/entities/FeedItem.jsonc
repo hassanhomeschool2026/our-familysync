@@ -1,0 +1,43 @@
+{
+  "name": "FeedItem",
+  "type": "object",
+  "properties": {
+    "family_id": {
+      "type": "string",
+      "description": "Family group ID"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User who triggered the action"
+    },
+    "user_name": {
+      "type": "string",
+      "description": "Display name of user"
+    },
+    "user_avatar": {
+      "type": "string",
+      "description": "Avatar of user"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "event_added",
+        "task_completed",
+        "checkin",
+        "member_joined",
+        "family_alert"
+      ],
+      "description": "Type of feed item"
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable message"
+    }
+  },
+  "required": [
+    "family_id",
+    "user_id",
+    "type",
+    "message"
+  ]
+}

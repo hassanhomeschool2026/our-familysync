@@ -1,0 +1,70 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "member"
+      ],
+      "default": "member"
+    },
+    "family_id": {
+      "type": "string",
+      "description": "ID of the family group"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Display name"
+    },
+    "avatar": {
+      "type": "string",
+      "description": "Emoji avatar"
+    },
+    "member_color": {
+      "type": "string",
+      "description": "Hex color for calendar display"
+    },
+    "plan": {
+      "type": "string",
+      "enum": [
+        "free",
+        "premium"
+      ],
+      "default": "free"
+    },
+    "notification_prefs": {
+      "type": "object",
+      "description": "Notification preference toggles",
+      "properties": {
+        "day_before_reminder": {
+          "type": "boolean",
+          "default": true
+        },
+        "same_day_reminder": {
+          "type": "string",
+          "enum": [
+            "morning",
+            "1hr_before",
+            "both"
+          ],
+          "default": "both"
+        },
+        "task_due_reminders": {
+          "type": "boolean",
+          "default": true
+        },
+        "family_alerts": {
+          "type": "boolean",
+          "default": true
+        },
+        "checkin_notifications": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    }
+  },
+  "required": []
+}

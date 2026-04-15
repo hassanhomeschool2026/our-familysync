@@ -1,0 +1,41 @@
+{
+  "name": "CheckIn",
+  "type": "object",
+  "properties": {
+    "family_id": {
+      "type": "string",
+      "description": "Family group ID"
+    },
+    "user_id": {
+      "type": "string",
+      "description": "User who checked in"
+    },
+    "location_name": {
+      "type": "string",
+      "description": "Name of the location"
+    },
+    "lat": {
+      "type": "number",
+      "description": "Latitude"
+    },
+    "lng": {
+      "type": "number",
+      "description": "Longitude"
+    },
+    "status_message": {
+      "type": "string",
+      "description": "Optional status message"
+    },
+    "expires_at": {
+      "type": "string",
+      "description": "ISO timestamp when check-in expires"
+    }
+  },
+  "required": [
+    "family_id",
+    "user_id",
+    "location_name",
+    "lat",
+    "lng"
+  ]
+}
