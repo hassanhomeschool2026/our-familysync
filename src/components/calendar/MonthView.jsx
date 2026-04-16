@@ -14,7 +14,7 @@ export default function MonthView({ currentDate, events, onDayClick }) {
   const days = eachDayOfInterval({ start: calStart, end: calEnd });
 
   const getEventsForDay = (day) =>
-    events.filter((e) => isSameDay(new Date(e.date), day));
+    events.filter((e) => isSameDay(new Date(e.date + 'T00:00:00'), day));
 
   return (
     <div>

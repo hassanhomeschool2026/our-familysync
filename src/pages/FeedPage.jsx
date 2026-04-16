@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
@@ -36,25 +37,28 @@ export default function FeedPage() {
   const { family, isPremium, getMemberColor } = useFamily();
 
   const { data: feedItems = [], isLoading } = useQuery({
-    queryKey: ['feed', family?.id],
+    queryKey: ['feed', family?.id, isPremium],
     queryFn: async () => {
-      const { data } = await supabase
+      const base = supabase
         .from('feed_items')
         .select('*')
         .eq('family_id', family?.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
+      const { data } = await base.limit(isPremium ? 200 : 100);
       return data || [];
     },
     enabled: !!family?.id,
   });
 
-  // Free plan: last 30 days only
-  const filtered = isPremium ? feedItems : feedItems.filter(item => {
-    const created = new Date(item.created_at);
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    return created >= thirtyDaysAgo;
-  });
+  const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+  const filtered = isPremium
+    ? feedItems
+    : feedItems.filter((item) => new Date(item.created_at).getTime() >= thirtyDaysAgoMs);
+
+  const freeUserHasOlderActivity =
+    !isPremium &&
+    feedItems.some((item) => new Date(item.created_at).getTime() < thirtyDaysAgoMs);
 
   if (isLoading) return <SkeletonCard count={5} />;
 
@@ -96,11 +100,13 @@ export default function FeedPage() {
         </div>
       )}
 
-      {!isPremium && feedItems.length > filtered.length && (
-        <div className="mt-4 bg-accent/10 border border-accent/20 rounded-xl p-3 text-center text-sm">
-          <p className="text-accent font-medium">Upgrade for full history</p>
-          <p className="text-muted-foreground text-xs">Free plan shows last 30 days only</p>
-        </div>
+      {freeUserHasOlderActivity && (
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Upgrade to Premium to see your full activity history.{' '}
+          <Link to="/upgrade" className="text-primary font-medium hover:underline">
+            Upgrade
+          </Link>
+        </p>
       )}
     </div>
   );

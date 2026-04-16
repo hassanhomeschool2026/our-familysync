@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 export default function CalendarPage() {
   const { family, currentUser } = useFamily();
   const queryClient = useQueryClient();
-  const [view, setView] = useState('month');
+  const [view, setView] = useState('day');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
@@ -50,7 +50,7 @@ export default function CalendarPage() {
         user_name: currentUser.display_name || currentUser.full_name,
         user_avatar: currentUser.avatar,
         type: 'event_added',
-        message: `${currentUser.display_name || currentUser.full_name} added "${newEvent.title}" on ${format(new Date(newEvent.date), 'MMM d')}`,
+        message: `${currentUser.display_name || currentUser.full_name} added "${newEvent.title}" on ${format(new Date(newEvent.date + 'T00:00:00'), 'MM/dd/yyyy')}`,
       });
     },
   });
@@ -89,7 +89,7 @@ export default function CalendarPage() {
 
   const handleEditEvent = (ev) => {
     setEditingEvent(ev);
-    setSelectedDate(new Date(ev.date));
+    setSelectedDate(new Date(ev.date + 'T00:00:00'));
     setShowAddEvent(true);
   };
 

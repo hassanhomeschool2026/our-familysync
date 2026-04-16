@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
@@ -79,7 +80,7 @@ export default function TodoPage() {
   });
 
   const activeTasks = tasks.filter(t => !t.completed);
-  const canAddTask = isPremium || activeTasks.length < 20;
+  const canAddTask = isPremium || activeTasks.length < 10;
 
   const filtered = tasks.filter((t) => {
     if (filter === 'mine') return t.assigned_to === currentUser?.id || t.created_by === currentUser?.id;
@@ -114,9 +115,13 @@ export default function TodoPage() {
       </div>
 
       {!canAddTask && (
-        <div className="bg-accent/10 border border-accent/20 rounded-xl p-3 mb-4 text-sm text-center">
-          <p className="font-medium text-accent">Free plan limit: 20 active tasks</p>
-          <p className="text-muted-foreground text-xs mt-0.5">Upgrade to Premium for unlimited tasks</p>
+        <div className="bg-accent/10 border border-accent/20 rounded-xl p-3 mb-4 text-sm flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+          <span className="text-foreground">
+            Free plan limit reached (10 tasks). Upgrade to Premium for unlimited tasks.
+          </span>
+          <Link to="/upgrade" className="text-xs font-medium text-primary hover:underline whitespace-nowrap">
+            Upgrade
+          </Link>
         </div>
       )}
 

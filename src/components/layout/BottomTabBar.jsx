@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, ListChecks, MapPin, Activity, User } from 'lucide-react';
+import { Calendar, ListChecks, CheckSquare, MapPin, Activity, User } from 'lucide-react';
 
 const tabs = [
   { path: '/', icon: Calendar, label: 'Calendar' },
   { path: '/todo', icon: ListChecks, label: 'To-Do' },
+  { path: '/chores', icon: CheckSquare, label: 'Chores' },
   { path: '/checkin', icon: MapPin, label: 'Check-In' },
   { path: '/feed', icon: Activity, label: 'Feed' },
   { path: '/profile', icon: User, label: 'Profile' },

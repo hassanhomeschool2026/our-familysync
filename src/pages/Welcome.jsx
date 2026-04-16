@@ -113,14 +113,18 @@ export default function Welcome() {
 
       const family = families[0];
 
-      // Check free plan member limit
       const { data: existingMembers } = await supabase
         .from('profiles')
-        .select('id')
+        .select('id, plan')
         .eq('family_id', family.id);
 
-      if (existingMembers && existingMembers.length >= 4) {
-        setError('This family has reached the free plan limit of 4 members. Ask the admin to upgrade.');
+      const memberCount = existingMembers?.length ?? 0;
+      const familyHasPremium = (existingMembers || []).some((m) => m.plan === 'premium');
+
+      if (!familyHasPremium && memberCount >= 4) {
+        setError(
+          'This family has reached the free plan limit of 4 members. The admin needs to upgrade to Premium.'
+        );
         setLoading(false);
         return;
       }

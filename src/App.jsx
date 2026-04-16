@@ -7,9 +7,11 @@ import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import { FamilyProvider, useFamily } from '@/lib/familyContext';
 
 import LoginPage from './pages/LoginPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import Welcome from './pages/Welcome';
 import CalendarPage from './pages/CalendarPage';
 import TodoPage from './pages/TodoPage';
+import ChoresPage from './pages/ChoresPage';
 import CheckInPage from './pages/CheckInPage';
 import FeedPage from './pages/FeedPage';
 import ProfilePage from './pages/ProfilePage';
@@ -51,6 +53,7 @@ const AuthenticatedApp = () => {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -60,9 +63,11 @@ const AuthenticatedApp = () => {
     <FamilyProvider>
       <FamilyGate>
         <Routes>
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route element={<AppLayout />}>
             <Route path="/" element={<CalendarPage />} />
             <Route path="/todo" element={<TodoPage />} />
+            <Route path="/chores" element={<ChoresPage />} />
             <Route path="/checkin" element={<CheckInPage />} />
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/profile" element={<ProfilePage />} />

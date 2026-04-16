@@ -1,48 +1,42 @@
 import React from 'react';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, isToday } from 'date-fns';
 import { useFamily } from '@/lib/familyContext';
 import { MapPin, Clock, Trash2, Pencil } from 'lucide-react';
-import EmptyState from '../shared/EmptyState';
 
-function formatTimeTo12h(timeStr) {
-  if (!timeStr) return '';
-  const parts = String(timeStr).split(':');
-  const h = parseInt(parts[0], 10);
-  const m = parseInt(parts[1] ?? '0', 10);
-  if (Number.isNaN(h)) return timeStr;
-  const hour = h % 12 === 0 ? 12 : h % 12;
-  const minute = m.toString().padStart(2, '0');
-  const period = h < 12 ? 'AM' : 'PM';
-  return `${hour}:${minute} ${period}`;
+function formatEventTime12h(dateStr, timeStr) {
+  if (!timeStr || !dateStr) return '';
+  return format(new Date(`${dateStr}T${timeStr}`), 'h:mm a');
 }
 
 export default function DayView({ currentDate, events, onDeleteEvent, onEditEvent }) {
   const { getMemberColor, getMemberName, getMemberAvatar, isAdmin, currentUser } = useFamily();
 
   const dayEvents = events
-    .filter((e) => isSameDay(new Date(e.date), currentDate))
+    .filter((e) => isSameDay(new Date(e.date + 'T00:00:00'), currentDate))
     .sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
 
   if (dayEvents.length === 0) {
     return (
-      <EmptyState
-        emoji={String.fromCodePoint(0x1f324, 0xfe0f)}
-        title="Nothing on the schedule"
-        description="Enjoy the quiet! Tap + to add an event."
-      />
+      <div className="py-12 px-4 text-center">
+        <p className="text-sm text-muted-foreground">
+          {isToday(currentDate)
+            ? 'No events today. Tap + to add one.'
+            : 'No events on this day. Tap + to add one.'}
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        {format(currentDate, 'EEEE, MMMM d')} · {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
+        {format(currentDate, 'EEEE, MM/dd/yyyy')} · {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
       </p>
       {dayEvents.map((ev) => {
         const canDelete = isAdmin || ev.created_by === currentUser?.id;
         const canEdit = canDelete;
-        const startDisp = formatTimeTo12h(ev.start_time);
-        const endDisp = ev.end_time ? formatTimeTo12h(ev.end_time) : '';
+        const startDisp = formatEventTime12h(ev.date, ev.start_time);
+        const endDisp = ev.end_time ? formatEventTime12h(ev.date, ev.end_time) : '';
         return (
           <div
             key={ev.id}

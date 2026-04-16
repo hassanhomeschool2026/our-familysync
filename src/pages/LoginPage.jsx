@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -36,6 +37,20 @@ export default function LoginPage() {
     }
   };
 
+  const handleSendReset = async () => {
+    if (!email) {
+      toast.error('Please enter your email.');
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://app.familysync.zencora.org/reset-password',
+    });
+    if (error) toast.error(error.message);
+    else toast.success('Check your email for a reset link!');
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
@@ -50,41 +65,83 @@ export default function LoginPage() {
         </div>
 
         <div className="space-y-4">
-          <div>
-            <Label>Email</Label>
-            <Input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-12 mt-1"
-            />
-          </div>
-          <div>
-            <Label>Password</Label>
-            <Input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-12 mt-1"
-            />
-          </div>
+          {showReset ? (
+            <>
+              <div>
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 mt-1"
+                />
+              </div>
+              <Button
+                onClick={handleSendReset}
+                disabled={loading}
+                className="w-full h-12 rounded-xl text-base font-semibold"
+              >
+                {loading ? 'Please wait...' : 'Send Reset Link'}
+              </Button>
+              <button
+                type="button"
+                onClick={() => setShowReset(false)}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Back to Sign In
+              </button>
+            </>
+          ) : (
+            <>
+              <div>
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 mt-1"
+                />
+              </div>
+              <div>
+                <Label>Password</Label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12 mt-1"
+                />
+              </div>
 
-          <Button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="w-full h-12 rounded-xl text-base font-semibold"
-          >
-            {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
-          </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={loading}
+                className="w-full h-12 rounded-xl text-base font-semibold"
+              >
+                {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
+              </Button>
 
-          <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-          </button>
+              {!isSignUp && (
+                <button
+                  type="button"
+                  onClick={() => setShowReset(true)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Forgot password?
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

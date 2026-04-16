@@ -57,7 +57,7 @@ export default function AddEventSheet({ open, onClose, onCreate, onUpdate, selec
     if (editingEvent) {
       setForm({
         title: editingEvent.title ?? '',
-        date: editingEvent.date ? format(new Date(editingEvent.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+        date: editingEvent.date ? editingEvent.date : format(new Date(), 'yyyy-MM-dd'),
         start_time: toHHMM(editingEvent.start_time),
         end_time: toHHMM(editingEvent.end_time),
         location: editingEvent.location ?? '',

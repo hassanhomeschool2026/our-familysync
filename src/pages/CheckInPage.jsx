@@ -73,12 +73,13 @@ function formatHistoryExactTime(iso) {
     year: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    hour12: true,
     timeZoneName: 'short',
   });
 }
 
 export default function CheckInPage() {
-  const { family, currentUser, members } = useFamily();
+  const { family, currentUser, members, getMemberColor } = useFamily();
   const queryClient = useQueryClient();
   const autocompleteRef = useRef(null);
 
@@ -104,7 +105,7 @@ export default function CheckInPage() {
         .select('*')
         .eq('family_id', family?.id)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
       return data || [];
     },
     enabled: !!family?.id,
@@ -114,10 +115,19 @@ export default function CheckInPage() {
   const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
 
-  const activeCheckIns = checkins.filter((c) => new Date(c.created_at) > eightHoursAgo);
+  const recentCheckIns = checkins.filter((c) => new Date(c.created_at) > eightHoursAgo);
+  const latestByUser = new Map();
+  for (const c of recentCheckIns) {
+    const existing = latestByUser.get(c.user_id);
+    if (!existing || new Date(c.created_at) > new Date(existing.created_at)) {
+      latestByUser.set(c.user_id, c);
+    }
+  }
+  const activeCheckIns = Array.from(latestByUser.values());
 
+  const activeIds = new Set(activeCheckIns.map((c) => c.id));
   const historyCheckIns = checkins.filter(
-    (c) => new Date(c.created_at) <= eightHoursAgo && new Date(c.created_at) > threeDaysAgo
+    (c) => !activeIds.has(c.id) && new Date(c.created_at) > threeDaysAgo
   );
 
   const historyGrouped = useMemo(() => {
@@ -129,7 +139,12 @@ export default function CheckInPage() {
         let label;
         if (isToday(d)) label = 'Today';
         else if (isYesterday(d)) label = 'Yesterday';
-        else label = format(d, 'MMM d');
+        else {
+          label =
+            d.getFullYear() === new Date().getFullYear()
+              ? format(d, 'EEE, MMM d')
+              : format(d, 'EEE, MMM d, yyyy');
+        }
         map.set(key, { dateKey: key, label, items: [] });
       }
       map.get(key).items.push(ci);
@@ -328,7 +343,7 @@ export default function CheckInPage() {
             {activeCheckIns.map((checkin) => {
               if (checkin.latitude == null || checkin.longitude == null) return null;
               const member = getMemberForUser(checkin.user_id);
-              const color = member?.member_color ?? '#6366f1';
+              const color = getMemberColor(checkin.user_id) || member?.member_color || '#6366f1';
               return (
                 <Marker
                   key={checkin.id}
@@ -415,7 +430,7 @@ export default function CheckInPage() {
         ) : (
           activeCheckIns.map((ci) => {
             const member = getMemberForUser(ci.user_id);
-            const color = member?.member_color ?? '#6366f1';
+            const color = getMemberColor(ci.user_id) || member?.member_color || '#6366f1';
             const displayName = member?.display_name || member?.full_name || ci.user_name || 'Member';
             const avatar = member?.avatar ?? ci.user_avatar;
             return (
@@ -443,39 +458,37 @@ export default function CheckInPage() {
         )}
       </div>
 
-      <div className="space-y-2 mt-6">
-        <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">HISTORY</p>
+      <div className="space-y-2 mt-6" aria-label="Check-in history">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">History</p>
         {historyGrouped.length === 0 ? (
-          <p className="text-xs text-muted-foreground/90 py-2">No recent check-in history</p>
+          <p className="text-xs text-muted-foreground py-2">No recent check-in history</p>
         ) : (
           historyGrouped.map((group) => (
             <div key={group.dateKey} className="space-y-1.5">
-              <p className="text-[11px] font-medium text-muted-foreground/70 pl-1">{group.label}</p>
-              <div className="space-y-1.5 opacity-90">
+              <p className="text-[11px] font-medium text-muted-foreground pl-1">{group.label}</p>
+              <div className="space-y-1.5">
                 {group.items.map((ci) => {
                   const member = getMemberForUser(ci.user_id);
-                  const color = member?.member_color ?? '#6366f1';
+                  const color = getMemberColor(ci.user_id) || member?.member_color || '#6366f1';
                   const displayName =
                     member?.display_name || member?.full_name || ci.user_name || 'Member';
                   const avatar = member?.avatar ?? ci.user_avatar;
                   return (
                     <div
                       key={ci.id}
-                      className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/40 border border-border/60"
-                      style={{ borderLeftWidth: '3px', borderLeftColor: `${color}99` }}
+                      className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
+                      style={{ borderLeftWidth: '4px', borderLeftColor: color }}
                     >
                       <MemberAvatar avatar={avatar} color={color} size="sm" name={displayName} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-muted-foreground">{displayName}</p>
-                        <p className="text-[11px] text-muted-foreground/80 flex items-start gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 shrink-0 mt-0.5 opacity-70" />
+                        <p className="text-sm font-medium">{displayName}</p>
+                        <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 shrink-0 mt-0.5" />
                           <span>{trimAddress(ci.location ?? '')}</span>
                         </p>
-                        {ci.note ? (
-                          <p className="text-[11px] mt-1 text-muted-foreground/90">{ci.note}</p>
-                        ) : null}
-                        <p className="text-[10px] text-muted-foreground/70 mt-1 flex items-center gap-1">
-                          <Clock className="w-3 h-3 shrink-0 opacity-70" />
+                        {ci.note ? <p className="text-xs mt-1 text-foreground/90">{ci.note}</p> : null}
+                        <p className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1">
+                          <Clock className="w-3 h-3 shrink-0 mt-0.5" />
                           {formatHistoryExactTime(ci.created_at)}
                         </p>
                       </div>
