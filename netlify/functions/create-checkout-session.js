@@ -1,16 +1,33 @@
-const Stripe = require('stripe');
-
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
   try {
-    const { priceId, userId, email } = JSON.parse(event.body);
-    console.log('Price ID received:', priceId);
-    console.log('Email received:', email);
+    console.log('Raw event body:', event.body);
+    console.log('isBase64Encoded:', event.isBase64Encoded);
+
+    const bodyStr = event.isBase64Encoded
+      ? Buffer.from(event.body, 'base64').toString('utf8')
+      : event.body;
+
+    console.log('Parsed body string:', bodyStr);
+
+    const { priceId, userId, email } = JSON.parse(bodyStr);
+
+    console.log('Price ID:', priceId);
+    console.log('Email:', email);
+    console.log('User ID:', userId);
+
+    if (!priceId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'priceId is required' }),
+      };
+    }
+
+    const Stripe = require('stripe');
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -22,12 +39,14 @@ exports.handler = async (event) => {
       cancel_url: `${event.headers.origin}/upgrade?cancelled=true`,
     });
 
+    console.log('Session created:', session.id);
+
     return {
       statusCode: 200,
       body: JSON.stringify({ url: session.url }),
     };
   } catch (error) {
-    console.error('create-checkout-session error:', error);
+    console.error('Full error:', error.message);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message }),
