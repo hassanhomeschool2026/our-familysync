@@ -108,7 +108,7 @@ export default function UpgradePage() {
 
       <div className="space-y-3">
         <Button
-          onClick={() => handleCheckout(import.meta.env.VITE_STRIPE_MONTHLY_PRICE_ID, 'monthly')}
+          onClick={() => handleCheckout('price_1TMdjsCh1f5OvEBZH8Y3XVGg', 'monthly')}
           disabled={loading !== null}
           className="w-full h-14 rounded-xl text-base font-semibold"
         >
@@ -117,7 +117,7 @@ export default function UpgradePage() {
         </Button>
 
         <Button
-          onClick={() => handleCheckout(import.meta.env.VITE_STRIPE_YEARLY_PRICE_ID, 'yearly')}
+          onClick={() => handleCheckout('price_1TMdlACh1f5OvEBZ0OCECvbq', 'yearly')}
           disabled={loading !== null}
           variant="outline"
           className="w-full h-14 rounded-xl text-base font-semibold"
