@@ -256,7 +256,7 @@ export default function ProfilePage() {
       </div>
 
       <p className="text-center text-[10px] text-muted-foreground mt-6">
-        My HomeSync · Built by Zencora
+        Our FamilySync · Built by Zencora
       </p>
     </div>
   );

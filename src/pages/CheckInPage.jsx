@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Autocomplete } from '@react-google-maps/api';
 
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -10,68 +10,165 @@ import { MapPin, Navigation, X, Clock } from 'lucide-react';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import EmptyState from '@/components/shared/EmptyState';
 import SkeletonCard from '@/components/shared/SkeletonCard';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 
-function checkInLabel(ci) {
-  return ci.location ?? ci.location_name ?? '';
-}
+const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
 
-async function reverseGeocode(lat, lng) {
+const geocodeLatLng = async (lat, lng) => {
+  const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const response = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-    {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'HomeSync/1.0 (https://github.com/homesync)',
-      },
-    }
+    `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${key}`
   );
   const data = await response.json();
-  return data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  if (data.results && data.results[0]) {
+    const components = data.results[0].address_components;
+    const streetNumber = components.find((c) => c.types.includes('street_number'))?.long_name || '';
+    const street = components.find((c) => c.types.includes('route'))?.long_name || '';
+    const city = components.find((c) => c.types.includes('locality'))?.long_name || '';
+    const state =
+      components.find((c) => c.types.includes('administrative_area_level_1'))?.short_name || '';
+    return `${streetNumber} ${street}, ${city}, ${state}`.trim();
+  }
+  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+};
+
+function trimAddress(s, max = 52) {
+  if (!s) return '';
+  const t = s.trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max - 1)}…`;
+}
+
+function markerIcon(color) {
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    fillColor: color || '#6366f1',
+    fillOpacity: 1,
+    strokeColor: '#ffffff',
+    strokeWeight: 2,
+    scale: 10,
+  };
+}
+
+function formatCheckInDetailTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const relative = formatDistanceToNow(d, { addSuffix: true });
+  const exact = d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
+  return `${relative} · ${exact}`;
+}
+
+function formatHistoryExactTime(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
 }
 
 export default function CheckInPage() {
-  const { family, currentUser, getMemberName } = useFamily();
+  const { family, currentUser, members } = useFamily();
   const queryClient = useQueryClient();
+  const autocompleteRef = useRef(null);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '',
+    libraries: ['places'],
   });
 
   const [locationName, setLocationName] = useState('');
+  const [note, setNote] = useState('');
   const [gettingLocation, setGettingLocation] = useState(false);
   const [coords, setCoords] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [userGeo, setUserGeo] = useState(null);
+  const [overrideMapView, setOverrideMapView] = useState(null);
+  const [infoCheckIn, setInfoCheckIn] = useState(null);
 
-  const { data: checkIns = [], isLoading } = useQuery({
+  const { data: checkins = [], isLoading } = useQuery({
     queryKey: ['checkins', family?.id],
     queryFn: async () => {
       const { data } = await supabase
         .from('checkins')
         .select('*')
         .eq('family_id', family?.id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(50);
       return data || [];
     },
     enabled: !!family?.id,
     refetchInterval: 60000,
   });
 
-  const activeCheckIns = useMemo(
-    () =>
-      checkIns.filter((ci) => {
-        if (!ci.expires_at) return true;
-        return new Date(ci.expires_at) > new Date();
-      }),
-    [checkIns]
+  const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);
+  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+
+  const activeCheckIns = checkins.filter((c) => new Date(c.created_at) > eightHoursAgo);
+
+  const historyCheckIns = checkins.filter(
+    (c) => new Date(c.created_at) <= eightHoursAgo && new Date(c.created_at) > threeDaysAgo
   );
+
+  const historyGrouped = useMemo(() => {
+    const map = new Map();
+    for (const ci of historyCheckIns) {
+      const d = new Date(ci.created_at);
+      const key = format(d, 'yyyy-MM-dd');
+      if (!map.has(key)) {
+        let label;
+        if (isToday(d)) label = 'Today';
+        else if (isYesterday(d)) label = 'Yesterday';
+        else label = format(d, 'MMM d');
+        map.set(key, { dateKey: key, label, items: [] });
+      }
+      map.get(key).items.push(ci);
+    }
+    const keys = Array.from(map.keys()).sort((a, b) => b.localeCompare(a));
+    return keys.map((k) => map.get(k));
+  }, [historyCheckIns]);
 
   const myCheckIn = activeCheckIns.find((ci) => ci.user_id === currentUser?.id);
 
+  const getMemberForUser = useCallback(
+    (userId) => members.find((m) => m.id === userId),
+    [members]
+  );
+
+  const fallbackMapCenter = useMemo(() => {
+    const withCoords = activeCheckIns.find(
+      (c) => c.latitude != null && c.longitude != null && !Number.isNaN(Number(c.latitude))
+    );
+    if (withCoords) {
+      return { lat: Number(withCoords.latitude), lng: Number(withCoords.longitude) };
+    }
+    if (userGeo) return userGeo;
+    return DEFAULT_CENTER;
+  }, [activeCheckIns, userGeo]);
+
+  const mapCenter = overrideMapView?.center ?? fallbackMapCenter;
+  const mapZoom = overrideMapView?.zoom ?? 14;
+
+  useEffect(() => {
+    if (infoCheckIn && !activeCheckIns.some((c) => c.id === infoCheckIn.id)) {
+      setInfoCheckIn(null);
+    }
+  }, [activeCheckIns, infoCheckIn]);
+
   const createCheckIn = useMutation({
-    mutationFn: async ({ location: loc, latitude: lat, longitude: lng }) => {
+    mutationFn: async ({ location: loc, latitude: lat, longitude: lng, note: noteVal }) => {
       if (myCheckIn) await supabase.from('checkins').delete().eq('id', myCheckIn.id);
-      const { data: newCheckIn } = await supabase
+      const { data: newCheckIn, error } = await supabase
         .from('checkins')
         .insert({
           family_id: family.id,
@@ -81,9 +178,11 @@ export default function CheckInPage() {
           location: loc,
           latitude: lat,
           longitude: lng,
+          note: noteVal?.trim() || null,
         })
         .select()
         .single();
+      if (error) throw error;
       return newCheckIn;
     },
     onSuccess: async (_newCheckIn, data) => {
@@ -99,22 +198,33 @@ export default function CheckInPage() {
       setShowForm(false);
       setCoords(null);
       setLocationName('');
+      setNote('');
+      setOverrideMapView(null);
     },
   });
 
   const clearCheckIn = useMutation({
     mutationFn: async () => {
-      await supabase.from('checkins').delete().eq('id', myCheckIn.id);
+      const latestMine = checkins.find((c) => c.user_id === currentUser?.id);
+      if (!latestMine?.id) return;
+      const { error } = await supabase.from('checkins').delete().eq('id', latestMine.id);
+      if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['checkins', family?.id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['checkins', family?.id] });
+      setInfoCheckIn(null);
+    },
   });
 
   const getLocation = () => {
     setGettingLocation(true);
     const finish = async (lat, lng) => {
-      setCoords({ lat, lng });
+      const center = { lat, lng };
+      setCoords(center);
+      setUserGeo(center);
+      setOverrideMapView({ center, zoom: 14 });
       try {
-        const name = await reverseGeocode(lat, lng);
+        const name = await geocodeLatLng(lat, lng);
         setLocationName(name);
       } catch {
         setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
@@ -128,7 +238,7 @@ export default function CheckInPage() {
         finish(pos.coords.latitude, pos.coords.longitude);
       },
       () => {
-        finish(40.7128, -74.006);
+        finish(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
@@ -140,8 +250,34 @@ export default function CheckInPage() {
       location: locationName.trim(),
       latitude: coords.lat,
       longitude: coords.lng,
+      note: note.trim(),
     });
   };
+
+  const onPlaceChanged = () => {
+    const ac = autocompleteRef.current;
+    if (!ac) return;
+    const place = ac.getPlace();
+    const loc = place.geometry?.location;
+    if (!loc) return;
+    const lat = loc.lat();
+    const lng = loc.lng();
+    const center = { lat, lng };
+    setCoords(center);
+    setLocationName(place.name || place.formatted_address || '');
+    setOverrideMapView({ center, zoom: 15 });
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setShowForm(false);
+    setOverrideMapView(null);
+    setCoords(null);
+    setLocationName('');
+    setNote('');
+  };
+
+  const infoWindowMember = infoCheckIn ? getMemberForUser(infoCheckIn.user_id) : null;
 
   if (isLoading) return <SkeletonCard count={3} />;
 
@@ -150,7 +286,13 @@ export default function CheckInPage() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-heading text-xl font-bold">Check-In</h2>
         {myCheckIn ? (
-          <Button size="sm" variant="outline" onClick={() => clearCheckIn.mutate()} className="rounded-full text-xs">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => clearCheckIn.mutate()}
+            className="rounded-full text-xs"
+            disabled={clearCheckIn.isPending}
+          >
             <X className="w-3 h-3 mr-1" /> Clear My Pin
           </Button>
         ) : (
@@ -161,6 +303,80 @@ export default function CheckInPage() {
         )}
       </div>
 
+      <div className="mb-4">
+        {isLoaded ? (
+          <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '300px', borderRadius: '12px' }}
+            mapContainerClassName="relative"
+            center={mapCenter}
+            zoom={mapZoom}
+            options={{ fullscreenControl: false, mapTypeControl: false }}
+          >
+            <Autocomplete
+              className="absolute top-3 left-0 right-0 z-10 px-3 w-full box-border"
+              onLoad={(ac) => {
+                autocompleteRef.current = ac;
+              }}
+              onPlaceChanged={onPlaceChanged}
+              fields={['geometry', 'name', 'formatted_address']}
+            >
+              <Input
+                placeholder="Search for a place..."
+                className="bg-background shadow-md border-border h-10 w-full"
+              />
+            </Autocomplete>
+            {activeCheckIns.map((checkin) => {
+              if (checkin.latitude == null || checkin.longitude == null) return null;
+              const member = getMemberForUser(checkin.user_id);
+              const color = member?.member_color ?? '#6366f1';
+              return (
+                <Marker
+                  key={checkin.id}
+                  position={{ lat: Number(checkin.latitude), lng: Number(checkin.longitude) }}
+                  title={checkin.user_name}
+                  icon={markerIcon(color)}
+                  onClick={() => setInfoCheckIn(checkin)}
+                />
+              );
+            })}
+            {infoCheckIn &&
+              infoCheckIn.latitude != null &&
+              infoCheckIn.longitude != null && (
+                <InfoWindow
+                  position={{
+                    lat: Number(infoCheckIn.latitude),
+                    lng: Number(infoCheckIn.longitude),
+                  }}
+                  onCloseClick={() => setInfoCheckIn(null)}
+                >
+                  <div className="max-w-[220px] text-foreground p-1">
+                    <p className="font-semibold text-sm">
+                      {infoWindowMember?.display_name ||
+                        infoWindowMember?.full_name ||
+                        infoCheckIn.user_name ||
+                        'Member'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {trimAddress(infoCheckIn.location, 200)}
+                    </p>
+                    {infoCheckIn.note ? <p className="text-xs mt-1">{infoCheckIn.note}</p> : null}
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {formatCheckInDetailTime(infoCheckIn.created_at)}
+                    </p>
+                  </div>
+                </InfoWindow>
+              )}
+          </GoogleMap>
+        ) : (
+          <div
+            style={{ width: '100%', height: '300px' }}
+            className="bg-secondary rounded-xl flex items-center justify-center"
+          >
+            <p className="text-muted-foreground text-sm">Loading map...</p>
+          </div>
+        )}
+      </div>
+
       {showForm && (
         <div className="bg-card border border-border rounded-xl p-4 mb-4 space-y-3">
           <Input
@@ -168,44 +384,25 @@ export default function CheckInPage() {
             value={locationName}
             onChange={(e) => setLocationName(e.target.value)}
           />
+          <Input
+            placeholder="What are you up to? (optional)"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
           <div className="flex gap-2">
-            <Button onClick={handleCheckIn} disabled={!locationName.trim()} className="flex-1 rounded-xl">
+            <Button
+              onClick={handleCheckIn}
+              disabled={!locationName.trim() || createCheckIn.isPending}
+              className="flex-1 rounded-xl"
+            >
               <MapPin className="w-4 h-4 mr-1" /> Check In
             </Button>
-            <Button variant="outline" onClick={() => setShowForm(false)} className="rounded-xl">
+            <Button variant="outline" onClick={cancelForm} className="rounded-xl">
               Cancel
             </Button>
           </div>
         </div>
       )}
-
-      <div className="mb-4">
-        {isLoaded ? (
-          <GoogleMap
-            mapContainerStyle={{ width: '100%', height: '300px', borderRadius: '12px' }}
-            center={
-              activeCheckIns.length > 0 && activeCheckIns[0].latitude
-                ? { lat: activeCheckIns[0].latitude, lng: activeCheckIns[0].longitude }
-                : { lat: 32.9482, lng: -96.7970 }
-            }
-            zoom={13}
-          >
-            {activeCheckIns.map((checkin) =>
-              checkin.latitude && checkin.longitude ? (
-                <Marker
-                  key={checkin.id}
-                  position={{ lat: checkin.latitude, lng: checkin.longitude }}
-                  title={checkin.user_name}
-                />
-              ) : null
-            )}
-          </GoogleMap>
-        ) : (
-          <div style={{ width: '100%', height: '300px' }} className="bg-secondary rounded-xl flex items-center justify-center">
-            <p className="text-muted-foreground text-sm">Loading map...</p>
-          </div>
-        )}
-      </div>
 
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Active Check-Ins</p>
@@ -216,22 +413,76 @@ export default function CheckInPage() {
             description="Tap 'Share My Location' to let your family know where you are."
           />
         ) : (
-          activeCheckIns.map((ci) => (
-            <div key={ci.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border">
-              <MemberAvatar avatar={ci.user_avatar} color={ci.member_color ?? '#6366f1'} size="sm" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{ci.user_name || getMemberName(ci.user_id)}</p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <MapPin className="w-3 h-3" /> {checkInLabel(ci)}
-                  {(ci.note || ci.status_message) && (
-                    <span> · {ci.note ?? ci.status_message}</span>
-                  )}
-                </p>
+          activeCheckIns.map((ci) => {
+            const member = getMemberForUser(ci.user_id);
+            const color = member?.member_color ?? '#6366f1';
+            const displayName = member?.display_name || member?.full_name || ci.user_name || 'Member';
+            const avatar = member?.avatar ?? ci.user_avatar;
+            return (
+              <div
+                key={ci.id}
+                className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
+                style={{ borderLeftWidth: '4px', borderLeftColor: color }}
+              >
+                <MemberAvatar avatar={avatar} color={color} size="sm" name={displayName} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{displayName}</p>
+                  <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">
+                    <MapPin className="w-3 h-3 shrink-0 mt-0.5" />
+                    <span>{trimAddress(ci.location ?? '')}</span>
+                  </p>
+                  {ci.note ? <p className="text-xs mt-1 text-foreground/90">{ci.note}</p> : null}
+                </div>
+                <span className="text-[10px] text-muted-foreground flex items-start gap-0.5 shrink-0 text-right leading-tight">
+                  <Clock className="w-3 h-3 shrink-0 mt-0.5" />
+                  {formatCheckInDetailTime(ci.created_at)}
+                </span>
               </div>
-              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                <Clock className="w-3 h-3" />
-                {formatDistanceToNow(new Date(ci.created_at ?? ci.created_date), { addSuffix: true })}
-              </span>
+            );
+          })
+        )}
+      </div>
+
+      <div className="space-y-2 mt-6">
+        <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest">HISTORY</p>
+        {historyGrouped.length === 0 ? (
+          <p className="text-xs text-muted-foreground/90 py-2">No recent check-in history</p>
+        ) : (
+          historyGrouped.map((group) => (
+            <div key={group.dateKey} className="space-y-1.5">
+              <p className="text-[11px] font-medium text-muted-foreground/70 pl-1">{group.label}</p>
+              <div className="space-y-1.5 opacity-90">
+                {group.items.map((ci) => {
+                  const member = getMemberForUser(ci.user_id);
+                  const color = member?.member_color ?? '#6366f1';
+                  const displayName =
+                    member?.display_name || member?.full_name || ci.user_name || 'Member';
+                  const avatar = member?.avatar ?? ci.user_avatar;
+                  return (
+                    <div
+                      key={ci.id}
+                      className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/40 border border-border/60"
+                      style={{ borderLeftWidth: '3px', borderLeftColor: `${color}99` }}
+                    >
+                      <MemberAvatar avatar={avatar} color={color} size="sm" name={displayName} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-muted-foreground">{displayName}</p>
+                        <p className="text-[11px] text-muted-foreground/80 flex items-start gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 shrink-0 mt-0.5 opacity-70" />
+                          <span>{trimAddress(ci.location ?? '')}</span>
+                        </p>
+                        {ci.note ? (
+                          <p className="text-[11px] mt-1 text-muted-foreground/90">{ci.note}</p>
+                        ) : null}
+                        <p className="text-[10px] text-muted-foreground/70 mt-1 flex items-center gap-1">
+                          <Clock className="w-3 h-3 shrink-0 opacity-70" />
+                          {formatHistoryExactTime(ci.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ))
         )}

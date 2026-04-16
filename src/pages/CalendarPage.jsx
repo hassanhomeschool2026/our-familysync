@@ -17,6 +17,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['events', family?.id],
@@ -42,7 +43,7 @@ export default function CalendarPage() {
       return newEvent;
     },
     onSuccess: async (newEvent) => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['events', family?.id] });
       await supabase.from('feed_items').insert({
         family_id: family.id,
         user_id: currentUser.id,
@@ -54,11 +55,20 @@ export default function CalendarPage() {
     },
   });
 
+  const updateEvent = useMutation({
+    mutationFn: async (data) => {
+      const { id, ...updates } = data;
+      const { error } = await supabase.from('events').update(updates).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events', family?.id] }),
+  });
+
   const deleteEvent = useMutation({
     mutationFn: async (id) => {
       await supabase.from('events').delete().eq('id', id);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['events', family?.id] }),
   });
 
   const handleDayClick = (day) => {
@@ -67,7 +77,19 @@ export default function CalendarPage() {
   };
 
   const handleAddEvent = () => {
+    setEditingEvent(null);
     setSelectedDate(currentDate);
+    setShowAddEvent(true);
+  };
+
+  const handleCloseSheet = () => {
+    setShowAddEvent(false);
+    setEditingEvent(null);
+  };
+
+  const handleEditEvent = (ev) => {
+    setEditingEvent(ev);
+    setSelectedDate(new Date(ev.date));
     setShowAddEvent(true);
   };
 
@@ -90,14 +112,21 @@ export default function CalendarPage() {
         <WeekView currentDate={currentDate} events={events} onDayClick={handleDayClick} />
       )}
       {view === 'day' && (
-        <DayView currentDate={currentDate} events={events} onDeleteEvent={(id) => deleteEvent.mutate(id)} />
+        <DayView
+          currentDate={currentDate}
+          events={events}
+          onDeleteEvent={(id) => deleteEvent.mutate(id)}
+          onEditEvent={handleEditEvent}
+        />
       )}
 
       <AddEventSheet
         open={showAddEvent}
-        onClose={() => setShowAddEvent(false)}
-        onSave={(data) => createEvent.mutateAsync(data)}
+        onClose={handleCloseSheet}
+        onCreate={(data) => createEvent.mutateAsync(data)}
+        onUpdate={(data) => updateEvent.mutateAsync(data)}
         selectedDate={selectedDate}
+        editingEvent={editingEvent}
       />
     </div>
   );

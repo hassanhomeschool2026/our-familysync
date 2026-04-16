@@ -9,7 +9,7 @@ export default function AppLayout() {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between px-4 h-14 max-w-lg mx-auto">
           <h1 className="font-heading font-bold text-lg text-foreground">
-            <span className="text-primary">Home</span>Sync
+            <span className="text-primary">Family</span>Sync
           </h1>
           <NotificationBell />
         </div>

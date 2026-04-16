@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,83 +8,163 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useFamily } from '@/lib/familyContext';
 import { format } from 'date-fns';
 
-export default function AddEventSheet({ open, onClose, onSave, selectedDate }) {
+const generateTimeOptions = () => {
+  const times = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 15) {
+      const hour = h % 12 === 0 ? 12 : h % 12;
+      const minute = m.toString().padStart(2, '0');
+      const period = h < 12 ? 'AM' : 'PM';
+      const label = `${hour}:${minute} ${period}`;
+      const value = `${h.toString().padStart(2, '0')}:${minute}`;
+      times.push({ label, value });
+    }
+  }
+  return times;
+};
+
+const TIME_OPTIONS = generateTimeOptions();
+
+function toHHMM(t) {
+  if (!t) return '';
+  const parts = String(t).split(':');
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1] ?? '0', 10);
+  if (Number.isNaN(h)) return '';
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+const emptyForm = (selectedDate) => ({
+  title: '',
+  date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+  start_time: '',
+  end_time: '',
+  location: '',
+  notes: '',
+  repeat_rule: 'none',
+  assigned_to: [],
+});
+
+export default function AddEventSheet({ open, onClose, onCreate, onUpdate, selectedDate, editingEvent }) {
   const { members, isAdmin } = useFamily();
-  const [form, setForm] = useState({
-    title: '',
-    date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-    start_time: '',
-    end_time: '',
-    location: '',
-    notes: '',
-    repeat_rule: 'none',
-    assigned_to: [],
-  });
+  const [form, setForm] = useState(() => emptyForm(selectedDate));
   const [saving, setSaving] = useState(false);
+
+  const isEditing = !!editingEvent?.id;
+
+  useEffect(() => {
+    if (!open) return;
+    if (editingEvent) {
+      setForm({
+        title: editingEvent.title ?? '',
+        date: editingEvent.date ? format(new Date(editingEvent.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+        start_time: toHHMM(editingEvent.start_time),
+        end_time: toHHMM(editingEvent.end_time),
+        location: editingEvent.location ?? '',
+        notes: editingEvent.notes ?? '',
+        repeat_rule: editingEvent.repeat_rule ?? 'none',
+        assigned_to: Array.isArray(editingEvent.assigned_to) ? editingEvent.assigned_to : [],
+      });
+    } else {
+      setForm(emptyForm(selectedDate));
+    }
+  }, [open, editingEvent, selectedDate]);
 
   const handleSave = async () => {
     if (!form.title.trim()) return;
     setSaving(true);
-    await onSave({
-      title: form.title,
-      date: form.date,
-      start_time: form.start_time,
-      end_time: form.end_time,
-      location: form.location,
-      notes: form.notes,
-      repeat_rule: form.repeat_rule,
-    });
-    setSaving(false);
-    setForm({ title: '', date: format(new Date(), 'yyyy-MM-dd'), start_time: '', end_time: '', location: '', notes: '', repeat_rule: 'none', assigned_to: [] });
-    onClose();
+    try {
+      const payload = {
+        title: form.title,
+        date: form.date,
+        start_time: form.start_time,
+        end_time: form.end_time,
+        location: form.location,
+        notes: form.notes,
+        repeat_rule: form.repeat_rule,
+      };
+      if (isEditing) {
+        await onUpdate({ id: editingEvent.id, ...payload });
+      } else {
+        await onCreate(payload);
+      }
+      setForm(emptyForm(selectedDate));
+      onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleAssignee = (id) => {
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
       assigned_to: prev.assigned_to.includes(id)
-        ? prev.assigned_to.filter(x => x !== id)
+        ? prev.assigned_to.filter((x) => x !== id)
         : [...prev.assigned_to, id],
     }));
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm mx-auto max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-heading">New Event</DialogTitle>
+          <DialogTitle className="font-heading">{isEditing ? 'Edit Event' : 'New Event'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
             <Label>Title</Label>
-            <Input value={form.title} onChange={(e) => setForm({...form, title: e.target.value})} placeholder="Soccer practice" className="mt-1" />
+            <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Soccer practice" className="mt-1" />
           </div>
           <div>
             <Label>Date</Label>
-            <Input type="date" value={form.date} onChange={(e) => setForm({...form, date: e.target.value})} className="mt-1" />
+            <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="mt-1" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Start Time</Label>
-              <Input type="time" value={form.start_time} onChange={(e) => setForm({...form, start_time: e.target.value})} className="mt-1" />
+              <Select value={form.start_time || undefined} onValueChange={(v) => setForm({ ...form, start_time: v })}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select time" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {TIME_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>End Time</Label>
-              <Input type="time" value={form.end_time} onChange={(e) => setForm({...form, end_time: e.target.value})} className="mt-1" />
+              <Select value={form.end_time || undefined} onValueChange={(v) => setForm({ ...form, end_time: v })}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select time" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {TIME_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div>
             <Label>Location</Label>
-            <Input value={form.location} onChange={(e) => setForm({...form, location: e.target.value})} placeholder="Optional" className="mt-1" />
+            <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Optional" className="mt-1" />
           </div>
           <div>
             <Label>Notes</Label>
-            <Textarea value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} placeholder="Optional" className="mt-1" rows={2} />
+            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional" className="mt-1" rows={2} />
           </div>
           <div>
             <Label>Repeat</Label>
-            <Select value={form.repeat_rule} onValueChange={(v) => setForm({...form, repeat_rule: v})}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <Select value={form.repeat_rule} onValueChange={(v) => setForm({ ...form, repeat_rule: v })}>
+              <SelectTrigger className="mt-1">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>
                 <SelectItem value="daily">Daily</SelectItem>
@@ -100,12 +180,13 @@ export default function AddEventSheet({ open, onClose, onSave, selectedDate }) {
                 {members.map((m) => (
                   <button
                     key={m.id}
+                    type="button"
                     onClick={() => toggleAssignee(m.id)}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                       form.assigned_to.includes(m.id) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'
                     }`}
                   >
-                    <span>{m.avatar || '👤'}</span>
+                    <span>{m.avatar || String.fromCodePoint(0x1f464)}</span>
                     {m.display_name || m.full_name}
                   </button>
                 ))}
@@ -113,7 +194,7 @@ export default function AddEventSheet({ open, onClose, onSave, selectedDate }) {
             </div>
           )}
           <Button onClick={handleSave} disabled={saving || !form.title.trim()} className="w-full h-12 rounded-xl">
-            {saving ? 'Saving...' : 'Add Event'}
+            {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Event'}
           </Button>
         </div>
       </DialogContent>
