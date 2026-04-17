@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MapPin, Navigation, X, Clock } from 'lucide-react';
+import { MapPin, Navigation, X, Clock, Radio } from 'lucide-react';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import EmptyState from '@/components/shared/EmptyState';
 import SkeletonCard from '@/components/shared/SkeletonCard';
@@ -96,6 +96,8 @@ export default function CheckInPage() {
   const [userGeo, setUserGeo] = useState(null);
   const [overrideMapView, setOverrideMapView] = useState(null);
   const [infoCheckIn, setInfoCheckIn] = useState(null);
+  const [liveTracking, setLiveTracking] = useState(false);
+  const watchIdRef = useRef(null);
 
   const { data: checkins = [], isLoading } = useQuery({
     queryKey: ['checkins', family?.id],
@@ -115,15 +117,7 @@ export default function CheckInPage() {
   const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
 
-  const recentCheckIns = checkins.filter((c) => new Date(c.created_at) > eightHoursAgo);
-  const latestByUser = new Map();
-  for (const c of recentCheckIns) {
-    const existing = latestByUser.get(c.user_id);
-    if (!existing || new Date(c.created_at) > new Date(existing.created_at)) {
-      latestByUser.set(c.user_id, c);
-    }
-  }
-  const activeCheckIns = Array.from(latestByUser.values());
+  const activeCheckIns = checkins.filter((c) => !c.cleared_at && new Date(c.created_at) > eightHoursAgo);
 
   const activeIds = new Set(activeCheckIns.map((c) => c.id));
   const historyCheckIns = checkins.filter(
@@ -180,9 +174,51 @@ export default function CheckInPage() {
     }
   }, [activeCheckIns, infoCheckIn]);
 
+  useEffect(() => {
+    if (liveTracking) {
+      if (!navigator.geolocation) return;
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        async (pos) => {
+          const { latitude: lat, longitude: lng } = pos.coords;
+          const center = { lat, lng };
+          setUserGeo(center);
+          setOverrideMapView({ center, zoom: 14 });
+          try {
+            const name = await geocodeLatLng(lat, lng);
+            setLocationName(name);
+            setCoords(center);
+          } catch {
+            setCoords(center);
+          }
+          if (myCheckIn) {
+            await supabase.from('checkins').update({
+              latitude: lat,
+              longitude: lng,
+              location: await geocodeLatLng(lat, lng),
+            }).eq('id', myCheckIn.id);
+            queryClient.invalidateQueries({ queryKey: ['checkins', family?.id] });
+          }
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+      );
+    } else {
+      if (watchIdRef.current != null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    }
+    return () => {
+      if (watchIdRef.current != null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, [liveTracking, myCheckIn]);
+
   const createCheckIn = useMutation({
     mutationFn: async ({ location: loc, latitude: lat, longitude: lng, note: noteVal }) => {
-      if (myCheckIn) await supabase.from('checkins').delete().eq('id', myCheckIn.id);
+      if (myCheckIn) await supabase.from('checkins').update({ cleared_at: new Date().toISOString() }).eq('id', myCheckIn.id);
       const { data: newCheckIn, error } = await supabase
         .from('checkins')
         .insert({
@@ -222,7 +258,7 @@ export default function CheckInPage() {
     mutationFn: async () => {
       const latestMine = checkins.find((c) => c.user_id === currentUser?.id);
       if (!latestMine?.id) return;
-      const { error } = await supabase.from('checkins').delete().eq('id', latestMine.id);
+      const { error } = await supabase.from('checkins').update({ cleared_at: new Date().toISOString() }).eq('id', latestMine.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -315,6 +351,16 @@ export default function CheckInPage() {
             <Navigation className="w-3 h-3 mr-1" />
             {gettingLocation ? 'Getting location...' : 'Share My Location'}
           </Button>
+        )}
+        {myCheckIn && (
+          <button
+            type="button"
+            onClick={() => setLiveTracking((v) => !v)}
+            className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${liveTracking ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'}`}
+          >
+            <Radio className="w-3 h-3" />
+            {liveTracking ? 'Live On' : 'Live Off'}
+          </button>
         )}
       </div>
 
