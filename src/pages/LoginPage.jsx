@@ -5,50 +5,176 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Home } from 'lucide-react';
 import { toast } from 'sonner';
+import { generateInviteCode } from '@/lib/memberColors';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState('signin');
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteStep, setInviteStep] = useState('code');
+  const [validatedFamily, setValidatedFamily] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showReset, setShowReset] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [forgotMode, setForgotMode] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleValidateCode = async () => {
+    if (!inviteCode.trim()) {
+      toast.error('Please enter an invite code.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data: families, error } = await supabase
+        .from('families')
+        .select('*')
+        .eq('invite_code', inviteCode.trim().toUpperCase());
+      if (error) throw error;
+      if (!families || families.length === 0) {
+        toast.error('Invalid invite code. Please check and try again.');
+        return;
+      }
+      const family = families[0];
+      const { data: existingMembers } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('family_id', family.id);
+      if (existingMembers && existingMembers.length >= 4) {
+        toast.error('This family has reached the free plan limit. Ask the admin to upgrade.');
+        return;
+      }
+      setValidatedFamily(family);
+      setInviteStep('account');
+    } catch (e) {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleJoinSubmit = async () => {
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match.');
+      return;
+    }
     if (!email || !password) {
       toast.error('Please enter your email and password.');
       return;
     }
     setLoading(true);
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        toast.success('Account created! Please sign in.');
-        setIsSignUp(false);
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        window.location.href = '/';
-      }
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
+      if (signUpError) throw signUpError;
+      const userId = signUpData?.user?.id;
+      if (!userId) throw new Error('Could not create account.');
+
+      await supabase.from('profiles').upsert({
+        id: userId,
+        family_id: validatedFamily.id,
+        display_name: email.split('@')[0],
+        avatar: '\u{1F60A}',
+        member_color: '#6366f1',
+        role: 'member',
+        plan: 'free',
+        notification_prefs: {
+          day_before_reminder: true,
+          same_day_reminder: 'both',
+          task_due_reminders: true,
+          family_alerts: true,
+          checkin_notifications: true,
+        },
+      });
+
+      await supabase.from('families')
+        .update({ invite_code: generateInviteCode() })
+        .eq('id', validatedFamily.id);
+
+      await supabase.from('feed_items').insert({
+        family_id: validatedFamily.id,
+        user_id: userId,
+        user_name: email.split('@')[0],
+        user_avatar: '\u{1F60A}',
+        type: 'member_joined',
+        message: `${email.split('@')[0]} joined the family!`,
+      });
+
+      toast.success('Welcome to the family!');
+      window.location.href = '/';
     } catch (e) {
-      toast.error(e.message || 'Something went wrong.');
+      toast.error('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSendReset = async () => {
-    if (!email) {
-      toast.error('Please enter your email.');
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      toast.error('Please enter your email and password.');
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://app.familysync.zencora.org/reset-password',
-    });
-    if (error) toast.error(error.message);
-    else toast.success('Check your email for a reset link!');
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      window.location.href = '/';
+    } catch (e) {
+      toast.error('Invalid email or password. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignUp = async () => {
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match.');
+      return;
+    }
+    if (!email || !password) {
+      toast.error('Please enter your email and password.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      toast.success('Account created! Please sign in.');
+      setMode('signin');
+    } catch (e) {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const switchMode = (m) => {
+    setMode(m);
+    setInviteStep('code');
+    setValidatedFamily(null);
+    setInviteCode('');
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setForgotMode(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      toast.error('Please enter your email address.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://app.familysync.zencora.org/login',
+      });
+      if (error) throw error;
+      toast.success('Password reset email sent! Check your inbox.');
+      setForgotMode(false);
+    } catch (e) {
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -64,86 +190,121 @@ export default function LoginPage() {
           <p className="text-muted-foreground text-base">Your family. In sync.</p>
         </div>
 
-        <div className="space-y-4">
-          {showReset ? (
-            <>
-              <div>
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 mt-1"
-                />
-              </div>
-              <Button
-                onClick={handleSendReset}
-                disabled={loading}
-                className="w-full h-12 rounded-xl text-base font-semibold"
-              >
-                {loading ? 'Please wait...' : 'Send Reset Link'}
-              </Button>
-              <button
-                type="button"
-                onClick={() => setShowReset(false)}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Back to Sign In
-              </button>
-            </>
-          ) : (
-            <>
-              <div>
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 mt-1"
-                />
-              </div>
-              <div>
-                <Label>Password</Label>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 mt-1"
-                />
-              </div>
-
-              <Button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="w-full h-12 rounded-xl text-base font-semibold"
-              >
-                {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
-              </Button>
-
-              {!isSignUp && (
-                <button
-                  type="button"
-                  onClick={() => setShowReset(true)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Forgot password?
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-              </button>
-            </>
-          )}
+        <div className="flex rounded-xl bg-secondary p-1 mb-6">
+          {['signin', 'signup', 'join'].map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => switchMode(m)}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === m ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}
+            >
+              {m === 'signin' ? 'Sign In' : m === 'signup' ? 'Sign Up' : 'Join Family'}
+            </button>
+          ))}
         </div>
+
+        {mode === 'signin' && !forgotMode && (
+          <div className="space-y-4">
+            <div>
+              <Label>Email</Label>
+              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 mt-1" />
+            </div>
+            <div>
+              <Label>Password</Label>
+              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 mt-1" />
+            </div>
+            <Button onClick={handleSignIn} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+              {loading ? 'Please wait...' : 'Sign In'}
+            </Button>
+            <button type="button" onClick={() => setForgotMode(true)} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
+              Forgot password?
+            </button>
+          </div>
+        )}
+
+        {mode === 'signin' && forgotMode && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">Enter your email and we&apos;ll send you a reset link.</p>
+            <div>
+              <Label>Email</Label>
+              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 mt-1" />
+            </div>
+            <Button onClick={handleForgotPassword} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+              {loading ? 'Sending...' : 'Send Reset Link'}
+            </Button>
+            <button type="button" onClick={() => setForgotMode(false)} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
+              ← Back to Sign In
+            </button>
+          </div>
+        )}
+
+        {mode === 'signup' && (
+          <div className="space-y-4">
+            <div>
+              <Label>Email</Label>
+              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 mt-1" />
+            </div>
+            <div>
+              <Label>Password</Label>
+              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 mt-1" />
+            </div>
+            <div>
+              <Label>Confirm Password</Label>
+              <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-12 mt-1" />
+            </div>
+            <Button onClick={handleSignUp} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+              {loading ? 'Please wait...' : 'Create Account'}
+            </Button>
+          </div>
+        )}
+
+        {mode === 'join' && inviteStep === 'code' && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">Enter the invite code sent by your family admin.</p>
+            <div>
+              <Label>Invite Code</Label>
+              <Input
+                placeholder=""
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                className="h-12 mt-1 tracking-widest font-mono text-center uppercase text-lg"
+                maxLength={6}
+              />
+            </div>
+            <Button onClick={handleValidateCode} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+              {loading ? 'Checking...' : 'Next →'}
+            </Button>
+          </div>
+        )}
+
+        {mode === 'join' && inviteStep === 'account' && (
+          <div className="space-y-4">
+            <div className="bg-primary/10 rounded-xl p-3 text-center">
+              <p className="text-sm font-medium text-primary">{'\u{2705}'} Code accepted!</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Joining: <span className="font-semibold">{validatedFamily?.name}</span></p>
+            </div>
+            <div>
+              <Label>Email</Label>
+              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 mt-1" />
+            </div>
+            <div>
+              <Label>Password</Label>
+              <Input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 mt-1" />
+            </div>
+            <div>
+              <Label>Confirm Password</Label>
+              <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-12 mt-1" />
+            </div>
+            <Button onClick={handleJoinSubmit} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+              {loading ? 'Joining...' : 'Create Account & Join'}
+            </Button>
+            <button type="button" onClick={() => setInviteStep('code')} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
+              ← Back
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
+

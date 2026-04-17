@@ -62,6 +62,15 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
+    const name = currentUser?.display_name || currentUser?.full_name || 'A member';
+    await supabase.from('feed_items').insert({
+      family_id: family.id,
+      user_id: currentUser.id,
+      user_name: name,
+      user_avatar: currentUser.avatar,
+      type: 'general',
+      message: `${name} signed out of FamilySync.`,
+    });
     await supabase.auth.signOut();
   };
 
@@ -207,7 +216,7 @@ export default function ProfilePage() {
           </Link>
         )}
 
-        {!isPremium && (
+        {!isPremium && isAdmin && (
           <Link to="/upgrade" className="flex items-center justify-between w-full p-4 hover:bg-secondary/50 transition-colors">
             <div className="flex items-center gap-3">
               <Crown className="w-5 h-5 text-yellow-500" />
@@ -224,35 +233,80 @@ export default function ProfilePage() {
           <span className="text-sm font-medium">Sign Out</span>
         </button>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button className="flex items-center gap-3 w-full p-4 hover:bg-destructive/5 transition-colors">
-              <Trash2 className="w-5 h-5 text-destructive" />
-              <span className="text-sm font-medium text-destructive">Delete Account</span>
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Account?</AlertDialogTitle>
-              <AlertDialogDescription>
-                {deleteAccountDescription}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleDeleteAccount();
-                }}
-                disabled={deletingAccount}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {isAdmin ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button className="flex items-center gap-3 w-full p-4 hover:bg-destructive/5 transition-colors">
+                <Trash2 className="w-5 h-5 text-destructive" />
+                <span className="text-sm font-medium text-destructive">Delete Account</span>
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Account?</AlertDialogTitle>
+                <AlertDialogDescription>{deleteAccountDescription}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={(e) => { e.preventDefault(); handleDeleteAccount(); }}
+                  disabled={deletingAccount}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button className="flex items-center gap-3 w-full p-4 hover:bg-secondary/50 transition-colors">
+                <Trash2 className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm font-medium text-muted-foreground">Request to Leave Family</span>
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Request to Leave?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Your request will be sent to the family admin for approval. You will stay in the family until they approve it.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    const name = currentUser?.display_name || currentUser?.full_name || 'A member';
+                    const admins = members.filter(m => m.role === 'admin');
+                    if (admins.length > 0) {
+                      await supabase.from('notifications').insert(
+                        admins.map(a => ({
+                          user_id: a.id,
+                          type: 'family_alert',
+                          message: `${name} has requested to leave the family.`,
+                          read: false,
+                        }))
+                      );
+                    }
+                    await supabase.from('feed_items').insert({
+                      family_id: family.id,
+                      user_id: currentUser.id,
+                      user_name: name,
+                      user_avatar: currentUser.avatar,
+                      type: 'general',
+                      message: `${name} has requested to leave the family.`,
+                    });
+                    toast.success('Your request has been sent to the admin.');
+                  }}
+                >
+                  Send Request
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       <p className="text-center text-[10px] text-muted-foreground mt-6">

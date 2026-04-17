@@ -152,6 +152,11 @@ export default function Welcome() {
 
       if (profileError) throw profileError;
 
+      await supabase
+        .from('families')
+        .update({ invite_code: generateInviteCode() })
+        .eq('id', family.id);
+
       await supabase.from('feed_items').insert({
         family_id: family.id,
         user_id: userId,

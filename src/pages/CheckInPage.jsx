@@ -11,6 +11,7 @@ import MemberAvatar from '@/components/shared/MemberAvatar';
 import EmptyState from '@/components/shared/EmptyState';
 import SkeletonCard from '@/components/shared/SkeletonCard';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
+import { toast } from 'sonner';
 
 const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
 
@@ -98,6 +99,15 @@ export default function CheckInPage() {
   const [infoCheckIn, setInfoCheckIn] = useState(null);
   const [liveTracking, setLiveTracking] = useState(false);
   const watchIdRef = useRef(null);
+  const [locationPermission, setLocationPermission] = useState('unknown');
+
+  useEffect(() => {
+    if (!navigator.permissions) return;
+    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+      setLocationPermission(result.state);
+      result.onchange = () => setLocationPermission(result.state);
+    });
+  }, []);
 
   const { data: checkins = [], isLoading } = useQuery({
     queryKey: ['checkins', family?.id],
@@ -268,6 +278,10 @@ export default function CheckInPage() {
   });
 
   const getLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser.');
+      return;
+    }
     setGettingLocation(true);
     const finish = async (lat, lng) => {
       const center = { lat, lng };
@@ -286,12 +300,19 @@ export default function CheckInPage() {
     };
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        setLocationPermission('granted');
         finish(pos.coords.latitude, pos.coords.longitude);
       },
-      () => {
-        finish(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
+      (err) => {
+        setGettingLocation(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationPermission('denied');
+          toast.error('Location permission denied. Please enable it in your browser/phone settings.');
+        } else {
+          toast.error('Could not get your location. Please try again.');
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
@@ -349,7 +370,7 @@ export default function CheckInPage() {
         ) : (
           <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs">
             <Navigation className="w-3 h-3 mr-1" />
-            {gettingLocation ? 'Getting location...' : 'Share My Location'}
+            {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
           </Button>
         )}
         {myCheckIn && (
