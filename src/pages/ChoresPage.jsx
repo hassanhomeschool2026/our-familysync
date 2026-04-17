@@ -41,6 +41,19 @@ function memberDisplayName(m) {
   return m.display_name || m.full_name || m.email || 'Member';
 }
 
+function choreFrequencyToFormArray(frequency) {
+  if (Array.isArray(frequency)) return frequency;
+  if (typeof frequency === 'string' && frequency.trim()) {
+    try {
+      const parsed = JSON.parse(frequency);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      /* legacy plain string */
+    }
+  }
+  return [];
+}
+
 export default function ChoresPage() {
   const { family, currentUser, members, isAdmin, isPremium, getMemberColor } = useFamily();
   const queryClient = useQueryClient();
@@ -50,7 +63,7 @@ export default function ChoresPage() {
   const [form, setForm] = useState({
     title: '',
     assigned_to: UNASSIGNED,
-    frequency: 'weekly',
+    frequency: [],
     point_value: '1',
   });
 
@@ -100,7 +113,7 @@ export default function ChoresPage() {
   const emptyForm = () => ({
     title: '',
     assigned_to: UNASSIGNED,
-    frequency: 'weekly',
+    frequency: [],
     point_value: '1',
   });
 
@@ -108,7 +121,9 @@ export default function ChoresPage() {
     mutationFn: async ({ editId, values }) => {
       const pts = Math.min(5, Math.max(1, parseInt(values.point_value, 10) || 1));
       const title = values.title.trim();
-      const frequency = values.frequency;
+      const frequency = Array.isArray(values.frequency)
+        ? JSON.stringify(values.frequency)
+        : values.frequency;
       const assigned_to = values.assigned_to === UNASSIGNED ? null : values.assigned_to;
       if (editId) {
         const { error } = await supabase
@@ -234,7 +249,7 @@ export default function ChoresPage() {
     setForm({
       title: chore.title ?? '',
       assigned_to: chore.assigned_to || UNASSIGNED,
-      frequency: chore.frequency || 'weekly',
+      frequency: choreFrequencyToFormArray(chore.frequency),
       point_value: String(chore.point_value ?? 1),
     });
   };
@@ -272,7 +287,6 @@ export default function ChoresPage() {
               }
             }}
           >
-            <Plus className="w-4 h-4 mr-1" />
             Add +
           </Button>
         )}
@@ -324,19 +338,30 @@ export default function ChoresPage() {
           </div>
           <div>
             <Label>Frequency</Label>
-            <Select
-              value={form.frequency}
-              onValueChange={(v) => setForm({ ...form, frequency: v })}
-            >
-              <SelectTrigger className="mt-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-1 flex-wrap mt-1">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => {
+                    const current = form.frequency || [];
+                    setForm({
+                      ...form,
+                      frequency: current.includes(day)
+                        ? current.filter((d) => d !== day)
+                        : [...current, day],
+                    });
+                  }}
+                  className={`px-2 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    (form.frequency || []).includes(day)
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border text-muted-foreground'
+                  }`}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
           </div>
           <div>
             <Label>Point Value (1–5)</Label>
@@ -460,7 +485,7 @@ export default function ChoresPage() {
                         {'\u2B50'} {chore.point_value ?? 1} pts
                       </span>
                       <span className="text-xs capitalize bg-muted px-2 py-0.5 rounded-full">
-                        {chore.frequency || 'weekly'}
+                        {choreFrequencyToFormArray(chore.frequency).join(', ') || 'Any day'}
                       </span>
                     </div>
                   </div>
