@@ -26,6 +26,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [showNotifPrefs, setShowNotifPrefs] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const prefs = currentUser?.notification_prefs || {};
 
@@ -68,7 +69,7 @@ export default function ProfilePage() {
       user_id: currentUser.id,
       user_name: name,
       user_avatar: currentUser.avatar,
-      type: 'general',
+      type: 'family_alert',
       message: `${name} signed out of FamilySync.`,
     });
     await supabase.auth.signOut();

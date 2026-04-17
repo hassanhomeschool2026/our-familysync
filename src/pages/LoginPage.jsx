@@ -17,6 +17,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [forgotMode, setForgotMode] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [signInError, setSignInError] = useState('');
 
   const handleValidateCode = async () => {
     if (!inviteCode.trim()) {
@@ -54,9 +56,10 @@ export default function LoginPage() {
 
   const handleJoinSubmit = async () => {
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match.');
+      setPasswordError('Passwords do not match.');
       return;
     }
+    setPasswordError('');
     if (!email || !password) {
       toast.error('Please enter your email and password.');
       return;
@@ -109,16 +112,17 @@ export default function LoginPage() {
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      toast.error('Please enter your email and password.');
+      setSignInError('Please enter your email and password.');
       return;
     }
+    setSignInError('');
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       window.location.href = '/';
     } catch (e) {
-      toast.error('Invalid email or password. Please try again.');
+      setSignInError('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -126,9 +130,10 @@ export default function LoginPage() {
 
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match.');
+      setPasswordError('Passwords do not match.');
       return;
     }
+    setPasswordError('');
     if (!email || !password) {
       toast.error('Please enter your email and password.');
       return;
@@ -155,23 +160,26 @@ export default function LoginPage() {
     setPassword('');
     setConfirmPassword('');
     setForgotMode(false);
+    setPasswordError('');
+    setSignInError('');
   };
 
   const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      toast.error('Please enter your email address.');
-      return;
-    }
     setLoading(true);
     try {
+      if (!email.trim()) {
+        toast.error('Please enter your email address.');
+        setLoading(false);
+        return;
+      }
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://app.familysync.zencora.org/login',
+        redirectTo: 'https://app.familysync.zencora.org/reset-password',
       });
       if (error) throw error;
       toast.success('Password reset email sent! Check your inbox.');
       setForgotMode(false);
     } catch (e) {
-      toast.error('Something went wrong. Please try again.');
+      toast.error('No account found with that email address.');
     } finally {
       setLoading(false);
     }
@@ -213,6 +221,7 @@ export default function LoginPage() {
               <Label>Password</Label>
               <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 mt-1" />
             </div>
+            {signInError && <p className="text-destructive text-sm text-center">{signInError}</p>}
             <Button onClick={handleSignIn} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
               {loading ? 'Please wait...' : 'Sign In'}
             </Button>
@@ -252,6 +261,7 @@ export default function LoginPage() {
               <Label>Confirm Password</Label>
               <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-12 mt-1" />
             </div>
+            {passwordError && <p className="text-destructive text-sm">{passwordError}</p>}
             <Button onClick={handleSignUp} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
               {loading ? 'Please wait...' : 'Create Account'}
             </Button>
@@ -295,6 +305,7 @@ export default function LoginPage() {
               <Label>Confirm Password</Label>
               <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-12 mt-1" />
             </div>
+            {passwordError && <p className="text-destructive text-sm">{passwordError}</p>}
             <Button onClick={handleJoinSubmit} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
               {loading ? 'Joining...' : 'Create Account & Join'}
             </Button>
