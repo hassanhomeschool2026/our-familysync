@@ -18,6 +18,7 @@ import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
 import NotificationsPage from './pages/NotificationsPage';
 import UpgradePage from './pages/UpgradePage';
+import GeofencePage from './pages/GeofencePage';
 import AppLayout from './components/layout/AppLayout';
 
 const FamilyGate = ({ children }) => {
@@ -69,6 +70,7 @@ const AuthenticatedApp = () => {
             <Route path="/todo" element={<TodoPage />} />
             <Route path="/chores" element={<ChoresPage />} />
             <Route path="/checkin" element={<CheckInPage />} />
+            <Route path="/geofence" element={<GeofencePage />} />
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/admin" element={<AdminPage />} />

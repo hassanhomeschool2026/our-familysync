@@ -29,7 +29,7 @@ export default function WeekView({ currentDate, events, onDayClick }) {
               }`}
             >
               <span className="text-[10px] font-medium opacity-70">{format(day, 'EEE')}</span>
-              <span className="text-sm font-bold">{format(day, 'MM/dd/yyyy')}</span>
+              <span className="text-sm font-bold">{format(day, 'd')}</span>
             </button>
           );
         })}
@@ -42,7 +42,7 @@ export default function WeekView({ currentDate, events, onDayClick }) {
           return (
             <div key={day.toISOString()}>
               <p className="text-xs font-medium text-muted-foreground mb-1">
-                {format(day, 'EEEE, MM/dd/yyyy')}
+                {format(day, 'EEEE, MMM d')}
               </p>
               {dayEvents.map((ev) => (
                 <div
