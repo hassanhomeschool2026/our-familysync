@@ -27,6 +27,7 @@ export default function AdminPage() {
   const [copied, setCopied] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [leaveRequests, setLeaveRequests] = useState([]);
+  const [deleteRequests, setDeleteRequests] = useState([]);
 
   useEffect(() => {
     if (!family?.id) return;
@@ -36,9 +37,14 @@ export default function AdminPage() {
       .eq('type', 'family_alert')
       .ilike('message', '%requested to leave%')
       .eq('read', false)
-      .then(({ data }) =>
-        setLeaveRequests((data || []).filter((n) => n.user_id === currentUser.id))
-      );
+      .then(({ data }) => setLeaveRequests(data || []));
+    supabase
+      .from('notifications')
+      .select('*')
+      .eq('type', 'family_alert')
+      .ilike('message', '%requested to delete%')
+      .eq('read', false)
+      .then(({ data }) => setDeleteRequests(data || []));
   }, [family?.id]);
 
   if (!isAdmin) {
@@ -222,16 +228,14 @@ export default function AdminPage() {
           </p>
           <div className="space-y-3">
             {leaveRequests.map((req) => {
-              const parsedName = req.message?.match(/^(.+?) has requested to leave the family\.$/)?.[1];
-              const member = parsedName
-                ? members.find(m => (m.display_name || m.full_name) === parsedName)
-                : null;
-              const requesterId = member?.id;
-              const name = member?.display_name || member?.full_name || parsedName || 'A member';
+              const parts = req.message?.split('|');
+              const requesterId = parts?.[1]?.trim();
+              const member = members.find(m => m.id === requesterId);
+              const name = member?.display_name || member?.full_name || 'A member';
               if (!requesterId) return null;
               return (
                 <div key={req.id} className="flex items-center justify-between gap-2">
-                  <p className="text-sm">{name} wants to leave</p>
+                  <p className="text-sm">{name} wants to leave the family</p>
                   <div className="flex gap-2">
                     <Button
                       size="sm"
@@ -256,10 +260,67 @@ export default function AdminPage() {
                           user_id: currentUser.id,
                           user_name: currentUser.display_name || currentUser.full_name,
                           user_avatar: currentUser.avatar,
-                          type: 'general',
+                          type: 'family_alert',
                           message: `${name} has left the family.`,
                         });
                         setLeaveRequests(prev => prev.filter(r => r.id !== req.id));
+                        setMembers(members.filter(m => m.id !== requesterId));
+                        toast.success(`${name} has been removed.`);
+                      }}
+                    >
+                      Approve
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {deleteRequests.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-4 mb-4 mt-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Account Deletion Requests ({deleteRequests.length})
+          </p>
+          <div className="space-y-3">
+            {deleteRequests.map((req) => {
+              const parts = req.message?.split('|');
+              const requesterId = parts?.[1]?.trim();
+              const member = members.find(m => m.id === requesterId);
+              const name = member?.display_name || member?.full_name || 'A member';
+              if (!requesterId) return null;
+              return (
+                <div key={req.id} className="flex items-center justify-between gap-2">
+                  <p className="text-sm">{name} wants to delete their account</p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={async () => {
+                        await supabase.from('notifications').update({ read: true }).eq('id', req.id);
+                        setDeleteRequests(prev => prev.filter(r => r.id !== req.id));
+                        toast.success('Request denied.');
+                      }}
+                    >
+                      Deny
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={async () => {
+                        await supabase.from('profiles').update({ family_id: null, role: 'member' }).eq('id', requesterId);
+                        await supabase.from('notifications').update({ read: true }).eq('id', req.id);
+                        await supabase.from('feed_items').insert({
+                          family_id: family.id,
+                          user_id: currentUser.id,
+                          user_name: currentUser.display_name || currentUser.full_name,
+                          user_avatar: currentUser.avatar,
+                          type: 'family_alert',
+                          message: `${name}'s account has been removed by admin.`,
+                        });
+                        setDeleteRequests(prev => prev.filter(r => r.id !== req.id));
                         setMembers(members.filter(m => m.id !== requesterId));
                         toast.success(`${name} has been removed.`);
                       }}

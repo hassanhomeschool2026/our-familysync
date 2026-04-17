@@ -12,11 +12,6 @@ import MemberAvatar from '@/components/shared/MemberAvatar';
 import {
   Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2,
 } from 'lucide-react';
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-
 export default function ProfilePage() {
   const { currentUser, family, members, isAdmin, isPremium, reload } = useFamily();
   const [editing, setEditing] = useState(false);
@@ -27,6 +22,12 @@ export default function ProfilePage() {
   const [showNotifPrefs, setShowNotifPrefs] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [requestDeleteConfirmText, setRequestDeleteConfirmText] = useState('');
+  const [showRequestDeleteModal, setShowRequestDeleteModal] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [sendingLeave, setSendingLeave] = useState(false);
 
   const prefs = currentUser?.notification_prefs || {};
 
@@ -76,6 +77,10 @@ export default function ProfilePage() {
   };
 
   const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      toast.error('Please type DELETE to confirm.');
+      return;
+    }
     setDeletingAccount(true);
     try {
       if (isAdmin) {
@@ -83,23 +88,55 @@ export default function ProfilePage() {
           await supabase.from('families').delete().eq('id', family.id);
         } else {
           const nextAdmin = otherMembers[0];
-          await supabase
-            .from('profiles')
-            .update({ role: 'admin' })
-            .eq('id', nextAdmin.id);
+          await supabase.from('profiles').update({ role: 'admin' }).eq('id', nextAdmin.id);
           toast.info(`${nextAdmin.display_name || nextAdmin.full_name} has been promoted to admin.`);
         }
       }
-      await supabase
-        .from('profiles')
-        .update({ family_id: null, role: 'member' })
-        .eq('id', currentUser.id);
+      await supabase.from('profiles').update({ family_id: null, role: 'member' }).eq('id', currentUser.id);
+      await supabase.from('feed_items').insert({
+        family_id: family.id,
+        user_id: currentUser.id,
+        user_name: currentUser?.display_name || currentUser?.full_name || 'A member',
+        user_avatar: currentUser.avatar,
+        type: 'family_alert',
+        message: `${currentUser?.display_name || currentUser?.full_name || 'A member'} deleted their account.`,
+      });
       toast.success('Your account has been deleted.');
       await supabase.auth.signOut();
     } catch (e) {
       toast.error('Something went wrong. Please try again.');
       setDeletingAccount(false);
     }
+  };
+
+  const handleRequestDelete = async () => {
+    if (requestDeleteConfirmText !== 'DELETE') {
+      toast.error('Please type DELETE to confirm.');
+      return;
+    }
+    const name = currentUser?.display_name || currentUser?.full_name || 'A member';
+    const admins = members.filter(m => m.role === 'admin');
+    if (admins.length > 0) {
+      await supabase.from('notifications').insert(
+        admins.map(a => ({
+          user_id: a.id,
+          type: 'family_alert',
+          message: `${name} has requested to delete their account.|${currentUser.id}`,
+          read: false,
+        }))
+      );
+    }
+    await supabase.from('feed_items').insert({
+      family_id: family.id,
+      user_id: currentUser.id,
+      user_name: name,
+      user_avatar: currentUser.avatar,
+      type: 'family_alert',
+      message: `${name} has requested to delete their account.`,
+    });
+    setShowRequestDeleteModal(false);
+    setRequestDeleteConfirmText('');
+    toast.success('Your request has been sent to the admin.');
   };
 
   return (
@@ -235,80 +272,150 @@ export default function ProfilePage() {
         </button>
 
         {isAdmin ? (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button className="flex items-center gap-3 w-full p-4 hover:bg-destructive/5 transition-colors">
-                <Trash2 className="w-5 h-5 text-destructive" />
-                <span className="text-sm font-medium text-destructive">Delete Account</span>
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Account?</AlertDialogTitle>
-                <AlertDialogDescription>{deleteAccountDescription}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  onClick={(e) => { e.preventDefault(); handleDeleteAccount(); }}
-                  disabled={deletingAccount}
-                >
-                  Delete
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <button
+            type="button"
+            onClick={() => setShowDeleteModal(true)}
+            className="flex items-center gap-3 w-full p-4 hover:bg-destructive/5 transition-colors"
+          >
+            <Trash2 className="w-5 h-5 text-destructive" />
+            <span className="text-sm font-medium text-destructive">Delete Account</span>
+          </button>
         ) : (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button className="flex items-center gap-3 w-full p-4 hover:bg-secondary/50 transition-colors">
-                <Trash2 className="w-5 h-5 text-muted-foreground" />
-                <span className="text-sm font-medium text-muted-foreground">Request to Leave Family</span>
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Request to Leave?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Your request will be sent to the family admin for approval. You will stay in the family until they approve it.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    const name = currentUser?.display_name || currentUser?.full_name || 'A member';
-                    const admins = members.filter(m => m.role === 'admin');
-                    if (admins.length > 0) {
-                      await supabase.from('notifications').insert(
-                        admins.map(a => ({
-                          user_id: a.id,
-                          type: 'family_alert',
-                          message: `${name} has requested to leave the family.`,
-                          read: false,
-                        }))
-                      );
-                    }
-                    await supabase.from('feed_items').insert({
-                      family_id: family.id,
-                      user_id: currentUser.id,
-                      user_name: name,
-                      user_avatar: currentUser.avatar,
-                      type: 'general',
-                      message: `${name} has requested to leave the family.`,
-                    });
-                    toast.success('Your request has been sent to the admin.');
-                  }}
-                >
-                  Send Request
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <>
+            <button
+              type="button"
+              onClick={() => { setShowRequestDeleteModal(true); setRequestDeleteConfirmText(''); }}
+              className="flex items-center gap-3 w-full p-4 hover:bg-destructive/5 transition-colors"
+            >
+              <Trash2 className="w-5 h-5 text-destructive" />
+              <span className="text-sm font-medium text-destructive">Delete Account</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowLeaveModal(true)}
+              className="flex items-center gap-3 w-full p-4 hover:bg-secondary/50 transition-colors"
+            >
+              <LogOut className="w-5 h-5 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">Request to Leave Family</span>
+            </button>
+          </>
         )}
       </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="font-heading font-bold text-lg text-destructive">Delete Account</h3>
+            <p className="text-sm text-muted-foreground">{deleteAccountDescription}</p>
+            <p className="text-sm font-medium">Type the word <span className="font-bold text-destructive">&quot;DELETE&quot;</span> below:</p>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder=""
+              className="h-12 font-mono tracking-widest"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-xl"
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount || deleteConfirmText !== 'DELETE'}
+              >
+                {deletingAccount ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showRequestDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="font-heading font-bold text-lg text-destructive">Request Account Deletion</h3>
+            <p className="text-sm text-muted-foreground">Your request will be sent to the family admin for approval. You will stay in the family until they approve it.</p>
+            <p className="text-sm font-medium">Type the word <span className="font-bold text-destructive">&quot;DELETE&quot;</span> below:</p>
+            <Input
+              value={requestDeleteConfirmText}
+              onChange={(e) => setRequestDeleteConfirmText(e.target.value)}
+              placeholder=""
+              className="h-12 font-mono tracking-widest"
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-xl"
+                onClick={() => { setShowRequestDeleteModal(false); setRequestDeleteConfirmText(''); }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={handleRequestDelete}
+                disabled={requestDeleteConfirmText !== 'DELETE'}
+              >
+                Send Request
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="font-heading font-bold text-lg">Request to Leave Family?</h3>
+            <p className="text-sm text-muted-foreground">Your request will be sent to the family admin for approval. You will stay in the family until they approve it.</p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-xl"
+                onClick={() => setShowLeaveModal(false)}
+                disabled={sendingLeave}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 rounded-xl"
+                disabled={sendingLeave}
+                onClick={async () => {
+                  setSendingLeave(true);
+                  const name = currentUser?.display_name || currentUser?.full_name || 'A member';
+                  const admins = members.filter(m => m.role === 'admin');
+                  if (admins.length > 0) {
+                    await supabase.from('notifications').insert(
+                      admins.map(a => ({
+                        user_id: a.id,
+                        type: 'family_alert',
+                        message: `${name} has requested to leave the family.|${currentUser.id}`,
+                        read: false,
+                      }))
+                    );
+                  }
+                  await supabase.from('feed_items').insert({
+                    family_id: family.id,
+                    user_id: currentUser.id,
+                    user_name: name,
+                    user_avatar: currentUser.avatar,
+                    type: 'family_alert',
+                    message: `${name} has requested to leave the family.`,
+                  });
+                  setSendingLeave(false);
+                  setShowLeaveModal(false);
+                  toast.success('Your request has been sent to the admin.');
+                }}
+              >
+                {sendingLeave ? 'Sending...' : 'Send Request'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <p className="text-center text-[10px] text-muted-foreground mt-6">
         Our FamilySync · Built by Zencora
