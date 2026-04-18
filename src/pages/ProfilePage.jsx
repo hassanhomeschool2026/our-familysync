@@ -7,15 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { MEMBER_COLORS } from '@/lib/memberColors';
+import { MEMBER_COLORS, AVATARS } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import {
-  Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2, Camera, X,
+  Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2,
 } from 'lucide-react';
 export default function ProfilePage() {
   const { currentUser, family, members, isAdmin, isPremium, reload } = useFamily();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(currentUser?.display_name || '');
+  const [avatar, setAvatar] = useState(currentUser?.avatar || '😊');
   const [color, setColor] = useState(currentUser?.member_color || MEMBER_COLORS[0].value);
   const [saving, setSaving] = useState(false);
   const [showNotifPrefs, setShowNotifPrefs] = useState(false);
@@ -27,8 +28,6 @@ export default function ProfilePage() {
   const [showRequestDeleteModal, setShowRequestDeleteModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [sendingLeave, setSendingLeave] = useState(false);
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState(currentUser?.avatar_url || null);
 
   const prefs = currentUser?.notification_prefs || {};
 
@@ -48,7 +47,7 @@ export default function ProfilePage() {
     setSaving(true);
     await supabase
       .from('profiles')
-      .update({ display_name: displayName, member_color: color, avatar_url: avatarUrl ?? null })
+      .update({ display_name: displayName, avatar, member_color: color })
       .eq('id', currentUser.id);
     await reload();
     setSaving(false);
@@ -140,34 +139,6 @@ export default function ProfilePage() {
     toast.success('Your request has been sent to the admin.');
   };
 
-  const handleAvatarUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be under 5MB.');
-      return;
-    }
-    setUploadingAvatar(true);
-    try {
-      const ext = file.name.split('.').pop();
-      const path = `${currentUser.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-      const url = `${data.publicUrl}?t=${Date.now()}`;
-      await supabase.from('profiles').update({ avatar_url: url }).eq('id', currentUser.id);
-      setAvatarUrl(url);
-      await reload();
-      toast.success('Profile photo updated!');
-    } catch (e) {
-      toast.error('Could not upload photo. Please try again.');
-    } finally {
-      setUploadingAvatar(false);
-    }
-  };
-
   return (
     <div>
       <h2 className="font-heading text-xl font-bold mb-4">Profile</h2>
@@ -175,24 +146,7 @@ export default function ProfilePage() {
       {/* Profile Card */}
       <div className="bg-card border border-border rounded-xl p-4 mb-4">
         <div className="flex items-center gap-4">
-          <div className="relative shrink-0">
-            <MemberAvatar
-              avatar={currentUser?.avatar}
-              avatarUrl={avatarUrl || currentUser?.avatar_url}
-              color={currentUser?.member_color}
-              size="xl"
-              name={currentUser?.display_name || currentUser?.full_name}
-            />
-            <label className="absolute bottom-0 right-0 w-6 h-6 bg-primary rounded-full flex items-center justify-center cursor-pointer">
-              <Camera className="w-3 h-3 text-primary-foreground" />
-              <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploadingAvatar} />
-            </label>
-            {uploadingAvatar && (
-              <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              </div>
-            )}
-          </div>
+          <MemberAvatar avatar={currentUser?.avatar} color={currentUser?.member_color} size="xl" />
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="font-heading font-bold text-lg">{currentUser?.display_name || currentUser?.full_name}</h3>
@@ -220,22 +174,22 @@ export default function ProfilePage() {
               <Label>Display Name</Label>
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1" />
             </div>
-            {(avatarUrl || currentUser?.avatar_url) && (
-              <div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setAvatarUrl(null);
-                    await supabase.from('profiles').update({ avatar_url: null }).eq('id', currentUser.id);
-                    await reload();
-                    toast.success('Photo removed.');
-                  }}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded-full px-3 py-1 hover:border-destructive hover:text-destructive transition-colors"
-                >
-                  <X className="w-3 h-3" /> Remove photo
-                </button>
+            <div>
+              <Label className="mb-2 block">Avatar</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {AVATARS.map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => setAvatar(a)}
+                    className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center ${
+                      avatar === a ? 'bg-primary/20 ring-2 ring-primary' : 'bg-secondary'
+                    }`}
+                  >
+                    {a}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
             <div>
               <Label className="mb-2 block">Color</Label>
               <div className="flex flex-wrap gap-1.5">

@@ -165,7 +165,7 @@ export default function AdminPage() {
         <div className="divide-y divide-border">
           {members.map((member) => (
             <div key={member.id} className="flex items-center gap-3 p-4">
-              <MemberAvatar avatar={member.avatar} avatarUrl={member.avatar_url} color={member.member_color} size="sm" />
+              <MemberAvatar avatar={member.avatar} color={member.member_color} size="sm" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium truncate">{member.display_name || member.full_name}</p>

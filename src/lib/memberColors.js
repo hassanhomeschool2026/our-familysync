@@ -11,7 +11,7 @@ export const MEMBER_COLORS = [
   { label: 'Cyan', value: '#06b6d4', bg: 'bg-cyan-500', text: 'text-cyan-500', border: 'border-cyan-500', light: 'bg-cyan-100' },
 ];
 
-export const AVATARS = [];
+export const AVATARS = ['😊','😎','🤗','👨','👩','👦','👧','👶','🧑','👴','👵','🐱','🐶','🦊','🐻','🌸','🌟','🏠','❤️','🎉'];
 
 export function getColorObj(hex) {
   return MEMBER_COLORS.find(c => c.value === hex) || MEMBER_COLORS[0];

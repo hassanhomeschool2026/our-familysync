@@ -99,6 +99,15 @@ export default function CheckInPage() {
   const [infoCheckIn, setInfoCheckIn] = useState(null);
   const [liveTracking, setLiveTracking] = useState(false);
   const watchIdRef = useRef(null);
+  const [locationPermission, setLocationPermission] = useState('unknown');
+
+  useEffect(() => {
+    if (!navigator.permissions) return;
+    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+      setLocationPermission(result.state);
+      result.onchange = () => setLocationPermission(result.state);
+    });
+  }, []);
 
   const { data: checkins = [], isLoading } = useQuery({
     queryKey: ['checkins', family?.id],
@@ -269,42 +278,41 @@ export default function CheckInPage() {
   });
 
   const getLocation = () => {
-    console.log('[CheckIn] getLocation: start');
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser.');
       return;
     }
     setGettingLocation(true);
-    const geoOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
-    console.log('[CheckIn] getCurrentPosition: invoking', geoOptions);
+    const finish = async (lat, lng) => {
+      const center = { lat, lng };
+      setCoords(center);
+      setUserGeo(center);
+      setOverrideMapView({ center, zoom: 14 });
+      try {
+        const name = await geocodeLatLng(lat, lng);
+        setLocationName(name);
+      } catch {
+        setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      } finally {
+        setGettingLocation(false);
+        setShowForm(true);
+      }
+    };
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        console.log('[CheckIn] getCurrentPosition: success', pos.coords);
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const center = { lat, lng };
-        setCoords(center);
-        setUserGeo(center);
-        setOverrideMapView({ center, zoom: 14 });
-        try {
-          const name = await geocodeLatLng(lat, lng);
-          setLocationName(name);
-        } catch {
-          setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-        } finally {
-          setGettingLocation(false);
-          setShowForm(true);
-        }
+      (pos) => {
+        setLocationPermission('granted');
+        finish(pos.coords.latitude, pos.coords.longitude);
       },
       (err) => {
-        console.log('[CheckIn] getCurrentPosition: error', err.code, err.message);
-        if (err.code === err.TIMEOUT) {
-          console.log('[CheckIn] getCurrentPosition: timeout (TIMEOUT)');
-        }
         setGettingLocation(false);
-        toast.error(`Location error ${err.code}: ${err.message}`);
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationPermission('denied');
+          toast.error('Location permission denied. Please enable it in your browser/phone settings.');
+        } else {
+          toast.error('Could not get your location. Please try again.');
+        }
       },
-      geoOptions
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
@@ -362,7 +370,7 @@ export default function CheckInPage() {
         ) : (
           <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs">
             <Navigation className="w-3 h-3 mr-1" />
-            {gettingLocation ? 'Getting location...' : 'Share My Location'}
+            {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
           </Button>
         )}
         {myCheckIn && (
@@ -498,7 +506,7 @@ export default function CheckInPage() {
                 className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
                 style={{ borderLeftWidth: '4px', borderLeftColor: color }}
               >
-                <MemberAvatar avatar={avatar} avatarUrl={member?.avatar_url} color={color} size="sm" name={displayName} />
+                <MemberAvatar avatar={avatar} color={color} size="sm" name={displayName} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{displayName}</p>
                   <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">
@@ -538,7 +546,7 @@ export default function CheckInPage() {
                       className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
                       style={{ borderLeftWidth: '4px', borderLeftColor: color }}
                     >
-                      <MemberAvatar avatar={avatar} avatarUrl={member?.avatar_url} color={color} size="sm" name={displayName} />
+                      <MemberAvatar avatar={avatar} color={color} size="sm" name={displayName} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{displayName}</p>
                         <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">

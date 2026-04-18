@@ -6,7 +6,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useFamily } from '@/lib/familyContext';
-import { toast } from 'sonner';
 
 export default function AddTaskSheet({ open, onClose, onSave }) {
   const { members, isAdmin } = useFamily();
@@ -21,10 +20,6 @@ export default function AddTaskSheet({ open, onClose, onSave }) {
 
   const handleSave = async () => {
     if (!form.title.trim()) return;
-    if (!form.due_date?.trim()) {
-      toast.error('Please select a due date.');
-      return;
-    }
     setSaving(true);
     await onSave({ ...form, assigned_to: form.assigned_to || undefined });
     setSaving(false);
@@ -55,7 +50,7 @@ export default function AddTaskSheet({ open, onClose, onSave }) {
             </Select>
           </div>
           <div>
-            <Label>Due Date <span className="text-destructive">*</span></Label>
+            <Label>Due Date</Label>
             <Input type="date" value={form.due_date} onChange={(e) => setForm({...form, due_date: e.target.value})} className="mt-1" />
           </div>
           {isAdmin && members.length > 1 && (
