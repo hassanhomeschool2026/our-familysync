@@ -101,7 +101,20 @@ export default function CheckInPage() {
   const watchIdRef = useRef(null);
   const [locationPermission, setLocationPermission] = useState('unknown');
 
+  const [debugHref, setDebugHref] = useState('');
+  const [debugStandalone, setDebugStandalone] = useState('');
+  const [debugPermissionInfo, setDebugPermissionInfo] = useState('(not read yet)');
+  const [debugGeoCallback, setDebugGeoCallback] = useState('none');
+  const [debugGeoErrorCode, setDebugGeoErrorCode] = useState('—');
+  const [debugGeoErrorMessage, setDebugGeoErrorMessage] = useState('—');
+
   useEffect(() => {
+    setDebugHref(window.location.href);
+    const ns = window.navigator.standalone === true;
+    const dm = window.matchMedia('(display-mode: standalone)').matches;
+    setDebugStandalone(
+      `navigator.standalone: ${String(window.navigator.standalone)} | display-mode standalone (matchMedia): ${dm} | effective PWA-ish: ${ns || dm}`
+    );
     console.log('[CheckIn][mount] window.location.href', window.location.href);
     console.log('[CheckIn][mount] window.location.origin', window.location.origin);
     console.log('[CheckIn][mount] window.location.pathname', window.location.pathname);
@@ -116,16 +129,20 @@ export default function CheckInPage() {
         .then((result) => {
           console.log('[CheckIn][mount] permissions.geolocation state', result.state, result);
           setLocationPermission(result.state);
+          setDebugPermissionInfo(`geolocation: ${result.state}`);
           result.onchange = () => {
             console.log('[CheckIn][mount] permissions.geolocation onchange', result.state);
             setLocationPermission(result.state);
+            setDebugPermissionInfo(`geolocation: ${result.state} (changed)`);
           };
         })
         .catch((e) => {
           console.log('[CheckIn][mount] permissions.geolocation query failed', e);
+          setDebugPermissionInfo(`query failed: ${e?.message || String(e)}`);
         });
     } else {
       console.log('[CheckIn][mount] navigator.permissions not available');
+      setDebugPermissionInfo('navigator.permissions not available');
     }
   }, []);
 
@@ -306,6 +323,9 @@ export default function CheckInPage() {
     }
     console.log('[CheckIn] getLocation: setGettingLocation(true)');
     setGettingLocation(true);
+    setDebugGeoCallback('pending');
+    setDebugGeoErrorCode('—');
+    setDebugGeoErrorMessage('—');
     const finish = async (lat, lng) => {
       const center = { lat, lng };
       setCoords(center);
@@ -326,6 +346,9 @@ export default function CheckInPage() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         console.log('[CheckIn] getCurrentPosition: success callback', pos.coords);
+        setDebugGeoCallback('success');
+        setDebugGeoErrorCode('—');
+        setDebugGeoErrorMessage('—');
         setLocationPermission('granted');
         finish(pos.coords.latitude, pos.coords.longitude);
       },
@@ -334,6 +357,9 @@ export default function CheckInPage() {
         if (err.code === err.TIMEOUT) {
           console.log('[CheckIn] getCurrentPosition: TIMEOUT (options.timeout may have elapsed)');
         }
+        setDebugGeoCallback('error');
+        setDebugGeoErrorCode(String(err.code));
+        setDebugGeoErrorMessage(err.message || '(no message)');
         setGettingLocation(false);
         if (err.code === err.PERMISSION_DENIED) {
           setLocationPermission('denied');
@@ -402,6 +428,7 @@ export default function CheckInPage() {
             size="sm"
             onClick={() => {
               console.log('[CheckIn] Share My Location button onClick fired');
+              setDebugHref(window.location.href);
               getLocation();
             }}
             disabled={gettingLocation}
@@ -604,6 +631,19 @@ export default function CheckInPage() {
             </div>
           ))
         )}
+      </div>
+
+      <div
+        className="mt-6 rounded-xl border border-amber-500/50 bg-amber-500/10 p-3 text-[10px] font-mono text-foreground break-all space-y-1"
+        aria-label="Geolocation debug"
+      >
+        <p className="font-sans text-xs font-semibold text-amber-800 dark:text-amber-200">Geolocation debug (on-screen)</p>
+        <p><span className="text-muted-foreground">location.href:</span> {debugHref || '—'}</p>
+        <p><span className="text-muted-foreground">standalone:</span> {debugStandalone || '—'}</p>
+        <p><span className="text-muted-foreground">permissions (geolocation):</span> {debugPermissionInfo}</p>
+        <p><span className="text-muted-foreground">getCurrentPosition last callback:</span> {debugGeoCallback}</p>
+        <p><span className="text-muted-foreground">last geo error code:</span> {debugGeoErrorCode}</p>
+        <p><span className="text-muted-foreground">last geo error message:</span> {debugGeoErrorMessage}</p>
       </div>
     </div>
   );
