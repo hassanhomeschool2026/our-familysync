@@ -269,13 +269,17 @@ export default function CheckInPage() {
   });
 
   const getLocation = () => {
+    console.log('[CheckIn] getLocation: start');
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser.');
       return;
     }
     setGettingLocation(true);
+    const geoOptions = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+    console.log('[CheckIn] getCurrentPosition: invoking', geoOptions);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        console.log('[CheckIn] getCurrentPosition: success', pos.coords);
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         const center = { lat, lng };
@@ -293,10 +297,14 @@ export default function CheckInPage() {
         }
       },
       (err) => {
+        console.log('[CheckIn] getCurrentPosition: error', err.code, err.message);
+        if (err.code === err.TIMEOUT) {
+          console.log('[CheckIn] getCurrentPosition: timeout (TIMEOUT)');
+        }
         setGettingLocation(false);
-        toast.error('Could not get your location. Please make sure location is enabled for this app in your phone settings.');
+        toast.error(`Location error ${err.code}: ${err.message}`);
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      geoOptions
     );
   };
 
