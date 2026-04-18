@@ -101,23 +101,7 @@ export default function CheckInPage() {
   const watchIdRef = useRef(null);
   const [locationPermission, setLocationPermission] = useState('unknown');
   const [showLocationExplainer, setShowLocationExplainer] = useState(false);
-
-  useEffect(() => {
-    if (!navigator.permissions) return;
-    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-      setLocationPermission(result.state);
-      result.onchange = () => setLocationPermission(result.state);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!navigator.permissions) return;
-    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-      if (result.state === 'prompt') {
-        setShowLocationExplainer(true);
-      }
-    });
-  }, []);
+  const [showLocationDeniedModal, setShowLocationDeniedModal] = useState(false);
 
   const { data: checkins = [], isLoading } = useQuery({
     queryKey: ['checkins', family?.id],
@@ -287,6 +271,43 @@ export default function CheckInPage() {
     },
   });
 
+  const probeGeolocation = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        setLocationPermission('granted');
+        setShowLocationExplainer(false);
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationPermission('denied');
+        }
+        // For other errors (timeout, unavailable), leave as 'unknown' — don't block UI
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+    );
+  };
+
+  useEffect(() => {
+    // Check permission state via Permissions API where supported
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        setLocationPermission(result.state);
+        result.onchange = () => setLocationPermission(result.state);
+        // If already granted, show explainer is not needed
+        if (result.state === 'granted') setShowLocationExplainer(false);
+        // If prompt state, show explainer to prime the user before the OS dialog fires
+        if (result.state === 'prompt') setShowLocationExplainer(true);
+      }).catch(() => {
+        // Permissions API not supported (e.g. some iOS versions) — silently probe
+        probeGeolocation();
+      });
+    } else {
+      // Permissions API not available — probe directly
+      probeGeolocation();
+    }
+  }, []);
+
   const getLocation = () => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser.');
@@ -317,7 +338,7 @@ export default function CheckInPage() {
         setGettingLocation(false);
         if (err.code === err.PERMISSION_DENIED) {
           setLocationPermission('denied');
-          toast.error('Location permission denied. Please enable it in your browser/phone settings.');
+          setShowLocationDeniedModal(true);
         } else {
           toast.error('Could not get your location. Please try again.');
         }
@@ -380,7 +401,7 @@ export default function CheckInPage() {
         ) : (
           <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs">
             <Navigation className="w-3 h-3 mr-1" />
-            {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
+            {gettingLocation ? 'Getting location...' : 'Share My Location'}
           </Button>
         )}
         {myCheckIn && (
@@ -611,6 +632,47 @@ export default function CheckInPage() {
               className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
             >
               Maybe later
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showLocationDeniedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <div className="w-14 h-14 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto">
+              <Navigation className="w-7 h-7 text-destructive" />
+            </div>
+            <div className="text-center">
+              <h3 className="font-heading font-bold text-lg mb-1">Location Blocked</h3>
+              <p className="text-sm text-muted-foreground">To use check-in and live tracking, enable location access for this app:</p>
+            </div>
+            <div className="bg-secondary rounded-xl p-3 space-y-3">
+              <div>
+                <p className="text-xs font-semibold text-foreground mb-1">📱 iPhone (iOS):</p>
+                <p className="text-xs text-muted-foreground">Settings → Privacy & Security → Location Services → Chrome → select <span className="font-semibold text-foreground">While Using the App</span></p>
+              </div>
+              <div className="border-t border-border pt-3">
+                <p className="text-xs font-semibold text-foreground mb-1">🤖 Android:</p>
+                <p className="text-xs text-muted-foreground">Settings → Apps → Chrome → Permissions → Location → select <span className="font-semibold text-foreground">Allow only while using the app</span></p>
+              </div>
+            </div>
+            <Button
+              className="w-full rounded-xl"
+              onClick={() => {
+                setShowLocationDeniedModal(false);
+                // Retry — if they just changed settings, this will now succeed
+                getLocation();
+              }}
+            >
+              I've updated settings, try again
+            </Button>
+            <button
+              type="button"
+              onClick={() => setShowLocationDeniedModal(false)}
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+            >
+              Dismiss
             </button>
           </div>
         </div>
