@@ -107,6 +107,10 @@ export default function CheckInPage() {
   const [debugGeoCallback, setDebugGeoCallback] = useState('none');
   const [debugGeoErrorCode, setDebugGeoErrorCode] = useState('—');
   const [debugGeoErrorMessage, setDebugGeoErrorMessage] = useState('—');
+  const [showIosGeoResetModal, setShowIosGeoResetModal] = useState(false);
+
+  const IOS_GEO_RESET_MESSAGE =
+    "To fix this, you need to reset location for this app:\n\niPhone: \n1. Press and hold the FamilySync icon on your home screen\n2. Tap 'Edit Home Screen' \n3. Delete FamilySync\n4. Open Chrome, go to app.familysync.zencora.org\n5. When prompted, tap Allow for location\n6. Reinstall: tap Share icon → Add to Home Screen";
 
   useEffect(() => {
     setDebugHref(window.location.href);
@@ -362,8 +366,13 @@ export default function CheckInPage() {
         setDebugGeoErrorMessage(err.message || '(no message)');
         setGettingLocation(false);
         if (err.code === err.PERMISSION_DENIED) {
-          setLocationPermission('denied');
-          toast.error('Location permission denied. Please enable it in your browser/phone settings.');
+          const permissionsSaysGranted = locationPermission === 'granted';
+          if (permissionsSaysGranted) {
+            setShowIosGeoResetModal(true);
+          } else {
+            setLocationPermission('denied');
+            toast.error('Location permission denied. Please enable it in your browser/phone settings.');
+          }
         } else {
           toast.error('Could not get your location. Please try again.');
         }
@@ -645,6 +654,29 @@ export default function CheckInPage() {
         <p><span className="text-muted-foreground">last geo error code:</span> {debugGeoErrorCode}</p>
         <p><span className="text-muted-foreground">last geo error message:</span> {debugGeoErrorMessage}</p>
       </div>
+
+      {showIosGeoResetModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ios-geo-reset-title"
+        >
+          <div className="bg-card border border-border rounded-xl shadow-lg max-w-md w-full p-5 space-y-4">
+            <h3 id="ios-geo-reset-title" className="font-heading text-lg font-bold">
+              Reset Location Permission
+            </h3>
+            <p className="text-sm text-foreground whitespace-pre-line">{IOS_GEO_RESET_MESSAGE}</p>
+            <Button
+              type="button"
+              onClick={() => setShowIosGeoResetModal(false)}
+              className="w-full rounded-xl"
+            >
+              Got it
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
