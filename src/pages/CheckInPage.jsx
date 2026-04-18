@@ -271,28 +271,41 @@ export default function CheckInPage() {
     },
   });
 
-  const isInstalledPWA = window.matchMedia('(display-mode: standalone)').matches
-    || window.navigator.standalone === true;
+  const probeGeolocation = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        setLocationPermission('granted');
+        setShowLocationExplainer(false);
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationPermission('denied');
+        }
+        // For other errors (timeout, unavailable), leave as 'unknown' — don't block UI
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
+    );
+  };
 
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocationPermission('denied');
-      return;
+    // Check permission state via Permissions API where supported
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        setLocationPermission(result.state);
+        result.onchange = () => setLocationPermission(result.state);
+        // If already granted, show explainer is not needed
+        if (result.state === 'granted') setShowLocationExplainer(false);
+        // If prompt state, show explainer to prime the user before the OS dialog fires
+        if (result.state === 'prompt') setShowLocationExplainer(true);
+      }).catch(() => {
+        // Permissions API not supported (e.g. some iOS versions) — silently probe
+        probeGeolocation();
+      });
+    } else {
+      // Permissions API not available — probe directly
+      probeGeolocation();
     }
-
-    if (isInstalledPWA) {
-      // Same as HomePage: do not call getCurrentPosition from useEffect on iOS PWA —
-      // it is not a user gesture and can deny or fail without ever showing the OS dialog.
-      setLocationPermission('unknown');
-      return;
-    }
-
-    if (!navigator.permissions) return;
-    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-      setLocationPermission(result.state);
-      result.onchange = () => setLocationPermission(result.state);
-      if (result.state === 'prompt') setShowLocationExplainer(true);
-    });
   }, []);
 
   const getLocation = () => {

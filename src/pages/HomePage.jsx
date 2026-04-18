@@ -144,36 +144,33 @@ export default function HomePage() {
   const [requestingLocation, setRequestingLocation] = useState(false);
   const [locationBannerDismissed, setLocationBannerDismissed] = useState(false);
 
-  // Detect if running as installed PWA
-  const isInstalledPWA = window.matchMedia('(display-mode: standalone)').matches
-    || window.navigator.standalone === true;
-
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setLocationPermission('denied');
-      return;
-    }
-
-    if (isInstalledPWA) {
-      // iOS WebKit (incl. Chrome A2HS) often will not show the location system sheet
-      // unless getCurrentPosition runs from a user gesture. A mount-time probe can
-      // return PERMISSION_DENIED or fail silently and leave users stuck. Keep unknown
-      // so the banner / "Tap to enable" (gesture) can trigger the real prompt.
-      setLocationPermission('unknown');
-      return;
-    }
-
-    // Browser tab — use Permissions API as normal
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-        setLocationPermission(result.state);
-        result.onchange = () => setLocationPermission(result.state);
-      }).catch(() => {
-        setLocationPermission('unknown');
-      });
-    } else {
-      setLocationPermission('unknown');
-    }
+    const checkPermission = async () => {
+      if (!navigator.geolocation) {
+        setLocationPermission('denied');
+        return;
+      }
+      if (navigator.permissions) {
+        try {
+          const result = await navigator.permissions.query({ name: 'geolocation' });
+          setLocationPermission(result.state);
+          result.onchange = () => setLocationPermission(result.state);
+          return;
+        } catch {
+          // Permissions API not supported — fall through to probe
+        }
+      }
+      // Permissions API unavailable (some iOS versions) — do a silent probe
+      navigator.geolocation.getCurrentPosition(
+        () => setLocationPermission('granted'),
+        (err) => {
+          if (err.code === err.PERMISSION_DENIED) setLocationPermission('denied');
+          // timeout/unavailable = leave as 'unknown', don't block UI
+        },
+        { enableHighAccuracy: false, timeout: 4000, maximumAge: 60000 }
+      );
+    };
+    checkPermission();
   }, []);
 
   useEffect(() => {
@@ -318,9 +315,6 @@ export default function HomePage() {
         setRequestingLocation(false);
         if (err.code === err.PERMISSION_DENIED) {
           setLocationPermission('denied');
-        } else {
-          // Not denied, just unavailable — don't punish the user
-          setLocationPermission('unknown');
         }
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
