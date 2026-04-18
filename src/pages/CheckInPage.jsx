@@ -281,17 +281,9 @@ export default function CheckInPage() {
     }
 
     if (isInstalledPWA) {
-      // Skip Permissions API on installed PWA — do a live probe instead
-      navigator.geolocation.getCurrentPosition(
-        () => setLocationPermission('granted'),
-        (err) => {
-          if (err.code === err.PERMISSION_DENIED) {
-            setLocationPermission('denied');
-            setShowLocationDeniedModal(true);
-          }
-        },
-        { enableHighAccuracy: false, timeout: 8000, maximumAge: 30000 }
-      );
+      // Same as HomePage: do not call getCurrentPosition from useEffect on iOS PWA —
+      // it is not a user gesture and can deny or fail without ever showing the OS dialog.
+      setLocationPermission('unknown');
       return;
     }
 

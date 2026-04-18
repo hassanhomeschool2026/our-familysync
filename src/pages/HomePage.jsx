@@ -155,24 +155,11 @@ export default function HomePage() {
     }
 
     if (isInstalledPWA) {
-      // On installed PWA, Permissions API is unreliable on iOS.
-      // Always do a live probe to verify location actually works.
+      // iOS WebKit (incl. Chrome A2HS) often will not show the location system sheet
+      // unless getCurrentPosition runs from a user gesture. A mount-time probe can
+      // return PERMISSION_DENIED or fail silently and leave users stuck. Keep unknown
+      // so the banner / "Tap to enable" (gesture) can trigger the real prompt.
       setLocationPermission('unknown');
-      navigator.geolocation.getCurrentPosition(
-        () => {
-          setLocationPermission('granted');
-        },
-        (err) => {
-          if (err.code === err.PERMISSION_DENIED) {
-            setLocationPermission('denied');
-          } else {
-            // TIMEOUT or POSITION_UNAVAILABLE — location may still work,
-            // don't block the user, just hide the banner
-            setLocationPermission('granted');
-          }
-        },
-        { enableHighAccuracy: false, timeout: 8000, maximumAge: 30000 }
-      );
       return;
     }
 
@@ -190,6 +177,12 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    const isInstalledPWA = window.matchMedia('(display-mode: standalone)').matches
+      || window.navigator.standalone === true;
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+    if (isInstalledPWA && isIOS && locationPermission !== 'granted') return;
+
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -208,7 +201,7 @@ export default function HomePage() {
       () => {},
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
     );
-  }, []);
+  }, [locationPermission]);
 
   const { data: events = [] } = useQuery({
     queryKey: ['events-home', family?.id],
