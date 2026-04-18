@@ -337,11 +337,16 @@ export default function HomePage() {
             </p>
           </div>
           {weather && (
-            <div className="bg-white/15 backdrop-blur-sm rounded-xl px-3 py-2 text-right ml-3 flex-shrink-0">
+            <a
+              href={`https://weather.com/weather/today/l/${encodeURIComponent(cityName || 'my+location')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-white/15 backdrop-blur-sm rounded-xl px-3 py-2 text-right ml-3 flex-shrink-0 block hover:bg-white/25 transition-colors cursor-pointer"
+            >
               <div className={`text-lg font-bold ${theme.textColor}`}>{Math.round(weather.temperature)}°F</div>
               <div className={`text-[10px] ${theme.subColor}`}>{getWeatherDesc(weather.weathercode)}</div>
               {cityName && <div className={`text-[10px] ${theme.subColor}`}>{cityName}</div>}
-            </div>
+            </a>
           )}
         </div>
       </div>

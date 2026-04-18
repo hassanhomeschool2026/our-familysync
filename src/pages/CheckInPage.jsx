@@ -649,11 +649,11 @@ export default function CheckInPage() {
             </div>
             <div className="bg-secondary rounded-xl p-3 space-y-3">
               <div>
-                <p className="text-xs font-semibold text-foreground mb-1">📱 iPhone (iOS):</p>
+                <p className="text-xs font-semibold text-foreground mb-1">iPhone (iOS):</p>
                 <p className="text-xs text-muted-foreground">Settings → Privacy & Security → Location Services → Chrome → select <span className="font-semibold text-foreground">While Using the App</span></p>
               </div>
               <div className="border-t border-border pt-3">
-                <p className="text-xs font-semibold text-foreground mb-1">🤖 Android:</p>
+                <p className="text-xs font-semibold text-foreground mb-1">Android:</p>
                 <p className="text-xs text-muted-foreground">Settings → Apps → Chrome → Permissions → Location → select <span className="font-semibold text-foreground">Allow only while using the app</span></p>
               </div>
             </div>
@@ -661,8 +661,8 @@ export default function CheckInPage() {
               className="w-full rounded-xl"
               onClick={() => {
                 setShowLocationDeniedModal(false);
-                // Retry — if they just changed settings, this will now succeed
-                getLocation();
+                setLocationPermission('unknown');
+                setTimeout(() => getLocation(), 300);
               }}
             >
               I've updated settings, try again
