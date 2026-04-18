@@ -34,7 +34,7 @@ const getTimeDisplay = (dateString) => {
 };
 
 export default function FeedPage() {
-  const { family, isPremium, getMemberColor } = useFamily();
+  const { family, members, isPremium, getMemberColor } = useFamily();
 
   const { data: feedItems = [], isLoading } = useQuery({
     queryKey: ['feed', family?.id, isPremium],
@@ -80,8 +80,10 @@ export default function FeedPage() {
                 <div className="relative">
                   <MemberAvatar
                     avatar={item.user_avatar}
+                    avatarUrl={members.find(m => m.id === item.user_id)?.avatar_url}
                     color={getMemberColor(item.user_id)}
                     size="sm"
+                    name={item.user_name}
                   />
                   <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center ${colorClasses}`}>
                     <Icon className="w-2.5 h-2.5" />

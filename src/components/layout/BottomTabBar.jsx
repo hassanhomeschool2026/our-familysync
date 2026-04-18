@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Calendar, ListChecks, MapPin, Activity, User, CheckSquare, Shield } from 'lucide-react';
+import { Home, Calendar, ListChecks, MapPin, Activity, User, CheckSquare, Shield } from 'lucide-react';
 
 const tabs = [
-  { path: '/', icon: Calendar, label: 'Calendar' },
+  { path: '/home', icon: Home, label: 'Home' },
+  { path: '/calendar', icon: Calendar, label: 'Calendar' },
   { path: '/todo', icon: ListChecks, label: 'To-Do' },
   { path: '/chores', icon: CheckSquare, label: 'Chores' },
   { path: '/checkin', icon: MapPin, label: 'Check-In' },
@@ -19,9 +20,9 @@ export default function BottomTabBar() {
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50 safe-area-bottom">
       <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
         {tabs.map((tab) => {
-          const isActive = tab.path === '/'
-            ? location.pathname === '/'
-            : location.pathname.startsWith(tab.path);
+          const isActive = tab.path === '/home'
+            ? location.pathname === '/home' || location.pathname === '/'
+            : location.pathname === tab.path || location.pathname.startsWith(`${tab.path}/`);
           const Icon = tab.icon;
           return (
             <Link

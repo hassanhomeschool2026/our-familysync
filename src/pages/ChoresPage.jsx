@@ -417,6 +417,7 @@ export default function ChoresPage() {
               >
                 <MemberAvatar
                   avatar={h.member.avatar}
+                  avatarUrl={h.member.avatar_url}
                   color={getMemberColor(h.member.id)}
                   name={memberDisplayName(h.member)}
                 />
@@ -473,6 +474,7 @@ export default function ChoresPage() {
                           <MemberAvatar
                             size="sm"
                             avatar={assignee.avatar}
+                            avatarUrl={assignee.avatar_url}
                             color={getMemberColor(assignee.id)}
                             name={memberDisplayName(assignee)}
                           />

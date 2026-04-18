@@ -100,12 +100,22 @@ export default function CheckInPage() {
   const [liveTracking, setLiveTracking] = useState(false);
   const watchIdRef = useRef(null);
   const [locationPermission, setLocationPermission] = useState('unknown');
+  const [showLocationExplainer, setShowLocationExplainer] = useState(false);
 
   useEffect(() => {
     if (!navigator.permissions) return;
     navigator.permissions.query({ name: 'geolocation' }).then((result) => {
       setLocationPermission(result.state);
       result.onchange = () => setLocationPermission(result.state);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!navigator.permissions) return;
+    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+      if (result.state === 'prompt') {
+        setShowLocationExplainer(true);
+      }
     });
   }, []);
 
@@ -506,7 +516,7 @@ export default function CheckInPage() {
                 className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
                 style={{ borderLeftWidth: '4px', borderLeftColor: color }}
               >
-                <MemberAvatar avatar={avatar} color={color} size="sm" name={displayName} />
+                <MemberAvatar avatar={avatar} avatarUrl={member?.avatar_url} color={color} size="sm" name={displayName} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{displayName}</p>
                   <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">
@@ -546,7 +556,7 @@ export default function CheckInPage() {
                       className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
                       style={{ borderLeftWidth: '4px', borderLeftColor: color }}
                     >
-                      <MemberAvatar avatar={avatar} color={color} size="sm" name={displayName} />
+                      <MemberAvatar avatar={avatar} avatarUrl={member?.avatar_url} color={color} size="sm" name={displayName} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{displayName}</p>
                         <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">
@@ -567,6 +577,44 @@ export default function CheckInPage() {
           ))
         )}
       </div>
+
+      {showLocationExplainer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
+            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
+              <Navigation className="w-7 h-7 text-primary" />
+            </div>
+            <div className="text-center">
+              <h3 className="font-heading font-bold text-lg mb-1">Location Access</h3>
+              <p className="text-sm text-muted-foreground">
+                FamilySync uses your location for check-ins, live tracking, and family safety zones. When your browser asks, please tap <span className="font-semibold text-foreground">Allow</span> to get the full experience.
+              </p>
+            </div>
+            <div className="bg-secondary rounded-xl p-3 space-y-1.5">
+              <p className="text-xs font-semibold text-foreground">Why we need it:</p>
+              <p className="text-xs text-muted-foreground">📍 Share your location with family</p>
+              <p className="text-xs text-muted-foreground">🛡️ Get alerts when entering/leaving zones</p>
+              <p className="text-xs text-muted-foreground">📡 Live tracking while app is open</p>
+            </div>
+            <Button
+              className="w-full rounded-xl"
+              onClick={() => {
+                setShowLocationExplainer(false);
+                getLocation();
+              }}
+            >
+              Got it, Enable Location
+            </Button>
+            <button
+              type="button"
+              onClick={() => setShowLocationExplainer(false)}
+              className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
