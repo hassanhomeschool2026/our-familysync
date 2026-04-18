@@ -99,9 +99,6 @@ export default function CheckInPage() {
   const [infoCheckIn, setInfoCheckIn] = useState(null);
   const [liveTracking, setLiveTracking] = useState(false);
   const watchIdRef = useRef(null);
-  const [locationPermission, setLocationPermission] = useState('unknown');
-  const [showLocationExplainer, setShowLocationExplainer] = useState(false);
-  const [showLocationDeniedModal, setShowLocationDeniedModal] = useState(false);
 
   const { data: checkins = [], isLoading } = useQuery({
     queryKey: ['checkins', family?.id],
@@ -271,77 +268,33 @@ export default function CheckInPage() {
     },
   });
 
-  const probeGeolocation = () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      () => {
-        setLocationPermission('granted');
-        setShowLocationExplainer(false);
-      },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) {
-          setLocationPermission('denied');
-        }
-        // For other errors (timeout, unavailable), leave as 'unknown' — don't block UI
-      },
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
-    );
-  };
-
-  useEffect(() => {
-    // Check permission state via Permissions API where supported
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-        setLocationPermission(result.state);
-        result.onchange = () => setLocationPermission(result.state);
-        // If already granted, show explainer is not needed
-        if (result.state === 'granted') setShowLocationExplainer(false);
-        // If prompt state, show explainer to prime the user before the OS dialog fires
-        if (result.state === 'prompt') setShowLocationExplainer(true);
-      }).catch(() => {
-        // Permissions API not supported (e.g. some iOS versions) — silently probe
-        probeGeolocation();
-      });
-    } else {
-      // Permissions API not available — probe directly
-      probeGeolocation();
-    }
-  }, []);
-
   const getLocation = () => {
     if (!navigator.geolocation) {
       toast.error('Geolocation is not supported by your browser.');
       return;
     }
     setGettingLocation(true);
-    const finish = async (lat, lng) => {
-      const center = { lat, lng };
-      setCoords(center);
-      setUserGeo(center);
-      setOverrideMapView({ center, zoom: 14 });
-      try {
-        const name = await geocodeLatLng(lat, lng);
-        setLocationName(name);
-      } catch {
-        setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
-      } finally {
-        setGettingLocation(false);
-        setShowForm(true);
-      }
-    };
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocationPermission('granted');
-        finish(pos.coords.latitude, pos.coords.longitude);
+      async (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const center = { lat, lng };
+        setCoords(center);
+        setUserGeo(center);
+        setOverrideMapView({ center, zoom: 14 });
+        try {
+          const name = await geocodeLatLng(lat, lng);
+          setLocationName(name);
+        } catch {
+          setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        } finally {
+          setGettingLocation(false);
+          setShowForm(true);
+        }
       },
       (err) => {
         setGettingLocation(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          setLocationPermission('denied');
-          setShowLocationDeniedModal(true);
-        } else {
-          toast.error('Could not get your location. Please try again.');
-        }
+        toast.error('Could not get your location. Please make sure location is enabled for this app in your phone settings.');
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
@@ -598,85 +551,6 @@ export default function CheckInPage() {
           ))
         )}
       </div>
-
-      {showLocationExplainer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
-            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto">
-              <Navigation className="w-7 h-7 text-primary" />
-            </div>
-            <div className="text-center">
-              <h3 className="font-heading font-bold text-lg mb-1">Location Access</h3>
-              <p className="text-sm text-muted-foreground">
-                FamilySync uses your location for check-ins, live tracking, and family safety zones. When your browser asks, please tap <span className="font-semibold text-foreground">Allow</span> to get the full experience.
-              </p>
-            </div>
-            <div className="bg-secondary rounded-xl p-3 space-y-1.5">
-              <p className="text-xs font-semibold text-foreground">Why we need it:</p>
-              <p className="text-xs text-muted-foreground">📍 Share your location with family</p>
-              <p className="text-xs text-muted-foreground">🛡️ Get alerts when entering/leaving zones</p>
-              <p className="text-xs text-muted-foreground">📡 Live tracking while app is open</p>
-            </div>
-            <Button
-              className="w-full rounded-xl"
-              onClick={() => {
-                setShowLocationExplainer(false);
-                getLocation();
-              }}
-            >
-              Got it, Enable Location
-            </Button>
-            <button
-              type="button"
-              onClick={() => setShowLocationExplainer(false)}
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
-            >
-              Maybe later
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showLocationDeniedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
-            <div className="w-14 h-14 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto">
-              <Navigation className="w-7 h-7 text-destructive" />
-            </div>
-            <div className="text-center">
-              <h3 className="font-heading font-bold text-lg mb-1">Location Blocked</h3>
-              <p className="text-sm text-muted-foreground">To use check-in and live tracking, enable location access for this app:</p>
-            </div>
-            <div className="bg-secondary rounded-xl p-3 space-y-3">
-              <div>
-                <p className="text-xs font-semibold text-foreground mb-1">iPhone (iOS):</p>
-                <p className="text-xs text-muted-foreground">Settings → Privacy & Security → Location Services → Chrome → select <span className="font-semibold text-foreground">While Using the App</span></p>
-              </div>
-              <div className="border-t border-border pt-3">
-                <p className="text-xs font-semibold text-foreground mb-1">Android:</p>
-                <p className="text-xs text-muted-foreground">Settings → Apps → Chrome → Permissions → Location → select <span className="font-semibold text-foreground">Allow only while using the app</span></p>
-              </div>
-            </div>
-            <Button
-              className="w-full rounded-xl"
-              onClick={() => {
-                setShowLocationDeniedModal(false);
-                setLocationPermission('unknown');
-                setTimeout(() => getLocation(), 300);
-              }}
-            >
-              I've updated settings, try again
-            </Button>
-            <button
-              type="button"
-              onClick={() => setShowLocationDeniedModal(false)}
-              className="w-full text-center text-sm text-muted-foreground hover:text-foreground"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

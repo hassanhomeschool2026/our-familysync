@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
 import MemberAvatar from '@/components/shared/MemberAvatar';
-import { MapPin, Calendar, CheckSquare, Megaphone, Zap, ChevronRight, Navigation, X } from 'lucide-react';
+import { MapPin, Calendar, CheckSquare, Megaphone, Zap, ChevronRight } from 'lucide-react';
 import { format, isToday } from 'date-fns';
 
 function getGreeting() {
@@ -140,46 +140,8 @@ export default function HomePage() {
   const { currentUser, family, members, isAdmin, getMemberColor } = useFamily();
   const [weather, setWeather] = useState(null);
   const [cityName, setCityName] = useState('');
-  const [locationPermission, setLocationPermission] = useState('unknown');
-  const [requestingLocation, setRequestingLocation] = useState(false);
-  const [locationBannerDismissed, setLocationBannerDismissed] = useState(false);
 
   useEffect(() => {
-    const checkPermission = async () => {
-      if (!navigator.geolocation) {
-        setLocationPermission('denied');
-        return;
-      }
-      if (navigator.permissions) {
-        try {
-          const result = await navigator.permissions.query({ name: 'geolocation' });
-          setLocationPermission(result.state);
-          result.onchange = () => setLocationPermission(result.state);
-          return;
-        } catch {
-          // Permissions API not supported — fall through to probe
-        }
-      }
-      // Permissions API unavailable (some iOS versions) — do a silent probe
-      navigator.geolocation.getCurrentPosition(
-        () => setLocationPermission('granted'),
-        (err) => {
-          if (err.code === err.PERMISSION_DENIED) setLocationPermission('denied');
-          // timeout/unavailable = leave as 'unknown', don't block UI
-        },
-        { enableHighAccuracy: false, timeout: 4000, maximumAge: 60000 }
-      );
-    };
-    checkPermission();
-  }, []);
-
-  useEffect(() => {
-    const isInstalledPWA = window.matchMedia('(display-mode: standalone)').matches
-      || window.navigator.standalone === true;
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-
-    if (isInstalledPWA && isIOS && locationPermission !== 'granted') return;
-
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
@@ -198,7 +160,7 @@ export default function HomePage() {
       () => {},
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
     );
-  }, [locationPermission]);
+  }, []);
 
   const { data: events = [] } = useQuery({
     queryKey: ['events-home', family?.id],
@@ -303,24 +265,6 @@ export default function HomePage() {
     low: 'bg-green-100 text-green-700',
   };
 
-  const handleEnableLocation = () => {
-    if (!navigator.geolocation) return;
-    setRequestingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      () => {
-        setLocationPermission('granted');
-        setRequestingLocation(false);
-      },
-      (err) => {
-        setRequestingLocation(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          setLocationPermission('denied');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
-  };
-
   return (
     <div className="space-y-4 pb-4">
       {/* Header */}
@@ -356,51 +300,6 @@ export default function HomePage() {
           )}
         </div>
       </div>
-
-      {locationPermission !== 'granted' && !locationBannerDismissed && (
-        <div className={`rounded-2xl p-4 mb-4 border flex items-start gap-3 ${
-          locationPermission === 'denied'
-            ? 'bg-destructive/10 border-destructive/30'
-            : 'bg-primary/10 border-primary/30'
-        }`}>
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
-            locationPermission === 'denied' ? 'bg-destructive/20' : 'bg-primary/20'
-          }`}>
-            <Navigation className={`w-4 h-4 ${locationPermission === 'denied' ? 'text-destructive' : 'text-primary'}`} />
-          </div>
-          <div className="flex-1 min-w-0">
-            {locationPermission === 'denied' ? (
-              <>
-                <p className="text-sm font-semibold text-foreground">Location access is blocked</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                  To use check-ins and zones, go to your phone Settings → Privacy → Location Services → Chrome → <span className="font-semibold text-foreground">While Using the App</span>, then reopen FamilySync.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-semibold text-foreground">Enable location for full access</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Required for check-ins, live tracking, and safety zones.</p>
-                <button
-                  type="button"
-                  onClick={handleEnableLocation}
-                  disabled={requestingLocation}
-                  className="mt-2 text-xs font-semibold text-primary underline underline-offset-2 disabled:opacity-50"
-                >
-                  {requestingLocation ? 'Requesting...' : 'Tap here to enable location →'}
-                </button>
-              </>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setLocationBannerDismissed(true)}
-            className="shrink-0 text-muted-foreground hover:text-foreground mt-0.5"
-            aria-label="Dismiss"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* Family Check-ins */}
       <div className="bg-card border border-border rounded-xl p-4">

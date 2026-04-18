@@ -2,6 +2,7 @@ import React from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2 } from 'lucide-react';
 import { useFamily } from '@/lib/familyContext';
+import MemberAvatar from '@/components/shared/MemberAvatar';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 
@@ -12,8 +13,10 @@ const priorityStyles = {
 };
 
 export default function TaskItem({ task, onToggle, onDelete }) {
-  const { getMemberName, getMemberAvatar, getMemberColor, isAdmin, currentUser } = useFamily();
+  const { members, getMemberColor, isAdmin, currentUser } = useFamily();
   const canDelete = isAdmin || task.created_by === currentUser?.id;
+  const assignee = task.assigned_to ? members.find((m) => m.id === task.assigned_to) : null;
+  const assigneeName = assignee ? assignee.display_name || assignee.full_name || 'Member' : '';
 
   return (
     <motion.div
@@ -46,11 +49,18 @@ export default function TaskItem({ task, onToggle, onDelete }) {
             </span>
           )}
           {task.assigned_to && (
-            <span
-              className="text-sm"
-              title={getMemberName(task.assigned_to)}
-            >
-              {getMemberAvatar(task.assigned_to)}
+            <span className="text-sm flex items-center" title={assigneeName || 'Assigned'}>
+              {assignee ? (
+                <MemberAvatar
+                  avatar={assignee.avatar}
+                  avatarUrl={assignee.avatar_url}
+                  color={getMemberColor(task.assigned_to)}
+                  size="sm"
+                  name={assigneeName}
+                />
+              ) : (
+                <span className="text-muted-foreground">?</span>
+              )}
             </span>
           )}
         </div>
