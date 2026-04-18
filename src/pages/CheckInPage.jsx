@@ -102,11 +102,31 @@ export default function CheckInPage() {
   const [locationPermission, setLocationPermission] = useState('unknown');
 
   useEffect(() => {
-    if (!navigator.permissions) return;
-    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-      setLocationPermission(result.state);
-      result.onchange = () => setLocationPermission(result.state);
-    });
+    console.log('[CheckIn][mount] window.location.href', window.location.href);
+    console.log('[CheckIn][mount] window.location.origin', window.location.origin);
+    console.log('[CheckIn][mount] window.location.pathname', window.location.pathname);
+    console.log('[CheckIn][mount] window.navigator.standalone', window.navigator.standalone);
+    console.log(
+      '[CheckIn][mount] matchMedia(display-mode: standalone)',
+      window.matchMedia('(display-mode: standalone)').matches
+    );
+    if (navigator.permissions) {
+      navigator.permissions
+        .query({ name: 'geolocation' })
+        .then((result) => {
+          console.log('[CheckIn][mount] permissions.geolocation state', result.state, result);
+          setLocationPermission(result.state);
+          result.onchange = () => {
+            console.log('[CheckIn][mount] permissions.geolocation onchange', result.state);
+            setLocationPermission(result.state);
+          };
+        })
+        .catch((e) => {
+          console.log('[CheckIn][mount] permissions.geolocation query failed', e);
+        });
+    } else {
+      console.log('[CheckIn][mount] navigator.permissions not available');
+    }
   }, []);
 
   const { data: checkins = [], isLoading } = useQuery({
@@ -278,10 +298,13 @@ export default function CheckInPage() {
   });
 
   const getLocation = () => {
+    console.log('[CheckIn] getLocation: called');
     if (!navigator.geolocation) {
+      console.log('[CheckIn] getLocation: navigator.geolocation missing');
       toast.error('Geolocation is not supported by your browser.');
       return;
     }
+    console.log('[CheckIn] getLocation: setGettingLocation(true)');
     setGettingLocation(true);
     const finish = async (lat, lng) => {
       const center = { lat, lng };
@@ -298,12 +321,19 @@ export default function CheckInPage() {
         setShowForm(true);
       }
     };
+    const geoOpts = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+    console.log('[CheckIn] getCurrentPosition: invoking', geoOpts);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        console.log('[CheckIn] getCurrentPosition: success callback', pos.coords);
         setLocationPermission('granted');
         finish(pos.coords.latitude, pos.coords.longitude);
       },
       (err) => {
+        console.log('[CheckIn] getCurrentPosition: error callback', err.code, err.message, err);
+        if (err.code === err.TIMEOUT) {
+          console.log('[CheckIn] getCurrentPosition: TIMEOUT (options.timeout may have elapsed)');
+        }
         setGettingLocation(false);
         if (err.code === err.PERMISSION_DENIED) {
           setLocationPermission('denied');
@@ -312,7 +342,7 @@ export default function CheckInPage() {
           toast.error('Could not get your location. Please try again.');
         }
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      geoOpts
     );
   };
 
@@ -368,7 +398,15 @@ export default function CheckInPage() {
             <X className="w-3 h-3 mr-1" /> Clear My Pin
           </Button>
         ) : (
-          <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs">
+          <Button
+            size="sm"
+            onClick={() => {
+              console.log('[CheckIn] Share My Location button onClick fired');
+              getLocation();
+            }}
+            disabled={gettingLocation}
+            className="rounded-full text-xs"
+          >
             <Navigation className="w-3 h-3 mr-1" />
             {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
           </Button>

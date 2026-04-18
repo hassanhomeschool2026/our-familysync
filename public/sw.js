@@ -1,6 +1,7 @@
-const CACHE_NAME = 'familysync-v1';
+const CACHE_NAME = 'familysync-v2';
 
 self.addEventListener('install', (event) => {
+  console.log('[SW] install', CACHE_NAME);
   self.skipWaiting();
 });
 

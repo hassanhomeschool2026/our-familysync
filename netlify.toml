@@ -5,3 +5,9 @@
 
 [functions]
   node_bundler = "esbuild"
+
+# Do not block geolocation in the installed PWA / browser tab (same-origin).
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Permissions-Policy = "geolocation=(self)"
