@@ -144,33 +144,49 @@ export default function HomePage() {
   const [requestingLocation, setRequestingLocation] = useState(false);
   const [locationBannerDismissed, setLocationBannerDismissed] = useState(false);
 
+  // Detect if running as installed PWA
+  const isInstalledPWA = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+
   useEffect(() => {
-    const checkPermission = async () => {
-      if (!navigator.geolocation) {
-        setLocationPermission('denied');
-        return;
-      }
-      if (navigator.permissions) {
-        try {
-          const result = await navigator.permissions.query({ name: 'geolocation' });
-          setLocationPermission(result.state);
-          result.onchange = () => setLocationPermission(result.state);
-          return;
-        } catch {
-          // Permissions API not supported — fall through to probe
-        }
-      }
-      // Permissions API unavailable (some iOS versions) — do a silent probe
+    if (!navigator.geolocation) {
+      setLocationPermission('denied');
+      return;
+    }
+
+    if (isInstalledPWA) {
+      // On installed PWA, Permissions API is unreliable on iOS.
+      // Always do a live probe to verify location actually works.
+      setLocationPermission('unknown');
       navigator.geolocation.getCurrentPosition(
-        () => setLocationPermission('granted'),
-        (err) => {
-          if (err.code === err.PERMISSION_DENIED) setLocationPermission('denied');
-          // timeout/unavailable = leave as 'unknown', don't block UI
+        () => {
+          setLocationPermission('granted');
         },
-        { enableHighAccuracy: false, timeout: 4000, maximumAge: 60000 }
+        (err) => {
+          if (err.code === err.PERMISSION_DENIED) {
+            setLocationPermission('denied');
+          } else {
+            // TIMEOUT or POSITION_UNAVAILABLE — location may still work,
+            // don't block the user, just hide the banner
+            setLocationPermission('granted');
+          }
+        },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 30000 }
       );
-    };
-    checkPermission();
+      return;
+    }
+
+    // Browser tab — use Permissions API as normal
+    if (navigator.permissions) {
+      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+        setLocationPermission(result.state);
+        result.onchange = () => setLocationPermission(result.state);
+      }).catch(() => {
+        setLocationPermission('unknown');
+      });
+    } else {
+      setLocationPermission('unknown');
+    }
   }, []);
 
   useEffect(() => {
@@ -309,6 +325,9 @@ export default function HomePage() {
         setRequestingLocation(false);
         if (err.code === err.PERMISSION_DENIED) {
           setLocationPermission('denied');
+        } else {
+          // Not denied, just unavailable — don't punish the user
+          setLocationPermission('unknown');
         }
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -338,7 +357,7 @@ export default function HomePage() {
           </div>
           {weather && (
             <a
-              href={`https://weather.com/weather/today/l/${encodeURIComponent(cityName || 'my+location')}`}
+              href={`https://www.google.com/search?q=weather+${encodeURIComponent(cityName || 'today')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white/15 backdrop-blur-sm rounded-xl px-3 py-2 text-right ml-3 flex-shrink-0 block hover:bg-white/25 transition-colors cursor-pointer"

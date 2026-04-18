@@ -271,41 +271,36 @@ export default function CheckInPage() {
     },
   });
 
-  const probeGeolocation = () => {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      () => {
-        setLocationPermission('granted');
-        setShowLocationExplainer(false);
-      },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) {
-          setLocationPermission('denied');
-        }
-        // For other errors (timeout, unavailable), leave as 'unknown' — don't block UI
-      },
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
-    );
-  };
+  const isInstalledPWA = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
 
   useEffect(() => {
-    // Check permission state via Permissions API where supported
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'geolocation' }).then((result) => {
-        setLocationPermission(result.state);
-        result.onchange = () => setLocationPermission(result.state);
-        // If already granted, show explainer is not needed
-        if (result.state === 'granted') setShowLocationExplainer(false);
-        // If prompt state, show explainer to prime the user before the OS dialog fires
-        if (result.state === 'prompt') setShowLocationExplainer(true);
-      }).catch(() => {
-        // Permissions API not supported (e.g. some iOS versions) — silently probe
-        probeGeolocation();
-      });
-    } else {
-      // Permissions API not available — probe directly
-      probeGeolocation();
+    if (!navigator.geolocation) {
+      setLocationPermission('denied');
+      return;
     }
+
+    if (isInstalledPWA) {
+      // Skip Permissions API on installed PWA — do a live probe instead
+      navigator.geolocation.getCurrentPosition(
+        () => setLocationPermission('granted'),
+        (err) => {
+          if (err.code === err.PERMISSION_DENIED) {
+            setLocationPermission('denied');
+            setShowLocationDeniedModal(true);
+          }
+        },
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 30000 }
+      );
+      return;
+    }
+
+    if (!navigator.permissions) return;
+    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+      setLocationPermission(result.state);
+      result.onchange = () => setLocationPermission(result.state);
+      if (result.state === 'prompt') setShowLocationExplainer(true);
+    });
   }, []);
 
   const getLocation = () => {
