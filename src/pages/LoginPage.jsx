@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home } from 'lucide-react';
+import { Home, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateInviteCode } from '@/lib/memberColors';
 
@@ -225,6 +225,13 @@ export default function LoginPage() {
             <Button onClick={handleSignIn} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
               {loading ? 'Please wait...' : 'Sign In'}
             </Button>
+            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
+              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+                after signing in.
+              </p>
+            </div>
             <button type="button" onClick={() => setForgotMode(true)} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
               Forgot password?
             </button>
@@ -241,6 +248,13 @@ export default function LoginPage() {
             <Button onClick={handleForgotPassword} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
               {loading ? 'Sending...' : 'Send Reset Link'}
             </Button>
+            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
+              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+                after signing in.
+              </p>
+            </div>
             <button type="button" onClick={() => setForgotMode(false)} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
               ← Back to Sign In
             </button>
@@ -265,6 +279,13 @@ export default function LoginPage() {
             <Button onClick={handleSignUp} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
               {loading ? 'Please wait...' : 'Create Account'}
             </Button>
+            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
+              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+                after signing in.
+              </p>
+            </div>
           </div>
         )}
 
@@ -284,6 +305,13 @@ export default function LoginPage() {
             <Button onClick={handleValidateCode} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
               {loading ? 'Checking...' : 'Next →'}
             </Button>
+            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
+              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+                after signing in.
+              </p>
+            </div>
           </div>
         )}
 
@@ -309,6 +337,13 @@ export default function LoginPage() {
             <Button onClick={handleJoinSubmit} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
               {loading ? 'Joining...' : 'Create Account & Join'}
             </Button>
+            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
+              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+                after signing in.
+              </p>
+            </div>
             <button type="button" onClick={() => setInviteStep('code')} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
               ← Back
             </button>

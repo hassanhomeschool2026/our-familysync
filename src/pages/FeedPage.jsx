@@ -36,6 +36,9 @@ const getTimeDisplay = (dateString) => {
 export default function FeedPage() {
   const { family, isPremium, getMemberColor } = useFamily();
 
+  const fiveDaysAgo = new Date();
+  fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+
   const { data: feedItems = [], isLoading } = useQuery({
     queryKey: ['feed', family?.id, isPremium],
     queryFn: async () => {
@@ -43,6 +46,7 @@ export default function FeedPage() {
         .from('feed_items')
         .select('*')
         .eq('family_id', family?.id)
+        .gte('created_at', fiveDaysAgo.toISOString())
         .order('created_at', { ascending: false });
       const { data } = await base.limit(isPremium ? 200 : 100);
       return data || [];

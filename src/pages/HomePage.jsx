@@ -244,13 +244,17 @@ export default function HomePage() {
     enabled: !!family?.id,
   });
 
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
   const { data: feedItems = [] } = useQuery({
-    queryKey: ['feed-home', family?.id],
+    queryKey: ['feed', family?.id],
     queryFn: async () => {
       const { data } = await supabase
         .from('feed_items')
         .select('*')
         .eq('family_id', family?.id)
+        .gte('created_at', threeDaysAgo.toISOString())
         .order('created_at', { ascending: false })
         .limit(5);
       return data || [];
@@ -510,37 +514,37 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="bg-card border border-border rounded-xl p-4">
+      <div className="bg-card border border-border rounded-2xl p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold">Recent activity</p>
+          <h3 className="font-heading font-semibold text-sm">Recent Activity</h3>
           <button
             type="button"
             onClick={() => navigate('/feed')}
-            className="text-xs text-primary font-medium flex items-center gap-0.5"
+            className="text-xs text-primary"
           >
-            View all <ChevronRight className="w-3 h-3" />
+            View all
           </button>
         </div>
         {feedItems.length === 0 ? (
           <p className="text-xs text-muted-foreground">No activity yet.</p>
         ) : (
           <div className="space-y-3">
-            {feedItems.map((item) => {
-              return (
-                <div key={item.id} className="flex items-center gap-2">
-                  <MemberAvatar
-                    avatar={item.user_avatar}
-                    color={getMemberColor(item.user_id)}
-                    size="sm"
-                    name={item.user_name}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-foreground truncate">{item.message}</p>
-                    <p className="text-[9px] text-muted-foreground">{format(new Date(item.created_at), 'h:mm a')}</p>
-                  </div>
+            {feedItems.map((item) => (
+              <div key={item.id} className="flex items-center gap-2">
+                <MemberAvatar
+                  avatar={item.user_avatar}
+                  color={getMemberColor(item.user_id)}
+                  size="sm"
+                  name={item.user_name}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-foreground truncate">{item.message}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {format(new Date(item.created_at), 'h:mm a')}
+                  </p>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </div>

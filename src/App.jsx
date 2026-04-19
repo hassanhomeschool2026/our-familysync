@@ -10,6 +10,7 @@ import LoginPage from './pages/LoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import Welcome from './pages/Welcome';
 import HomePage from './pages/HomePage';
+import CalendarPage from './pages/CalendarPage';
 import TodoPage from './pages/TodoPage';
 import ChoresPage from './pages/ChoresPage';
 import CheckInPage from './pages/CheckInPage';
@@ -67,6 +68,7 @@ const AuthenticatedApp = () => {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/todo" element={<TodoPage />} />
             <Route path="/chores" element={<ChoresPage />} />
             <Route path="/checkin" element={<CheckInPage />} />

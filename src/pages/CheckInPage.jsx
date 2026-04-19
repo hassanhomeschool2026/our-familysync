@@ -12,6 +12,7 @@ import EmptyState from '@/components/shared/EmptyState';
 import SkeletonCard from '@/components/shared/SkeletonCard';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { toast } from 'sonner';
+import GeofencePage from './GeofencePage';
 
 const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
 
@@ -100,6 +101,7 @@ export default function CheckInPage() {
   const [liveTracking, setLiveTracking] = useState(false);
   const watchIdRef = useRef(null);
   const [locationPermission, setLocationPermission] = useState('unknown');
+  const [activeTab, setActiveTab] = useState('checkin');
 
   useEffect(() => {
     if (!navigator.permissions) return;
@@ -357,34 +359,65 @@ export default function CheckInPage() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-heading text-xl font-bold">Check-In</h2>
-        {myCheckIn ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => clearCheckIn.mutate()}
-            className="rounded-full text-xs"
-            disabled={clearCheckIn.isPending}
-          >
-            <X className="w-3 h-3 mr-1" /> Clear My Pin
-          </Button>
-        ) : (
-          <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs">
-            <Navigation className="w-3 h-3 mr-1" />
-            {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
-          </Button>
-        )}
-        {myCheckIn && (
-          <button
-            type="button"
-            onClick={() => setLiveTracking((v) => !v)}
-            className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${liveTracking ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'}`}
-          >
-            <Radio className="w-3 h-3" />
-            {liveTracking ? 'Live On' : 'Live Off'}
-          </button>
+        {activeTab === 'checkin' && (
+          <>
+            {myCheckIn ? (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => clearCheckIn.mutate()}
+                className="rounded-full text-xs"
+                disabled={clearCheckIn.isPending}
+              >
+                <X className="w-3 h-3 mr-1" /> Clear My Pin
+              </Button>
+            ) : (
+              <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs">
+                <Navigation className="w-3 h-3 mr-1" />
+                {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
+              </Button>
+            )}
+            {myCheckIn && (
+              <button
+                type="button"
+                onClick={() => setLiveTracking((v) => !v)}
+                className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${liveTracking ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'}`}
+              >
+                <Radio className="w-3 h-3" />
+                {liveTracking ? 'Live On' : 'Live Off'}
+              </button>
+            )}
+          </>
         )}
       </div>
 
+      <div className="flex gap-2 mb-4">
+        <button
+          type="button"
+          onClick={() => setActiveTab('checkin')}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+            activeTab === 'checkin'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-muted-foreground'
+          }`}
+        >
+          Check-In
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('zones')}
+          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+            activeTab === 'zones'
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-secondary text-muted-foreground'
+          }`}
+        >
+          Zones
+        </button>
+      </div>
+
+      {activeTab === 'checkin' && (
+        <>
       <div className="mb-4">
         {isLoaded ? (
           <GoogleMap
@@ -567,6 +600,10 @@ export default function CheckInPage() {
           ))
         )}
       </div>
+        </>
+      )}
+
+      {activeTab === 'zones' && <GeofencePage embedded={true} />}
     </div>
   );
 }
