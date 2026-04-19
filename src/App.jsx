@@ -9,7 +9,7 @@ import { FamilyProvider, useFamily } from '@/lib/familyContext';
 import LoginPage from './pages/LoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import Welcome from './pages/Welcome';
-import CalendarPage from './pages/CalendarPage';
+import HomePage from './pages/HomePage';
 import TodoPage from './pages/TodoPage';
 import ChoresPage from './pages/ChoresPage';
 import CheckInPage from './pages/CheckInPage';
@@ -66,7 +66,7 @@ const AuthenticatedApp = () => {
         <Routes>
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route element={<AppLayout />}>
-            <Route path="/" element={<CalendarPage />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/todo" element={<TodoPage />} />
             <Route path="/chores" element={<ChoresPage />} />
             <Route path="/checkin" element={<CheckInPage />} />
