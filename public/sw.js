@@ -1,14 +1,13 @@
-const CACHE_NAME = 'familysync-v3';
+const CACHE_NAME = 'familysync-v1';
 
 self.addEventListener('install', (event) => {
-  console.log('[SW] install', CACHE_NAME);
   self.skipWaiting();
 });
 
-self.addEventListener('activate', event => {
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(keys => 
-      Promise.all(keys.filter(k => k !== 'familysync-v3').map(k => caches.delete(k)))
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
     )
   );
   self.clients.claim();

@@ -101,35 +101,10 @@ export default function CheckInPage() {
   const watchIdRef = useRef(null);
   const [locationPermission, setLocationPermission] = useState('unknown');
 
-  const [debugHref, setDebugHref] = useState('');
-  const [debugStandalone, setDebugStandalone] = useState('');
-  const [debugPermissionInfo, setDebugPermissionInfo] = useState('(not read yet)');
-  const [debugGeoCallback, setDebugGeoCallback] = useState('none');
-  const [debugGeoErrorCode, setDebugGeoErrorCode] = useState('—');
-  const [debugGeoErrorMessage, setDebugGeoErrorMessage] = useState('—');
-  const [showIosGeoResetModal, setShowIosGeoResetModal] = useState(false);
-  const [showLocationExplainer, setShowLocationExplainer] = useState(false);
-
-  const IOS_GEO_RESET_MESSAGE =
-    "To fix this, you need to reset location for this app:\n\niPhone: \n1. Press and hold the FamilySync icon on your home screen\n2. Tap 'Edit Home Screen' \n3. Delete FamilySync\n4. Open Chrome, go to app.familysync.zencora.org\n5. When prompted, tap Allow for location\n6. Reinstall: tap Share icon → Add to Home Screen";
-
   useEffect(() => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isPWA =
-      window.navigator.standalone === true ||
-      window.matchMedia('(display-mode: standalone)').matches;
-
-    if (isIOS && isPWA) {
-      setShowLocationExplainer(true);
-      return;
-    }
-
     if (!navigator.permissions) return;
     navigator.permissions.query({ name: 'geolocation' }).then((result) => {
       setLocationPermission(result.state);
-      if (result.state === 'prompt') {
-        setShowLocationExplainer(true);
-      }
       result.onchange = () => setLocationPermission(result.state);
     });
   }, []);
@@ -303,17 +278,11 @@ export default function CheckInPage() {
   });
 
   const getLocation = () => {
-    console.log('[CheckIn] getLocation: called');
     if (!navigator.geolocation) {
-      console.log('[CheckIn] getLocation: navigator.geolocation missing');
       toast.error('Geolocation is not supported by your browser.');
       return;
     }
-    console.log('[CheckIn] getLocation: setGettingLocation(true)');
     setGettingLocation(true);
-    setDebugGeoCallback('pending');
-    setDebugGeoErrorCode('—');
-    setDebugGeoErrorMessage('—');
     const finish = async (lat, lng) => {
       const center = { lat, lng };
       setCoords(center);
@@ -329,39 +298,21 @@ export default function CheckInPage() {
         setShowForm(true);
       }
     };
-    const geoOpts = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
-    console.log('[CheckIn] getCurrentPosition: invoking', geoOpts);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        console.log('[CheckIn] getCurrentPosition: success callback', pos.coords);
-        setDebugGeoCallback('success');
-        setDebugGeoErrorCode('—');
-        setDebugGeoErrorMessage('—');
         setLocationPermission('granted');
         finish(pos.coords.latitude, pos.coords.longitude);
       },
       (err) => {
-        console.log('[CheckIn] getCurrentPosition: error callback', err.code, err.message, err);
-        if (err.code === err.TIMEOUT) {
-          console.log('[CheckIn] getCurrentPosition: TIMEOUT (options.timeout may have elapsed)');
-        }
-        setDebugGeoCallback('error');
-        setDebugGeoErrorCode(String(err.code));
-        setDebugGeoErrorMessage(err.message || '(no message)');
         setGettingLocation(false);
         if (err.code === err.PERMISSION_DENIED) {
-          const permissionsSaysGranted = locationPermission === 'granted';
-          if (permissionsSaysGranted) {
-            setShowIosGeoResetModal(true);
-          } else {
-            setLocationPermission('denied');
-            toast.error('Location permission denied. Please enable it in your browser/phone settings.');
-          }
+          setLocationPermission('denied');
+          toast.error('Location permission denied. Please enable it in your browser/phone settings.');
         } else {
           toast.error('Could not get your location. Please try again.');
         }
       },
-      geoOpts
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   };
 
@@ -417,16 +368,7 @@ export default function CheckInPage() {
             <X className="w-3 h-3 mr-1" /> Clear My Pin
           </Button>
         ) : (
-          <Button
-            size="sm"
-            onClick={() => {
-              console.log('[CheckIn] Share My Location button onClick fired');
-              setDebugHref(window.location.href);
-              getLocation();
-            }}
-            disabled={gettingLocation}
-            className="rounded-full text-xs"
-          >
+          <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs">
             <Navigation className="w-3 h-3 mr-1" />
             {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
           </Button>
@@ -442,24 +384,6 @@ export default function CheckInPage() {
           </button>
         )}
       </div>
-
-      {showLocationExplainer && (
-        <div className="mb-4 rounded-xl border border-border bg-muted/40 px-3 py-2.5 flex gap-2 items-start justify-between">
-          <p className="text-xs text-muted-foreground leading-snug pr-2">
-            Location isn&apos;t set for this site yet. Tap <span className="font-medium text-foreground">Share My Location</span> and
-            choose <span className="font-medium text-foreground">Allow</span> when your browser asks.
-          </p>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="shrink-0 h-7 text-xs rounded-lg"
-            onClick={() => setShowLocationExplainer(false)}
-          >
-            Dismiss
-          </Button>
-        </div>
-      )}
 
       <div className="mb-4">
         {isLoaded ? (
@@ -643,42 +567,6 @@ export default function CheckInPage() {
           ))
         )}
       </div>
-
-      <div
-        className="mt-6 rounded-xl border border-amber-500/50 bg-amber-500/10 p-3 text-[10px] font-mono text-foreground break-all space-y-1"
-        aria-label="Geolocation debug"
-      >
-        <p className="font-sans text-xs font-semibold text-amber-800 dark:text-amber-200">Geolocation debug (on-screen)</p>
-        <p><span className="text-muted-foreground">location.href:</span> {debugHref || '—'}</p>
-        <p><span className="text-muted-foreground">standalone:</span> {debugStandalone || '—'}</p>
-        <p><span className="text-muted-foreground">permissions (geolocation):</span> {debugPermissionInfo}</p>
-        <p><span className="text-muted-foreground">getCurrentPosition last callback:</span> {debugGeoCallback}</p>
-        <p><span className="text-muted-foreground">last geo error code:</span> {debugGeoErrorCode}</p>
-        <p><span className="text-muted-foreground">last geo error message:</span> {debugGeoErrorMessage}</p>
-      </div>
-
-      {showIosGeoResetModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="ios-geo-reset-title"
-        >
-          <div className="bg-card border border-border rounded-xl shadow-lg max-w-md w-full p-5 space-y-4">
-            <h3 id="ios-geo-reset-title" className="font-heading text-lg font-bold">
-              Reset Location Permission
-            </h3>
-            <p className="text-sm text-foreground whitespace-pre-line">{IOS_GEO_RESET_MESSAGE}</p>
-            <Button
-              type="button"
-              onClick={() => setShowIosGeoResetModal(false)}
-              className="w-full rounded-xl"
-            >
-              Got it
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
