@@ -108,6 +108,7 @@ export default function CheckInPage() {
   const [debugGeoErrorCode, setDebugGeoErrorCode] = useState('—');
   const [debugGeoErrorMessage, setDebugGeoErrorMessage] = useState('—');
   const [showIosGeoResetModal, setShowIosGeoResetModal] = useState(false);
+  const [showLocationExplainer, setShowLocationExplainer] = useState(false);
 
   const IOS_GEO_RESET_MESSAGE =
     "To fix this, you need to reset location for this app:\n\niPhone: \n1. Press and hold the FamilySync icon on your home screen\n2. Tap 'Edit Home Screen' \n3. Delete FamilySync\n4. Open Chrome, go to app.familysync.zencora.org\n5. When prompted, tap Allow for location\n6. Reinstall: tap Share icon → Add to Home Screen";
@@ -134,10 +135,16 @@ export default function CheckInPage() {
           console.log('[CheckIn][mount] permissions.geolocation state', result.state, result);
           setLocationPermission(result.state);
           setDebugPermissionInfo(`geolocation: ${result.state}`);
+          if (result.state === 'prompt') {
+            setShowLocationExplainer(true);
+          }
           result.onchange = () => {
             console.log('[CheckIn][mount] permissions.geolocation onchange', result.state);
             setLocationPermission(result.state);
             setDebugPermissionInfo(`geolocation: ${result.state} (changed)`);
+            if (result.state === 'prompt') {
+              setShowLocationExplainer(true);
+            }
           };
         })
         .catch((e) => {
@@ -458,6 +465,24 @@ export default function CheckInPage() {
           </button>
         )}
       </div>
+
+      {showLocationExplainer && (
+        <div className="mb-4 rounded-xl border border-border bg-muted/40 px-3 py-2.5 flex gap-2 items-start justify-between">
+          <p className="text-xs text-muted-foreground leading-snug pr-2">
+            Location isn&apos;t set for this site yet. Tap <span className="font-medium text-foreground">Share My Location</span> and
+            choose <span className="font-medium text-foreground">Allow</span> when your browser asks.
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0 h-7 text-xs rounded-lg"
+            onClick={() => setShowLocationExplainer(false)}
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
 
       <div className="mb-4">
         {isLoaded ? (
