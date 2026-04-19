@@ -51,7 +51,7 @@ export default function MonthView({ currentDate, events, onDayClick }) {
                     <div
                       key={i}
                       className="w-1.5 h-1.5 rounded-full"
-                      style={{ backgroundColor: getMemberColor(ev.created_by) }}
+                      style={{ backgroundColor: getMemberColor(ev.assigned_to?.[0] ?? ev.created_by) }}
                     />
                   ))}
                 </div>

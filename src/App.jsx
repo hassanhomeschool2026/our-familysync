@@ -8,6 +8,8 @@ import { FamilyProvider, useFamily } from '@/lib/familyContext';
 
 import LoginPage from './pages/LoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
 import Welcome from './pages/Welcome';
 import HomePage from './pages/HomePage';
 import CalendarPage from './pages/CalendarPage';
@@ -56,6 +58,8 @@ const AuthenticatedApp = () => {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     );
@@ -66,6 +70,8 @@ const AuthenticatedApp = () => {
       <FamilyGate>
         <Routes>
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route element={<AppLayout />}>
             <Route path="/" element={<HomePage />} />
             <Route path="/calendar" element={<CalendarPage />} />

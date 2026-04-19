@@ -7,16 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { MEMBER_COLORS, AVATARS } from '@/lib/memberColors';
+import { MEMBER_COLORS } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import {
-  Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2,
+  Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2, Camera, X,
 } from 'lucide-react';
 export default function ProfilePage() {
   const { currentUser, family, members, isAdmin, isPremium, reload } = useFamily();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(currentUser?.display_name || '');
-  const [avatar, setAvatar] = useState(currentUser?.avatar || '😊');
   const [color, setColor] = useState(currentUser?.member_color || MEMBER_COLORS[0].value);
   const [saving, setSaving] = useState(false);
   const [showNotifPrefs, setShowNotifPrefs] = useState(false);
@@ -28,6 +27,8 @@ export default function ProfilePage() {
   const [showRequestDeleteModal, setShowRequestDeleteModal] = useState(false);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [sendingLeave, setSendingLeave] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const prefs = currentUser?.notification_prefs || {};
 
@@ -47,7 +48,7 @@ export default function ProfilePage() {
     setSaving(true);
     await supabase
       .from('profiles')
-      .update({ display_name: displayName, avatar, member_color: color })
+      .update({ display_name: displayName, member_color: color })
       .eq('id', currentUser.id);
     await reload();
     setSaving(false);
@@ -71,7 +72,7 @@ export default function ProfilePage() {
       user_name: name,
       user_avatar: currentUser.avatar,
       type: 'family_alert',
-      message: `${name} signed out of FamilySync.`,
+      message: `${name} signed out of Our FamilySync.`,
     });
     await supabase.auth.signOut();
   };
@@ -139,6 +140,38 @@ export default function ProfilePage() {
     toast.success('Your request has been sent to the admin.');
   };
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUser?.id) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File must be 5MB or less.');
+      e.target.value = '';
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `${currentUser.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, {
+        upsert: true,
+        contentType: file.type || 'image/jpeg',
+      });
+      if (uploadError) throw uploadError;
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+      const publicUrl = pub.publicUrl;
+      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+      setAvatarUrl(publicUrl);
+      await reload();
+      toast.success('Photo updated!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not upload photo.');
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
+  };
+
   return (
     <div>
       <h2 className="font-heading text-xl font-bold mb-4">Profile</h2>
@@ -146,7 +179,19 @@ export default function ProfilePage() {
       {/* Profile Card */}
       <div className="bg-card border border-border rounded-xl p-4 mb-4">
         <div className="flex items-center gap-4">
-          <MemberAvatar avatar={currentUser?.avatar} color={currentUser?.member_color} size="xl" />
+          <div className="relative shrink-0">
+            <MemberAvatar
+              avatar={currentUser?.avatar}
+              avatarUrl={avatarUrl || currentUser?.avatar_url}
+              color={currentUser?.member_color}
+              size="xl"
+              name={currentUser?.display_name || currentUser?.full_name}
+            />
+            <label className="absolute bottom-0 right-0 w-6 h-6 bg-primary rounded-full flex items-center justify-center cursor-pointer">
+              <Camera className="w-3 h-3 text-primary-foreground" />
+              <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} disabled={uploadingAvatar} />
+            </label>
+          </div>
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h3 className="font-heading font-bold text-lg">{currentUser?.display_name || currentUser?.full_name}</h3>
@@ -174,22 +219,20 @@ export default function ProfilePage() {
               <Label>Display Name</Label>
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1" />
             </div>
-            <div>
-              <Label className="mb-2 block">Avatar</Label>
-              <div className="flex flex-wrap gap-1.5">
-                {AVATARS.map((a) => (
-                  <button
-                    key={a}
-                    onClick={() => setAvatar(a)}
-                    className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center ${
-                      avatar === a ? 'bg-primary/20 ring-2 ring-primary' : 'bg-secondary'
-                    }`}
-                  >
-                    {a}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {(avatarUrl || currentUser?.avatar_url) && (
+              <button
+                type="button"
+                onClick={async () => {
+                  setAvatarUrl(null);
+                  await supabase.from('profiles').update({ avatar_url: null }).eq('id', currentUser.id);
+                  await reload();
+                  toast.success('Photo removed.');
+                }}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:border-destructive hover:text-destructive transition-colors w-full justify-center"
+              >
+                <X className="w-3 h-3" /> Remove current photo
+              </button>
+            )}
             <div>
               <Label className="mb-2 block">Color</Label>
               <div className="flex flex-wrap gap-1.5">
@@ -417,9 +460,29 @@ export default function ProfilePage() {
         </div>
       )}
 
-      <p className="text-center text-[10px] text-muted-foreground mt-6">
-        Our FamilySync · Built by Zencora
-      </p>
+      <div className="text-center mt-6 space-y-2 pb-2">
+        <p className="text-[11px] text-muted-foreground">
+          © 2026 Zencora. All Rights Reserved.
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          <a
+            href="/terms"
+            className="text-[11px] text-primary hover:underline"
+          >
+            Terms of Service
+          </a>
+          <span className="text-muted-foreground/40 text-[11px]">·</span>
+          <a
+            href="/privacy"
+            className="text-[11px] text-primary hover:underline"
+          >
+            Privacy Policy
+          </a>
+        </div>
+        <p className="text-[10px] text-muted-foreground/50">
+          Our FamilySync · Built by Zencora
+        </p>
+      </div>
     </div>
   );
 }

@@ -13,11 +13,12 @@ import { format } from 'date-fns';
 export default function CalendarPage() {
   const { family, currentUser } = useFamily();
   const queryClient = useQueryClient();
-  const [view, setView] = useState('day');
+  const [view, setView] = useState('month');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(new Date());
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['events', family?.id],
@@ -73,7 +74,11 @@ export default function CalendarPage() {
 
   const handleDayClick = (day) => {
     setCurrentDate(day);
-    setView('day');
+    if (view === 'month') {
+      setSelectedDay(day);
+    } else {
+      setView('day');
+    }
   };
 
   const handleAddEvent = () => {
@@ -106,7 +111,31 @@ export default function CalendarPage() {
       />
 
       {view === 'month' && (
-        <MonthView currentDate={currentDate} events={events} onDayClick={handleDayClick} />
+        <>
+          <MonthView currentDate={currentDate} events={events} onDayClick={handleDayClick} />
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-foreground">
+                {format(selectedDay, 'EEEE, MMMM d')}
+              </p>
+              <button
+                onClick={() => {
+                  setCurrentDate(selectedDay);
+                  setShowAddEvent(true);
+                }}
+                className="text-xs text-primary font-medium hover:underline"
+              >
+                + Add event
+              </button>
+            </div>
+            <DayView
+              currentDate={selectedDay}
+              events={events}
+              onDeleteEvent={(id) => deleteEvent.mutate(id)}
+              onEditEvent={handleEditEvent}
+            />
+          </div>
+        </>
       )}
       {view === 'week' && (
         <WeekView currentDate={currentDate} events={events} onDayClick={handleDayClick} />

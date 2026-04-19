@@ -57,7 +57,7 @@ export default function ResetPasswordPage() {
             <Home className="w-10 h-10 text-primary" />
           </div>
           <h1 className="font-heading text-3xl font-extrabold text-foreground mb-2">
-            <span className="text-primary">Family</span>Sync
+            Our <span className="text-primary">Family</span>Sync
           </h1>
           <p className="text-muted-foreground text-base">Reset your password</p>
         </div>

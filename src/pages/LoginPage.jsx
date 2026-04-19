@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateInviteCode } from '@/lib/memberColors';
 
@@ -189,12 +189,18 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
-            <Home className="w-10 h-10 text-primary" />
+          <div className="flex items-center justify-center gap-1 mb-2">
+            <img
+              src="/FSLogoIconOnly-512.png"
+              alt="Our FamilySync icon"
+              className="h-16 w-16 object-contain"
+            />
+            <img
+              src="/FSLogo_TitleOnly-512.png"
+              alt="Our FamilySync"
+              className="h-14 w-auto object-contain"
+            />
           </div>
-          <h1 className="font-heading text-3xl font-extrabold text-foreground mb-2">
-            <span className="text-primary">Family</span>Sync
-          </h1>
           <p className="text-muted-foreground text-base">Your family. In sync.</p>
         </div>
 
@@ -228,7 +234,7 @@ export default function LoginPage() {
             <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
               <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+                Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
                 after signing in.
               </p>
             </div>
@@ -251,7 +257,7 @@ export default function LoginPage() {
             <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
               <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+                Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
                 after signing in.
               </p>
             </div>
@@ -282,7 +288,7 @@ export default function LoginPage() {
             <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
               <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+                Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
                 after signing in.
               </p>
             </div>
@@ -308,7 +314,7 @@ export default function LoginPage() {
             <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
               <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+                Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
                 after signing in.
               </p>
             </div>
@@ -340,7 +346,7 @@ export default function LoginPage() {
             <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
               <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+                Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
                 after signing in.
               </p>
             </div>

@@ -356,6 +356,7 @@ export default function HomePage() {
                   <div className="relative">
                     <MemberAvatar
                       avatar={m.avatar}
+                      avatarUrl={m?.avatar_url}
                       color={m.member_color}
                       size="lg"
                       name={m.display_name || m.full_name}
@@ -467,6 +468,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2 bg-primary/5 rounded-lg px-3 py-2">
             <MemberAvatar
               avatar={topHelper.member.avatar}
+              avatarUrl={topHelper.member?.avatar_url}
               color={topHelper.member.member_color}
               size="sm"
               name={topHelper.member.display_name || topHelper.member.full_name}
@@ -533,6 +535,7 @@ export default function HomePage() {
               <div key={item.id} className="flex items-center gap-2">
                 <MemberAvatar
                   avatar={item.user_avatar}
+                  avatarUrl={members.find((mem) => mem.id === item.user_id)?.avatar_url}
                   color={getMemberColor(item.user_id)}
                   size="sm"
                   name={item.user_name}

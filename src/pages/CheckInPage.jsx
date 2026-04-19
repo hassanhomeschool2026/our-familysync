@@ -102,6 +102,7 @@ export default function CheckInPage() {
   const watchIdRef = useRef(null);
   const [locationPermission, setLocationPermission] = useState('unknown');
   const [activeTab, setActiveTab] = useState('checkin');
+  const [historyExpanded, setHistoryExpanded] = useState(false);
 
   useEffect(() => {
     if (!navigator.permissions) return;
@@ -520,13 +521,15 @@ export default function CheckInPage() {
       )}
 
       <div className="space-y-2">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Active Check-Ins</p>
+        <p className="text-base font-bold text-foreground">Active Check-Ins</p>
         {activeCheckIns.length === 0 ? (
-          <EmptyState
-            emoji={String.fromCodePoint(0x1f4cd)}
-            title="No active check-ins"
-            description="Tap 'Share My Location' to let your family know where you are."
-          />
+          <div className="py-4">
+            <EmptyState
+              emoji={String.fromCodePoint(0x1f4cd)}
+              title="No active check-ins"
+              description="Tap 'Share My Location' to let your family know where you are."
+            />
+          </div>
         ) : (
           activeCheckIns.map((ci) => {
             const member = getMemberForUser(ci.user_id);
@@ -539,7 +542,13 @@ export default function CheckInPage() {
                 className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
                 style={{ borderLeftWidth: '4px', borderLeftColor: color }}
               >
-                <MemberAvatar avatar={avatar} color={color} size="sm" name={displayName} />
+                <MemberAvatar
+                  avatar={avatar}
+                  avatarUrl={member?.avatar_url}
+                  color={color}
+                  size="sm"
+                  name={displayName}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{displayName}</p>
                   <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">
@@ -558,16 +567,27 @@ export default function CheckInPage() {
         )}
       </div>
 
+      <div className="flex items-center justify-between mt-4 mb-2">
+        <h3 className="text-base font-bold text-foreground">History</h3>
+        <button
+          type="button"
+          onClick={() => setHistoryExpanded((s) => !s)}
+          className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-full flex items-center gap-1"
+        >
+          <Clock className="w-3 h-3" />
+          {historyExpanded ? 'Collapse History' : 'Expand History'}
+        </button>
+      </div>
+
       <div className="space-y-2 mt-6" aria-label="Check-in history">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">History</p>
         {historyGrouped.length === 0 ? (
           <p className="text-xs text-muted-foreground py-2">No recent check-in history</p>
         ) : (
-          historyGrouped.map((group) => (
+          (historyExpanded ? historyGrouped : historyGrouped.slice(0, 1)).map((group) => (
             <div key={group.dateKey} className="space-y-1.5">
               <p className="text-[11px] font-medium text-muted-foreground pl-1">{group.label}</p>
               <div className="space-y-1.5">
-                {group.items.map((ci) => {
+                {(historyExpanded ? group.items : group.items.slice(0, 3)).map((ci) => {
                   const member = getMemberForUser(ci.user_id);
                   const color = getMemberColor(ci.user_id) || member?.member_color || '#6366f1';
                   const displayName =
@@ -579,7 +599,13 @@ export default function CheckInPage() {
                       className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
                       style={{ borderLeftWidth: '4px', borderLeftColor: color }}
                     >
-                      <MemberAvatar avatar={avatar} color={color} size="sm" name={displayName} />
+                      <MemberAvatar
+                        avatar={avatar}
+                        avatarUrl={member?.avatar_url}
+                        color={color}
+                        size="sm"
+                        name={displayName}
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{displayName}</p>
                         <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">

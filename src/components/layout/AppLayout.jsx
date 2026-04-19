@@ -8,11 +8,23 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <UpdateBanner />
-      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
+      <header
+        className="sticky top-0 z-40 border-b border-purple-200/40"
+        style={{ background: 'linear-gradient(135deg, #f3f0ff 0%, #ede9fe 40%, #e8f7f4 100%)' }}
+      >
         <div className="flex items-center justify-between px-4 h-14 max-w-lg mx-auto">
-          <h1 className="font-heading font-bold text-lg text-foreground">
-            <span className="text-primary">Family</span>Sync
-          </h1>
+          <div className="flex items-center gap-1">
+            <img
+              src="/FSLogoIconOnly-512.png"
+              alt="Our FamilySync icon"
+              className="h-8 w-8 object-contain"
+            />
+            <img
+              src="/FSLogo_TitleOnly-512.png"
+              alt="Our FamilySync"
+              className="h-7 w-auto object-contain"
+            />
+          </div>
           <NotificationBell />
         </div>
       </header>

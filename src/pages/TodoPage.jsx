@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, Pencil, Check } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -202,6 +202,11 @@ export default function TodoPage() {
   const queryClient = useQueryClient();
   const [showAdd, setShowAdd] = useState(false);
   const [filter, setFilter] = useState('all');
+  const [showAddShop, setShowAddShop] = useState(false);
+  const [shopForm, setShopForm] = useState({ name: '', quantity: 1, unit: '', note: '' });
+  const [editingShopItem, setEditingShopItem] = useState(null);
+  const [shopTab, setShopTab] = useState('todo');
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks', family?.id],
@@ -211,6 +216,19 @@ export default function TodoPage() {
         .select('*')
         .eq('family_id', family?.id)
         .order('created_at', { ascending: false });
+      return data || [];
+    },
+    enabled: !!family?.id,
+  });
+
+  const { data: shopItems = [] } = useQuery({
+    queryKey: ['shopping', family?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('shopping_items')
+        .select('*')
+        .eq('family_id', family?.id)
+        .order('created_at', { ascending: true });
       return data || [];
     },
     enabled: !!family?.id,
@@ -262,6 +280,48 @@ export default function TodoPage() {
       await supabase.from('tasks').delete().eq('id', id);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+
+  const createShopItem = useMutation({
+    mutationFn: async (data) => {
+      const { data: item } = await supabase
+        .from('shopping_items')
+        .insert({ ...data, family_id: family.id, created_by: currentUser.id })
+        .select()
+        .single();
+      return item;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['shopping'] }),
+  });
+
+  const toggleShopItem = useMutation({
+    mutationFn: async (item) => {
+      await supabase
+        .from('shopping_items')
+        .update({
+          purchased: !item.purchased,
+          purchased_at: !item.purchased ? new Date().toISOString() : null,
+        })
+        .eq('id', item.id);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['shopping'] }),
+  });
+
+  const updateShopItem = useMutation({
+    mutationFn: async ({ id, ...data }) => {
+      await supabase.from('shopping_items').update(data).eq('id', id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['shopping'] });
+      setEditingShopItem(null);
+    },
+  });
+
+  const deleteShopItem = useMutation({
+    mutationFn: async (id) => {
+      await supabase.from('shopping_items').delete().eq('id', id);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['shopping'] }),
   });
 
   const activeTasks = tasks.filter((t) => !t.completed);
@@ -317,23 +377,37 @@ export default function TodoPage() {
           <button
             key={f}
             type="button"
-            onClick={() => setFilter(f)}
+            onClick={() => {
+              setFilter(f);
+              setShopTab('todo');
+            }}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize whitespace-nowrap ${
-              filter === f ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+              shopTab !== 'shop' && filter === f ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
             }`}
           >
             {f}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setShopTab('shop')}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${
+            shopTab === 'shop' ? 'bg-card text-purple-600 shadow-sm' : 'text-muted-foreground'
+          }`}
+        >
+          <ShoppingCart className="w-3 h-3" /> Shop
+        </button>
       </div>
 
+      {shopTab !== 'shop' && (
+        <>
       {filtered.length === 0 ? (
         <EmptyState emoji="🎯" title="All caught up!" description="No tasks here yet. Tap + to add one." />
       ) : (
         <div className="space-y-4">
           {myTasks.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">My Tasks</p>
+              <p className="text-xs font-bold text-foreground tracking-wide mb-2">My tasks</p>
               <div className="space-y-2">
                 <AnimatePresence>
                   {myTasks.map((t) => (
@@ -350,7 +424,7 @@ export default function TodoPage() {
           )}
           {familyTasks.length > 0 && (
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Family Tasks</p>
+              <p className="text-xs font-bold text-foreground tracking-wide mb-2">Family tasks</p>
               <div className="space-y-2">
                 <AnimatePresence>
                   {familyTasks.map((t) => (
@@ -367,19 +441,32 @@ export default function TodoPage() {
           )}
           {completedTasks.length > 0 && filter !== 'completed' && (
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Completed</p>
-              <div className="space-y-2">
-                <AnimatePresence>
-                  {completedTasks.slice(0, 5).map((t) => (
-                    <TaskItemRow
-                      key={t.id}
-                      task={t}
-                      onToggle={(task) => toggleTask.mutate(task)}
-                      onDelete={(id) => deleteTask.mutate(id)}
-                    />
-                  ))}
-                </AnimatePresence>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowCompleted((s) => !s)}
+                className="flex items-center justify-between w-full mb-2 group"
+              >
+                <p className="text-xs font-bold text-foreground tracking-wide">
+                  Completed ({completedTasks.length})
+                </p>
+                <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">
+                  {showCompleted ? 'Hide ▲' : 'Show ▼'}
+                </span>
+              </button>
+              {showCompleted && (
+                <div className="space-y-2">
+                  <AnimatePresence>
+                    {completedTasks.map((t) => (
+                      <TaskItemRow
+                        key={t.id}
+                        task={t}
+                        onToggle={(task) => toggleTask.mutate(task)}
+                        onDelete={(id) => deleteTask.mutate(id)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
           )}
           {filter === 'completed' && completedTasks.length > 0 && (
@@ -398,8 +485,306 @@ export default function TodoPage() {
           )}
         </div>
       )}
+        </>
+      )}
 
       <AddTaskSheet open={showAdd} onClose={() => setShowAdd(false)} onSave={(data) => createTask.mutateAsync(data)} />
+
+      {shopTab !== 'shop' && (
+        <div className="mt-4 pt-4 border-t border-border">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4 text-foreground" />
+              <p className="text-sm font-bold text-foreground">Shopping List</p>
+              <span className="text-[10px] bg-secondary text-foreground px-1.5 py-0.5 rounded-full font-bold">
+                {shopItems.filter((i) => !i.purchased).length}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAddShop(true)}
+              className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full"
+            >
+              <Plus className="w-3 h-3" /> Add item
+            </button>
+          </div>
+
+          {shopItems.length === 0 ? (
+            <div className="text-center py-6 text-sm text-muted-foreground">
+              No items yet. Tap + to add to your shopping list.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {shopItems.map((item) =>
+                editingShopItem?.id === item.id ? (
+                  <div key={item.id} className="bg-card border border-purple-200 rounded-xl p-3 space-y-2">
+                    <input
+                      className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+                      value={editingShopItem.name}
+                      onChange={(e) => setEditingShopItem({ ...editingShopItem, name: e.target.value })}
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        className="w-16 text-sm border border-border rounded-lg px-2 py-1.5 bg-background"
+                        value={editingShopItem.quantity}
+                        onChange={(e) => setEditingShopItem({ ...editingShopItem, quantity: e.target.value })}
+                      />
+                      <input
+                        className="flex-1 text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+                        placeholder="unit (e.g. oz, lbs)"
+                        value={editingShopItem.unit || ''}
+                        onChange={(e) => setEditingShopItem({ ...editingShopItem, unit: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateShopItem.mutate(editingShopItem)}
+                        className="flex-1 bg-primary text-primary-foreground text-xs font-semibold py-1.5 rounded-lg"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingShopItem(null)}
+                        className="flex-1 bg-secondary text-secondary-foreground text-xs font-semibold py-1.5 rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    key={item.id}
+                    className={`bg-card border rounded-xl px-3 py-2.5 flex items-center gap-3 ${
+                      item.purchased ? 'border-border opacity-60' : 'border-border'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleShopItem.mutate(item)}
+                      className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
+                        item.purchased ? 'bg-purple-600 border-purple-600' : 'border-muted-foreground/40'
+                      }`}
+                    >
+                      {item.purchased && <Check className="w-3 h-3 text-white" />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-medium ${item.purchased ? 'line-through text-muted-foreground' : ''}`}
+                      >
+                        {item.name}
+                      </p>
+                      {(item.quantity > 1 || item.unit) && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Qty: {item.quantity}
+                          {item.unit ? ` ${item.unit}` : ''}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditingShopItem(item)}
+                      className="p-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteShopItem.mutate(item.id)}
+                      className="p-1.5 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {shopTab === 'shop' && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="w-4 h-4 text-foreground" />
+              <p className="text-sm font-bold text-foreground">Shopping List</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAddShop(true)}
+              className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full"
+            >
+              <Plus className="w-3 h-3" /> Add item
+            </button>
+          </div>
+          {shopItems.length === 0 ? (
+            <div className="text-center py-12 text-sm text-muted-foreground">
+              No items yet. Tap + to start your shopping list.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {shopItems.map((item) =>
+                editingShopItem?.id === item.id ? (
+                  <div key={item.id} className="bg-card border border-purple-200 rounded-xl p-3 space-y-2">
+                    <input
+                      className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+                      value={editingShopItem.name}
+                      onChange={(e) => setEditingShopItem({ ...editingShopItem, name: e.target.value })}
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        min="1"
+                        className="w-16 text-sm border border-border rounded-lg px-2 py-1.5 bg-background"
+                        value={editingShopItem.quantity}
+                        onChange={(e) => setEditingShopItem({ ...editingShopItem, quantity: e.target.value })}
+                      />
+                      <input
+                        className="flex-1 text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
+                        placeholder="unit (e.g. oz, lbs)"
+                        value={editingShopItem.unit || ''}
+                        onChange={(e) => setEditingShopItem({ ...editingShopItem, unit: e.target.value })}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateShopItem.mutate(editingShopItem)}
+                        className="flex-1 bg-primary text-primary-foreground text-xs font-semibold py-1.5 rounded-lg"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingShopItem(null)}
+                        className="flex-1 bg-secondary text-secondary-foreground text-xs font-semibold py-1.5 rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    key={item.id}
+                    className={`bg-card border rounded-xl px-3 py-2.5 flex items-center gap-3 ${
+                      item.purchased ? 'border-border opacity-60' : 'border-border'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleShopItem.mutate(item)}
+                      className={`w-5 h-5 rounded flex-shrink-0 border-2 flex items-center justify-center transition-colors ${
+                        item.purchased ? 'bg-purple-600 border-purple-600' : 'border-muted-foreground/40'
+                      }`}
+                    >
+                      {item.purchased && <Check className="w-3 h-3 text-white" />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-sm font-medium ${item.purchased ? 'line-through text-muted-foreground' : ''}`}
+                      >
+                        {item.name}
+                      </p>
+                      {(item.quantity > 1 || item.unit) && (
+                        <p className="text-[11px] text-muted-foreground">
+                          Qty: {item.quantity}
+                          {item.unit ? ` ${item.unit}` : ''}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditingShopItem(item)}
+                      className="p-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteShopItem.mutate(item.id)}
+                      className="p-1.5 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showAddShop && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-24">
+          <div className="bg-card rounded-2xl p-5 w-full max-w-sm space-y-3 border border-border">
+            <h3 className="font-heading font-bold text-base">Add Shopping Item</h3>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Item name</label>
+              <input
+                className="w-full mt-1 text-sm border border-border rounded-xl px-3 py-2 bg-background"
+                placeholder="e.g. Milk"
+                value={shopForm.name}
+                onChange={(e) => setShopForm({ ...shopForm, name: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2">
+              <div className="w-20">
+                <label className="text-xs font-semibold text-muted-foreground">Qty</label>
+                <input
+                  type="number"
+                  min="1"
+                  className="w-full mt-1 text-sm border border-border rounded-xl px-3 py-2 bg-background"
+                  value={shopForm.quantity}
+                  onChange={(e) => setShopForm({ ...shopForm, quantity: parseInt(e.target.value, 10) || 1 })}
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs font-semibold text-muted-foreground">Unit (optional)</label>
+                <input
+                  className="w-full mt-1 text-sm border border-border rounded-xl px-3 py-2 bg-background"
+                  placeholder="oz, lbs, bag..."
+                  value={shopForm.unit}
+                  onChange={(e) => setShopForm({ ...shopForm, unit: e.target.value })}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground">Note (optional)</label>
+              <input
+                className="w-full mt-1 text-sm border border-border rounded-xl px-3 py-2 bg-background"
+                placeholder="e.g. name brand only"
+                value={shopForm.note}
+                onChange={(e) => setShopForm({ ...shopForm, note: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!shopForm.name.trim()) return;
+                  await createShopItem.mutateAsync(shopForm);
+                  setShopForm({ name: '', quantity: 1, unit: '', note: '' });
+                  setShowAddShop(false);
+                }}
+                className="flex-1 bg-primary text-primary-foreground text-sm font-semibold py-2.5 rounded-xl"
+              >
+                Add to List
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddShop(false)}
+                className="flex-1 bg-secondary text-secondary-foreground text-sm font-semibold py-2.5 rounded-xl"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

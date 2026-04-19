@@ -41,7 +41,7 @@ export default function DayView({ currentDate, events, onDeleteEvent, onEditEven
           <div
             key={ev.id}
             className="p-3 rounded-xl bg-card border border-border"
-            style={{ borderLeftWidth: '4px', borderLeftColor: getMemberColor(ev.created_by) }}
+            style={{ borderLeftWidth: '4px', borderLeftColor: getMemberColor(ev.assigned_to?.[0] ?? ev.created_by) }}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">

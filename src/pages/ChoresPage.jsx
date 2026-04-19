@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import EmptyState from '@/components/shared/EmptyState';
 import SkeletonCard from '@/components/shared/SkeletonCard';
-import { CheckCircle2, Plus, Pencil, Trash2, Flame, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle2, Plus, Pencil, Trash2, Flame } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isToday, startOfWeek, isAfter, isBefore, startOfMonth, formatDistanceToNow } from 'date-fns';
 
@@ -268,7 +268,7 @@ export default function ChoresPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="font-heading text-xl font-bold">Responsibilities</h2>
+        <h2 className="font-heading text-xl font-bold">Chores</h2>
         {isAdmin && (
           <Button
             size="sm"
@@ -402,7 +402,12 @@ export default function ChoresPage() {
       )}
 
       <section>
-        <h3 className="text-sm font-semibold mb-1">⭐ Top Helper This Week</h3>
+        <h3 className="text-base font-bold text-foreground mb-2 flex items-center gap-2">
+          <span className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+            <Flame className="w-4 h-4 text-primary" />
+          </span>
+          Top Helper This Week
+        </h3>
         <p className="text-xs text-muted-foreground mb-3">
           Week starting {format(weekStart, 'MMM d, yyyy')}
         </p>
@@ -417,6 +422,7 @@ export default function ChoresPage() {
               >
                 <MemberAvatar
                   avatar={h.member.avatar}
+                  avatarUrl={h.member?.avatar_url}
                   color={getMemberColor(h.member.id)}
                   name={memberDisplayName(h.member)}
                 />
@@ -436,10 +442,16 @@ export default function ChoresPage() {
         )}
       </section>
 
-      <section>
-        <h3 className="text-sm font-semibold mb-2">Daily Progress</h3>
-        <p className="text-sm text-muted-foreground mb-2">
-          {completedTodayCount} of {totalChores} responsibilities done today
+      <section className="bg-card border border-border rounded-xl p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+            Daily Progress
+            <span className="text-base">🎉</span>
+          </h3>
+          <span className="text-xs font-semibold text-primary">{dailyPct}%</span>
+        </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          {completedTodayCount} of {totalChores} chores done today
         </p>
         <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
           <div
@@ -450,7 +462,7 @@ export default function ChoresPage() {
       </section>
 
       <section>
-        <h3 className="text-sm font-semibold mb-3">To Do</h3>
+        <h3 className="text-base font-bold text-foreground mb-3">To do</h3>
         {activeChores.length === 0 ? (
           <EmptyState
             title="All caught up"
@@ -464,6 +476,10 @@ export default function ChoresPage() {
                 <li
                   key={chore.id}
                   className="flex items-start gap-3 rounded-xl border border-border bg-card p-3"
+                  style={{
+                    borderLeftWidth: '3px',
+                    borderLeftColor: getMemberColor(chore.assigned_to),
+                  }}
                 >
                   <div className="flex-1 min-w-0 space-y-1">
                     <p className="font-medium">{chore.title}</p>
@@ -473,6 +489,7 @@ export default function ChoresPage() {
                           <MemberAvatar
                             size="sm"
                             avatar={assignee.avatar}
+                            avatarUrl={assignee?.avatar_url}
                             color={getMemberColor(assignee.id)}
                             name={memberDisplayName(assignee)}
                           />
@@ -548,15 +565,18 @@ export default function ChoresPage() {
       <section>
         <button
           type="button"
-          className="flex items-center gap-2 text-sm font-semibold mb-3 w-full text-left"
-          onClick={() => setDoneExpanded((e) => !e)}
+          onClick={() => setDoneExpanded((s) => !s)}
+          className="flex items-center justify-between w-full mt-2 mb-2 group"
         >
-          <span>{`Done ${String.fromCodePoint(0x2713)}`}</span>
-          {doneExpanded ? (
-            <ChevronUp className="w-4 h-4" />
-          ) : (
-            <ChevronDown className="w-4 h-4" />
-          )}
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+            <span className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+            </span>
+            Completed
+          </h3>
+          <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">
+            {doneExpanded ? 'Hide ▲' : `View all (${completedChores.length}) ▼`}
+          </span>
         </button>
         {doneExpanded && completedChores.length > 0 && (
           <ul className="space-y-2 opacity-80">

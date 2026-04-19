@@ -1,6 +1,6 @@
 {
   "name": "Our FamilySync",
-  "short_name": "FamilySync",
+  "short_name": "Our FamilySync",
   "description": "Your family. In sync.",
   "start_url": "/",
   "display": "standalone",

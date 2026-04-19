@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { generateInviteCode } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import {
-  Copy, RefreshCw, Megaphone, Trash2, ArrowLeft, Check,
+  Copy, RefreshCw, Megaphone, Trash2, ArrowLeft, Check, Share2, MessageSquare,
 } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -126,11 +126,11 @@ export default function AdminPage() {
         </div>
         <Button
           size="sm"
-          variant="outline"
-          className="mt-2 text-xs"
+          className="mt-2 text-xs rounded-full flex items-center gap-1.5"
           onClick={() => setShowShareModal(true)}
         >
-          {'\u{1F4E4}'} Share Invite
+          <Share2 className="w-3.5 h-3.5" />
+          Share Invite
         </Button>
         <Button variant="ghost" size="sm" onClick={regenerateCode} className="mt-2 text-xs text-muted-foreground">
           <RefreshCw className="w-3 h-3 mr-1" /> Regenerate Code
@@ -165,7 +165,12 @@ export default function AdminPage() {
         <div className="divide-y divide-border">
           {members.map((member) => (
             <div key={member.id} className="flex items-center gap-3 p-4">
-              <MemberAvatar avatar={member.avatar} color={member.member_color} size="sm" />
+              <MemberAvatar
+                avatar={member.avatar}
+                avatarUrl={member?.avatar_url}
+                color={member.member_color}
+                size="sm"
+              />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium truncate">{member.display_name || member.full_name}</p>
@@ -358,7 +363,7 @@ export default function AdminPage() {
       {showShareModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-sm space-y-4">
-            <h3 className="font-heading font-bold text-lg">Invite to FamilySync</h3>
+            <h3 className="font-heading font-bold text-lg">Invite to Our FamilySync</h3>
             <p className="text-sm text-muted-foreground">Share this message with your family member:</p>
             <div className="bg-secondary rounded-xl p-4 text-sm text-foreground">
               Hey! I&apos;m inviting you to join our family on Our FamilySync. Download the app at app.familysync.zencora.org and use invite code:{' '}
@@ -373,7 +378,8 @@ export default function AdminPage() {
                   toast.success('Message copied!');
                 }}
               >
-                {'\u{1F4CB}'} Copy Message
+                <Copy className="w-3.5 h-3.5 mr-1.5" />
+                Copy Message
               </Button>
               <Button
                 className="flex-1 rounded-xl"
@@ -382,7 +388,8 @@ export default function AdminPage() {
                   window.open(`sms:?body=${msg}`);
                 }}
               >
-                {'\u{1F4AC}'} Send via SMS
+                <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+                Send via SMS
               </Button>
             </div>
             <button
