@@ -114,47 +114,24 @@ export default function CheckInPage() {
     "To fix this, you need to reset location for this app:\n\niPhone: \n1. Press and hold the FamilySync icon on your home screen\n2. Tap 'Edit Home Screen' \n3. Delete FamilySync\n4. Open Chrome, go to app.familysync.zencora.org\n5. When prompted, tap Allow for location\n6. Reinstall: tap Share icon → Add to Home Screen";
 
   useEffect(() => {
-    setDebugHref(window.location.href);
-    const ns = window.navigator.standalone === true;
-    const dm = window.matchMedia('(display-mode: standalone)').matches;
-    setDebugStandalone(
-      `navigator.standalone: ${String(window.navigator.standalone)} | display-mode standalone (matchMedia): ${dm} | effective PWA-ish: ${ns || dm}`
-    );
-    console.log('[CheckIn][mount] window.location.href', window.location.href);
-    console.log('[CheckIn][mount] window.location.origin', window.location.origin);
-    console.log('[CheckIn][mount] window.location.pathname', window.location.pathname);
-    console.log('[CheckIn][mount] window.navigator.standalone', window.navigator.standalone);
-    console.log(
-      '[CheckIn][mount] matchMedia(display-mode: standalone)',
-      window.matchMedia('(display-mode: standalone)').matches
-    );
-    if (navigator.permissions) {
-      navigator.permissions
-        .query({ name: 'geolocation' })
-        .then((result) => {
-          console.log('[CheckIn][mount] permissions.geolocation state', result.state, result);
-          setLocationPermission(result.state);
-          setDebugPermissionInfo(`geolocation: ${result.state}`);
-          if (result.state === 'prompt') {
-            setShowLocationExplainer(true);
-          }
-          result.onchange = () => {
-            console.log('[CheckIn][mount] permissions.geolocation onchange', result.state);
-            setLocationPermission(result.state);
-            setDebugPermissionInfo(`geolocation: ${result.state} (changed)`);
-            if (result.state === 'prompt') {
-              setShowLocationExplainer(true);
-            }
-          };
-        })
-        .catch((e) => {
-          console.log('[CheckIn][mount] permissions.geolocation query failed', e);
-          setDebugPermissionInfo(`query failed: ${e?.message || String(e)}`);
-        });
-    } else {
-      console.log('[CheckIn][mount] navigator.permissions not available');
-      setDebugPermissionInfo('navigator.permissions not available');
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isPWA =
+      window.navigator.standalone === true ||
+      window.matchMedia('(display-mode: standalone)').matches;
+
+    if (isIOS && isPWA) {
+      setShowLocationExplainer(true);
+      return;
     }
+
+    if (!navigator.permissions) return;
+    navigator.permissions.query({ name: 'geolocation' }).then((result) => {
+      setLocationPermission(result.state);
+      if (result.state === 'prompt') {
+        setShowLocationExplainer(true);
+      }
+      result.onchange = () => setLocationPermission(result.state);
+    });
   }, []);
 
   const { data: checkins = [], isLoading } = useQuery({
