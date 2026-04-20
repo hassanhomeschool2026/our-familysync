@@ -1,3 +1,6 @@
+/** Fallback when `member_color` is unset — brand teal */
+export const DEFAULT_MEMBER_ACCENT = '#2f9db6';
+
 export const MEMBER_COLORS = [
   { label: 'Teal', value: '#14b8a6', bg: 'bg-teal-500', text: 'text-teal-500', border: 'border-teal-500', light: 'bg-teal-100' },
   { label: 'Blue', value: '#3b82f6', bg: 'bg-blue-500', text: 'text-blue-500', border: 'border-blue-500', light: 'bg-blue-100' },

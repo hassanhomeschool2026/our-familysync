@@ -1,6 +1,7 @@
 import React from 'react';
 import { format, isSameDay, isToday } from 'date-fns';
 import { useFamily } from '@/lib/familyContext';
+import MemberAvatar from '@/components/shared/MemberAvatar';
 import { MapPin, Clock, Trash2, Pencil } from 'lucide-react';
 
 function formatEventTime12h(dateStr, timeStr) {
@@ -9,7 +10,7 @@ function formatEventTime12h(dateStr, timeStr) {
 }
 
 export default function DayView({ currentDate, events, onDeleteEvent, onEditEvent }) {
-  const { getMemberColor, getMemberName, getMemberAvatar, isAdmin, currentUser } = useFamily();
+  const { getMemberColor, getMemberName, members, isAdmin, currentUser } = useFamily();
 
   const dayEvents = events
     .filter((e) => isSameDay(new Date(e.date + 'T00:00:00'), currentDate))
@@ -41,7 +42,7 @@ export default function DayView({ currentDate, events, onDeleteEvent, onEditEven
           <div
             key={ev.id}
             className="p-3 rounded-xl bg-card border border-border"
-            style={{ borderLeftWidth: '4px', borderLeftColor: getMemberColor(ev.assigned_to?.[0] ?? ev.created_by) }}
+            style={{ borderLeftWidth: '4px', borderLeftColor: getMemberColor(ev.created_by) }}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
@@ -64,11 +65,19 @@ export default function DayView({ currentDate, events, onDeleteEvent, onEditEven
                 {ev.notes && <p className="text-xs text-muted-foreground mt-1">{ev.notes}</p>}
                 {ev.assigned_to?.length > 0 && (
                   <div className="flex items-center gap-1 mt-2">
-                    {ev.assigned_to.map((id) => (
-                      <span key={id} className="text-sm" title={getMemberName(id)}>
-                        {getMemberAvatar(id)}
-                      </span>
-                    ))}
+                    {ev.assigned_to.map((id) => {
+                      const mem = members.find((m) => m.id === id);
+                      return (
+                        <MemberAvatar
+                          key={id}
+                          size="sm"
+                          avatar={mem?.avatar}
+                          avatarUrl={mem?.avatar_url}
+                          color={getMemberColor(id)}
+                          name={getMemberName(id)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>

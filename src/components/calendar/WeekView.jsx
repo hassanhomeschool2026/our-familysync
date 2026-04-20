@@ -8,7 +8,7 @@ function formatEventTime12h(dateStr, timeStr) {
 }
 
 export default function WeekView({ currentDate, events, onDayClick }) {
-  const { getMemberColor, getMemberName } = useFamily();
+  const { getMemberName, getMemberColor } = useFamily();
   const weekStart = startOfWeek(currentDate);
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -25,7 +25,7 @@ export default function WeekView({ currentDate, events, onDayClick }) {
               key={day.toISOString()}
               onClick={() => onDayClick(day)}
               className={`flex flex-col items-center py-2 rounded-xl transition-colors ${
-                today ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'
+                today ? 'bg-[#2f9db6] text-white shadow-sm' : 'hover:bg-secondary'
               }`}
             >
               <span className="text-[10px] font-medium opacity-70">{format(day, 'EEE')}</span>

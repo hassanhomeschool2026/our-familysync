@@ -16,6 +16,11 @@ const typeIcons = {
   general: Bell,
 };
 
+function notifAccent(type) {
+  if (type === 'family_alert') return 'rgba(127, 48, 203, 0.38)';
+  return 'rgba(47, 157, 182, 0.32)';
+}
+
 export default function NotificationsPage() {
   const { currentUser } = useFamily();
   const queryClient = useQueryClient();
@@ -79,9 +84,10 @@ export default function NotificationsPage() {
               <button
                 key={notif.id}
                 onClick={() => !notif.read && markRead.mutate(notif.id)}
-                className={`flex items-start gap-3 w-full text-left p-3 rounded-xl transition-colors ${
-                  notif.read ? 'opacity-60' : 'bg-primary/5'
+                className={`flex items-start gap-3 w-full text-left p-3 rounded-xl transition-colors pl-2.5 border-l-[3px] ${
+                  notif.read ? 'opacity-60' : 'bg-[rgba(47,157,182,0.06)]'
                 }`}
+                style={{ borderLeftColor: notifAccent(notif.type) }}
               >
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                   notif.read ? 'bg-muted' : 'bg-primary/10'

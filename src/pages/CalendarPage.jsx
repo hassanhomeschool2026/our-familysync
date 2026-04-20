@@ -112,7 +112,7 @@ export default function CalendarPage() {
 
       {view === 'month' && (
         <>
-          <MonthView currentDate={currentDate} events={events} onDayClick={handleDayClick} />
+          <MonthView currentDate={currentDate} events={events} onDayClick={handleDayClick} selectedDay={selectedDay} />
           <div className="mt-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-semibold text-foreground">

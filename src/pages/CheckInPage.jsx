@@ -13,6 +13,7 @@ import SkeletonCard from '@/components/shared/SkeletonCard';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { toast } from 'sonner';
 import GeofencePage from './GeofencePage';
+import { DEFAULT_MEMBER_ACCENT } from '@/lib/memberColors';
 
 const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
 
@@ -44,7 +45,7 @@ function trimAddress(s, max = 52) {
 function markerIcon(color) {
   return {
     path: google.maps.SymbolPath.CIRCLE,
-    fillColor: color || '#6366f1',
+    fillColor: color || DEFAULT_MEMBER_ACCENT,
     fillOpacity: 1,
     strokeColor: '#ffffff',
     strokeWeight: 2,
@@ -487,7 +488,7 @@ export default function CheckInPage() {
                 <X className="w-3 h-3 mr-1" /> Clear My Pin
               </Button>
             ) : (
-              <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs">
+              <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs shadow-md">
                 <Navigation className="w-3 h-3 mr-1" />
                 {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
               </Button>
@@ -573,7 +574,7 @@ export default function CheckInPage() {
             {activeCheckIns.map((checkin) => {
               if (checkin.latitude == null || checkin.longitude == null) return null;
               const member = getMemberForUser(checkin.user_id);
-              const color = getMemberColor(checkin.user_id) || member?.member_color || '#6366f1';
+              const color = getMemberColor(checkin.user_id);
               return (
                 <Marker
                   key={checkin.id}
@@ -662,13 +663,13 @@ export default function CheckInPage() {
         ) : (
           activeCheckIns.map((ci) => {
             const member = getMemberForUser(ci.user_id);
-            const color = getMemberColor(ci.user_id) || member?.member_color || '#6366f1';
+            const color = getMemberColor(ci.user_id);
             const displayName = member?.display_name || member?.full_name || ci.user_name || 'Member';
             const avatar = member?.avatar ?? ci.user_avatar;
             return (
               <div
                 key={ci.id}
-                className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
+                className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border"
                 style={{ borderLeftWidth: '4px', borderLeftColor: color }}
               >
                 <MemberAvatar
@@ -679,17 +680,19 @@ export default function CheckInPage() {
                   name={displayName}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{displayName}</p>
+                  <p className="text-sm font-semibold truncate">{displayName}</p>
                   <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">
                     <MapPin className="w-3 h-3 shrink-0 mt-0.5" />
-                    <span>{trimAddress(ci.location ?? '')}</span>
+                    <span className="truncate">{trimAddress(ci.location ?? '')}</span>
                   </p>
-                  {ci.note ? <p className="text-xs mt-1 text-foreground/90">{ci.note}</p> : null}
+                  {ci.note ? (
+                    <p className="text-xs mt-1 text-foreground/90 truncate">{ci.note}</p>
+                  ) : null}
+                  <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+                    <Clock className="w-3 h-3 shrink-0" />
+                    {formatCheckInDetailTime(ci.created_at)}
+                  </p>
                 </div>
-                <span className="text-[10px] text-muted-foreground flex items-start gap-0.5 shrink-0 text-right leading-tight">
-                  <Clock className="w-3 h-3 shrink-0 mt-0.5" />
-                  {formatCheckInDetailTime(ci.created_at)}
-                </span>
               </div>
             );
           })
@@ -718,7 +721,7 @@ export default function CheckInPage() {
               <div className="space-y-1.5">
                 {(historyExpanded ? group.items : group.items.slice(0, 3)).map((ci) => {
                   const member = getMemberForUser(ci.user_id);
-                  const color = getMemberColor(ci.user_id) || member?.member_color || '#6366f1';
+                  const color = getMemberColor(ci.user_id);
                   const displayName =
                     member?.display_name || member?.full_name || ci.user_name || 'Member';
                   const avatar = member?.avatar ?? ci.user_avatar;

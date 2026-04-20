@@ -304,7 +304,7 @@ export default function ChoresPage() {
       )}
 
       {isAdmin && (showAddForm || editingChore) && (
-        <div className="bg-card border border-border rounded-xl p-4 space-y-3">
+        <div className="bg-gradient-to-br from-card to-[#2f9db6]/[0.05] border border-border rounded-xl p-4 space-y-3">
           <h3 className="font-heading font-semibold text-base">
             {editingChore ? 'Edit Responsibility' : 'Add Responsibility'}
           </h3>
@@ -402,9 +402,9 @@ export default function ChoresPage() {
       )}
 
       <section>
-        <h3 className="text-base font-bold text-foreground mb-2 flex items-center gap-2">
-          <span className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-            <Flame className="w-4 h-4 text-primary" />
+        <h3 className="text-base font-bold text-[#7f30cb] mb-2 flex items-center gap-2">
+          <span className="w-7 h-7 rounded-full bg-[rgba(127,48,203,0.12)] flex items-center justify-center">
+            <Flame className="w-4 h-4 text-[#7f30cb]" />
           </span>
           Top Helper This Week
         </h3>
@@ -418,7 +418,7 @@ export default function ChoresPage() {
             {topHelpers.map((h, idx) => (
               <li
                 key={h.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-card/50 px-3 py-2"
+                className="flex items-center gap-3 rounded-lg border border-border bg-[rgba(127,48,203,0.04)] px-3 py-2"
               >
                 <MemberAvatar
                   avatar={h.member.avatar}
@@ -435,34 +435,37 @@ export default function ChoresPage() {
                     <p className="text-xs text-muted-foreground">{h.maxStreak}-day streak</p>
                   )}
                 </div>
-                <span className="text-sm font-semibold tabular-nums">{h.points} pts</span>
+                <span className="text-sm font-semibold tabular-nums text-[#7f30cb]">{h.points} pts</span>
               </li>
             ))}
           </ul>
         )}
       </section>
 
-      <section className="bg-card border border-border rounded-xl p-4">
+      <section className="bg-gradient-to-br from-card to-[#2f9db6]/[0.06] border border-border rounded-xl p-4">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+          <h3 className="text-base font-bold text-[#247a8f] flex items-center gap-2">
             Daily Progress
             <span className="text-base">🎉</span>
           </h3>
-          <span className="text-xs font-semibold text-primary">{dailyPct}%</span>
+          <span className="text-xs font-semibold text-[#2f9db6]">{dailyPct}%</span>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
           {completedTodayCount} of {totalChores} chores done today
         </p>
         <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
           <div
-            className="h-full bg-primary transition-all duration-300 rounded-full"
-            style={{ width: `${dailyPct}%` }}
+            className="h-full transition-all duration-300 rounded-full"
+            style={{
+              width: `${dailyPct}%`,
+              background: 'linear-gradient(90deg, #7f30cb, #01dcba)',
+            }}
           />
         </div>
       </section>
 
       <section>
-        <h3 className="text-base font-bold text-foreground mb-3">To do</h3>
+        <h3 className="text-base font-bold text-[#247a8f] mb-3">To do</h3>
         {activeChores.length === 0 ? (
           <EmptyState
             title="All caught up"
@@ -498,7 +501,7 @@ export default function ChoresPage() {
                       ) : (
                         <span>Unassigned</span>
                       )}
-                      <span>
+                      <span className="text-[#7f30cb] font-medium">
                         {'\u2B50'} {chore.point_value ?? 1} pts
                       </span>
                       <span className="text-xs capitalize bg-muted px-2 py-0.5 rounded-full">
@@ -568,13 +571,13 @@ export default function ChoresPage() {
           onClick={() => setDoneExpanded((s) => !s)}
           className="flex items-center justify-between w-full mt-2 mb-2 group"
         >
-          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-            <span className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4 text-primary" />
+          <h3 className="text-base font-bold text-[#247a8f] flex items-center gap-2">
+            <span className="w-7 h-7 rounded-full bg-[rgba(47,157,182,0.12)] flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 text-[#2f9db6]" />
             </span>
             Completed
           </h3>
-          <span className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">
+          <span className="text-xs font-semibold text-[#247a8f] bg-[rgba(47,157,182,0.12)] px-3 py-1 rounded-full">
             {doneExpanded ? 'Hide ▲' : `View all (${completedChores.length}) ▼`}
           </span>
         </button>

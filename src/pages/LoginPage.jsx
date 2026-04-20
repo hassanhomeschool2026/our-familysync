@@ -76,7 +76,7 @@ export default function LoginPage() {
         family_id: validatedFamily.id,
         display_name: email.split('@')[0],
         avatar: '\u{1F60A}',
-        member_color: '#6366f1',
+        member_color: '#2f9db6',
         role: 'member',
         plan: 'free',
         notification_prefs: {

@@ -32,7 +32,9 @@ export default function CalendarHeader({ view, setView, currentDate, setCurrentD
               key={v}
               onClick={() => setView(v)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize ${
-                view === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+                view === v
+                  ? 'bg-[rgba(47,157,182,0.14)] text-[#247a8f] shadow-sm ring-1 ring-[rgba(47,157,182,0.25)]'
+                  : 'text-muted-foreground'
               }`}
             >
               {v}

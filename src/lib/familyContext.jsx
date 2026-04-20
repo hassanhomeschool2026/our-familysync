@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
+import { DEFAULT_MEMBER_ACCENT } from '@/lib/memberColors';
 
 const FamilyContext = createContext();
 
@@ -58,7 +59,7 @@ export const FamilyProvider = ({ children }) => {
 
   const getMemberColor = (userId) => {
     const member = members.find(m => m.id === userId);
-    return member?.member_color || '#6366f1';
+    return member?.member_color || DEFAULT_MEMBER_ACCENT;
   };
 
   return (

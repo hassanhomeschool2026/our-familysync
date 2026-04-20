@@ -18,11 +18,11 @@ const typeIcons = {
 };
 
 const typeColors = {
-  event_added: 'text-blue-500 bg-blue-50',
-  task_completed: 'text-green-500 bg-green-50',
-  checkin: 'text-orange-500 bg-orange-50',
-  member_joined: 'text-purple-500 bg-purple-50',
-  family_alert: 'text-red-500 bg-red-50',
+  event_added: 'text-[#247a8f] bg-[rgba(47,157,182,0.12)]',
+  task_completed: 'text-[#247a8f] bg-[rgba(47,157,182,0.14)]',
+  checkin: 'text-[#2f9db6] bg-[rgba(47,157,182,0.12)]',
+  member_joined: 'text-[#7f30cb] bg-[rgba(127,48,203,0.12)]',
+  family_alert: 'text-[#b91c1c] bg-[rgba(239,68,68,0.1)]',
 };
 
 const getTimeDisplay = (dateString) => {
@@ -80,7 +80,11 @@ export default function FeedPage() {
             const { relative, absolute, timezone } = getTimeDisplay(item.created_at);
 
             return (
-              <div key={item.id} className="flex items-start gap-3 py-3 border-b border-border last:border-0">
+              <div
+                key={item.id}
+                className="flex items-start gap-3 py-3 border-b border-border last:border-0 pl-2 border-l-[3px]"
+                style={{ borderLeftColor: getMemberColor(item.user_id) }}
+              >
                 <div className="relative">
                   <MemberAvatar
                     avatar={item.user_avatar}

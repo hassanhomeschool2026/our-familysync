@@ -114,7 +114,7 @@ export default function AdminPage() {
       <h2 className="font-heading text-xl font-bold mb-4">Admin Panel</h2>
 
       {/* Invite Code */}
-      <div className="bg-card border border-border rounded-xl p-4 mb-4">
+      <div className="bg-gradient-to-br from-card to-[#2f9db6]/[0.06] border border-border rounded-xl p-4 mb-4">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Family Invite Code</p>
         <div className="flex items-center gap-2">
           <div className="flex-1 bg-secondary rounded-lg px-4 py-3 font-mono text-xl text-center tracking-[0.4em] font-bold">
@@ -138,7 +138,7 @@ export default function AdminPage() {
       </div>
 
       {/* Send Family Alert */}
-      <div className="bg-card border border-border rounded-xl p-4 mb-4">
+      <div className="bg-gradient-to-br from-card to-[#7f30cb]/[0.05] border border-border rounded-xl p-4 mb-4">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Send Family Alert</p>
         <Textarea
           value={alertMessage}
@@ -158,7 +158,7 @@ export default function AdminPage() {
       </div>
 
       {/* Members List */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden">
+      <div className="bg-gradient-to-br from-card to-[#2f9db6]/[0.04] border border-border rounded-xl overflow-hidden">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide p-4 pb-2">
           Household Members ({members.length})
         </p>
@@ -170,11 +170,20 @@ export default function AdminPage() {
                 avatarUrl={member?.avatar_url}
                 color={member.member_color}
                 size="sm"
+                name={member.display_name || member.full_name}
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium truncate">{member.display_name || member.full_name}</p>
-                  <span className="text-[10px] bg-secondary px-1.5 py-0.5 rounded-full capitalize">{member.role}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full capitalize ${
+                      member.role === 'admin'
+                        ? 'bg-[rgba(127,48,203,0.14)] text-[#7f30cb]'
+                        : 'bg-secondary text-secondary-foreground'
+                    }`}
+                  >
+                    {member.role}
+                  </span>
                 </div>
                 <p className="text-[10px] text-muted-foreground">
                   Joined {format(new Date(member.created_at), 'MMM d, yyyy')}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { DEFAULT_MEMBER_ACCENT } from '@/lib/memberColors';
 
 export default function MemberAvatar({ avatar, avatarUrl, color, size = 'md', name }) {
   const sizes = {
@@ -8,8 +9,7 @@ export default function MemberAvatar({ avatar, avatarUrl, color, size = 'md', na
     xl: 'w-16 h-16 text-xl',
   };
 
-  const borderColor = color || '#94a3b8';
-  const bgColor = color ? `${color}25` : '#f1f5f9';
+  const ringHex = color || DEFAULT_MEMBER_ACCENT;
 
   const getInitials = (n) => {
     if (!n) return '?';
@@ -24,7 +24,7 @@ export default function MemberAvatar({ avatar, avatarUrl, color, size = 'md', na
         src={avatarUrl}
         alt={name || 'Member'}
         className={`${sizes[size]} rounded-full object-cover flex-shrink-0`}
-        style={{ borderColor, borderWidth: '2px', borderStyle: 'solid' }}
+        style={{ borderColor: ringHex, borderWidth: '2px', borderStyle: 'solid' }}
         title={name}
       />
     );
@@ -32,8 +32,8 @@ export default function MemberAvatar({ avatar, avatarUrl, color, size = 'md', na
 
   return (
     <div
-      className={`${sizes[size]} rounded-full flex items-center justify-center flex-shrink-0 font-semibold`}
-      style={{ backgroundColor: bgColor, borderColor, borderWidth: '2px', borderStyle: 'solid', color: borderColor }}
+      className={`${sizes[size]} rounded-full flex items-center justify-center flex-shrink-0 font-semibold bg-muted text-muted-foreground`}
+      style={{ borderColor: ringHex, borderWidth: '2px', borderStyle: 'solid' }}
       title={name}
     >
       {getInitials(name || avatar)}

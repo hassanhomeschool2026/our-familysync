@@ -1,6 +1,20 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <script>
+      (function () {
+        var k = 'fs-theme';
+        try {
+          var t = localStorage.getItem(k);
+          var d = document.documentElement;
+          var dark =
+            t === 'dark' ||
+            ((t === 'system' || !t) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) d.classList.add('dark');
+          else d.classList.remove('dark');
+        } catch (e) {}
+      })();
+    </script>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/FSLogoIconOnly-512.png" />
     <link rel="apple-touch-icon" href="/FSLogo_Tealhorizon-512.png" />

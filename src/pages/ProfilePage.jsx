@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTheme } from 'next-themes';
 import { supabase } from '@/lib/supabaseClient';
 import { useFamily } from '@/lib/familyContext';
 import { Link } from 'react-router-dom';
@@ -10,9 +11,17 @@ import { Switch } from '@/components/ui/switch';
 import { MEMBER_COLORS } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import {
-  Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2, Camera, X,
+  Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2, Camera, X, Sun, Moon, Monitor,
 } from 'lucide-react';
+
+const THEME_OPTIONS = [
+  { value: 'light', label: 'Light', Icon: Sun },
+  { value: 'dark', label: 'Dark', Icon: Moon },
+  { value: 'system', label: 'System', Icon: Monitor },
+];
+
 export default function ProfilePage() {
+  const { theme, setTheme } = useTheme();
   const { currentUser, family, members, isAdmin, isPremium, reload } = useFamily();
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(currentUser?.display_name || '');
@@ -177,7 +186,7 @@ export default function ProfilePage() {
       <h2 className="font-heading text-xl font-bold mb-4">Profile</h2>
 
       {/* Profile Card */}
-      <div className="bg-card border border-border rounded-xl p-4 mb-4">
+      <div className="bg-gradient-to-br from-card to-[#7f30cb]/[0.04] dark:to-[#7f30cb]/[0.08] border border-border rounded-xl p-4 mb-4">
         <div className="flex items-center gap-4">
           <div className="relative shrink-0">
             <MemberAvatar
@@ -199,7 +208,13 @@ export default function ProfilePage() {
             </div>
             <p className="text-sm text-muted-foreground">{currentUser?.email}</p>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium capitalize">
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${
+                  currentUser?.role === 'admin'
+                    ? 'bg-[rgba(127,48,203,0.14)] text-[#7f30cb]'
+                    : 'bg-secondary text-secondary-foreground'
+                }`}
+              >
                 {currentUser?.role}
               </span>
               <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-medium">
@@ -240,7 +255,7 @@ export default function ProfilePage() {
                   <button
                     key={c.value}
                     onClick={() => setColor(c.value)}
-                    className={`w-9 h-9 rounded-lg ${color === c.value ? 'ring-2 ring-offset-2 ring-foreground' : ''}`}
+                    className={`w-9 h-9 rounded-lg ${color === c.value ? 'ring-2 ring-offset-2 ring-[#2f9db6]' : ''}`}
                     style={{ backgroundColor: c.value }}
                   />
                 ))}
@@ -257,7 +272,30 @@ export default function ProfilePage() {
       </div>
 
       {/* Menu Items */}
-      <div className="bg-card border border-border rounded-xl divide-y divide-border overflow-hidden mb-4">
+      <div className="bg-gradient-to-br from-card to-[#2f9db6]/[0.04] dark:from-card dark:to-[#2f9db6]/[0.08] border border-border rounded-xl divide-y divide-border overflow-hidden mb-4">
+        <div className="p-4">
+          <div className="flex items-center gap-3 mb-3">
+            <Sun className="w-5 h-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Theme</span>
+          </div>
+          <div className="flex rounded-lg bg-secondary/60 dark:bg-secondary/40 p-0.5 gap-0.5">
+            {THEME_OPTIONS.map(({ value, label, Icon }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setTheme(value)}
+                className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 px-1 rounded-md text-[10px] font-semibold transition-colors ${
+                  theme === value
+                    ? 'bg-card text-foreground shadow-sm ring-1 ring-border'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <button onClick={() => setShowNotifPrefs(!showNotifPrefs)} className="flex items-center justify-between w-full p-4 hover:bg-secondary/50 transition-colors">
           <div className="flex items-center gap-3">
             <Bell className="w-5 h-5 text-muted-foreground" />
