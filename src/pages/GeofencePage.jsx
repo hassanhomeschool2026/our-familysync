@@ -12,17 +12,33 @@ import { toast } from 'sonner';
 const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
 
 export default function GeofencePage() {
-  const { family, currentUser, members, isAdmin } = useFamily();
+  const { family, currentUser, isAdmin } = useFamily();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [radius, setRadius] = useState('200');
   const [selectedCoords, setSelectedCoords] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
-  const [monitoring, setMonitoring] = useState(false);
-  const watchIdRef = useRef(null);
+  const [monitoring, setMonitoring] = useState(() => {
+    try {
+      return localStorage.getItem('fs_geofence_monitoring') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const autocompleteRef = useRef(null);
-  const insideZonesRef = useRef(new Set());
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('fs_geofence_monitoring', String(monitoring));
+    } catch {}
+  }, [monitoring]);
+
+  useEffect(() => {
+    const onSync = (e) => setMonitoring(e.detail);
+    window.addEventListener('fs_zone_monitoring_change', onSync);
+    return () => window.removeEventListener('fs_zone_monitoring_change', onSync);
+  }, []);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '',
@@ -77,97 +93,6 @@ export default function GeofencePage() {
     },
   });
 
-  const getDistance = (lat1, lng1, lat2, lng2) => {
-    const R = 6371000;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLng / 2) *
-        Math.sin(dLng / 2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  };
-
-  const checkGeofences = async (lat, lng) => {
-    const userName = currentUser?.display_name || currentUser?.full_name || 'Someone';
-    for (const zone of geofences) {
-      const dist = getDistance(lat, lng, zone.latitude, zone.longitude);
-      const inside = dist <= zone.radius_meters;
-      const wasInside = insideZonesRef.current.has(zone.id);
-      if (inside && !wasInside) {
-        insideZonesRef.current.add(zone.id);
-        await supabase.from('feed_items').insert({
-          family_id: family.id,
-          user_id: currentUser.id,
-          user_name: userName,
-          user_avatar: currentUser.avatar,
-          type: 'checkin',
-          message: `${userName} arrived at ${zone.name}`,
-        });
-        await supabase.from('notifications').insert(
-          members
-            .filter(m => m.id !== currentUser.id)
-            .map(m => ({
-              user_id: m.id,
-              type: 'checkin',
-              message: `${userName} arrived at ${zone.name}`,
-              read: false,
-            }))
-        );
-        toast.success(`You arrived at ${zone.name}!`);
-      } else if (!inside && wasInside) {
-        insideZonesRef.current.delete(zone.id);
-        await supabase.from('feed_items').insert({
-          family_id: family.id,
-          user_id: currentUser.id,
-          user_name: userName,
-          user_avatar: currentUser.avatar,
-          type: 'checkin',
-          message: `${userName} left ${zone.name}`,
-        });
-        await supabase.from('notifications').insert(
-          members
-            .filter(m => m.id !== currentUser.id)
-            .map(m => ({
-              user_id: m.id,
-              type: 'checkin',
-              message: `${userName} left ${zone.name}`,
-              read: false,
-            }))
-        );
-        toast(`You left ${zone.name}.`);
-      }
-    }
-  };
-
-  useEffect(() => {
-    if (monitoring) {
-      if (!navigator.geolocation) return;
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setUserLocation({ lat: latitude, lng: longitude });
-          checkGeofences(latitude, longitude);
-        },
-        () => toast.error('Could not get location.'),
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-      );
-    } else {
-      if (watchIdRef.current != null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-    }
-    return () => {
-      if (watchIdRef.current != null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-    };
-  }, [monitoring, geofences]);
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -175,7 +100,14 @@ export default function GeofencePage() {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => setMonitoring(v => !v)}
+            onClick={() => {
+              const next = !monitoring;
+              setMonitoring(next);
+              try {
+                localStorage.setItem('fs_geofence_monitoring', String(next));
+              } catch {}
+              window.dispatchEvent(new CustomEvent('fs_zone_monitoring_change', { detail: next }));
+            }}
             className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${monitoring ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'}`}
           >
             <Radio className="w-3 h-3" />
@@ -190,7 +122,7 @@ export default function GeofencePage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Geofencing alerts your family when you arrive or leave a saved zone — while the app is open.
+        Geofencing alerts your family when you arrive or leave a saved zone while the app is open. Enable Zone Alerts on the Check-In tab to monitor while using other features.
       </p>
 
       {showForm && isAdmin && (

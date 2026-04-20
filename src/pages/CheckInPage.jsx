@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MapPin, Navigation, X, Clock, Radio } from 'lucide-react';
+import { MapPin, Navigation, X, Clock, Radio, Shield } from 'lucide-react';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import EmptyState from '@/components/shared/EmptyState';
 import SkeletonCard from '@/components/shared/SkeletonCard';
@@ -100,9 +100,17 @@ export default function CheckInPage() {
   const [infoCheckIn, setInfoCheckIn] = useState(null);
   const [liveTracking, setLiveTracking] = useState(false);
   const watchIdRef = useRef(null);
+  const insideZonesRef = useRef(new Set());
   const [locationPermission, setLocationPermission] = useState('unknown');
   const [activeTab, setActiveTab] = useState('checkin');
   const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [zoneMonitoring, setZoneMonitoring] = useState(() => {
+    try {
+      return localStorage.getItem('fs_geofence_monitoring') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     if (!navigator.permissions) return;
@@ -110,6 +118,12 @@ export default function CheckInPage() {
       setLocationPermission(result.state);
       result.onchange = () => setLocationPermission(result.state);
     });
+  }, []);
+
+  useEffect(() => {
+    const onSync = (e) => setZoneMonitoring(e.detail);
+    window.addEventListener('fs_zone_monitoring_change', onSync);
+    return () => window.removeEventListener('fs_zone_monitoring_change', onSync);
   }, []);
 
   const { data: checkins = [], isLoading } = useQuery({
@@ -125,6 +139,19 @@ export default function CheckInPage() {
     },
     enabled: !!family?.id,
     refetchInterval: 60000,
+  });
+
+  const { data: geofences = [] } = useQuery({
+    queryKey: ['geofences', family?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('geofences')
+        .select('*')
+        .eq('family_id', family?.id)
+        .order('created_at', { ascending: true });
+      return data || [];
+    },
+    enabled: !!family?.id,
   });
 
   const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);
@@ -228,6 +255,77 @@ export default function CheckInPage() {
       }
     };
   }, [liveTracking, myCheckIn]);
+
+  useEffect(() => {
+    if (!zoneMonitoring || !navigator.geolocation) return;
+
+    const checkGeofences = async (lat, lng) => {
+      if (!geofences.length) return;
+      const userName = currentUser?.display_name || currentUser?.full_name || 'Someone';
+      const R = 6371000;
+      for (const zone of geofences) {
+        const dLat = ((zone.latitude - lat) * Math.PI) / 180;
+        const dLng = ((zone.longitude - lng) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((lat * Math.PI) / 180) *
+            Math.cos((zone.latitude * Math.PI) / 180) *
+            Math.sin(dLng / 2) *
+            Math.sin(dLng / 2);
+        const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const inside = dist <= zone.radius_meters;
+        const wasInside = insideZonesRef.current.has(zone.id);
+        if (inside && !wasInside) {
+          insideZonesRef.current.add(zone.id);
+          await supabase.from('feed_items').insert({
+            family_id: family.id,
+            user_id: currentUser.id,
+            user_name: userName,
+            user_avatar: currentUser.avatar,
+            type: 'checkin',
+            message: `${userName} arrived at ${zone.name}`,
+          });
+          await supabase.from('notifications').insert(
+            members.filter((m) => m.id !== currentUser.id).map((m) => ({
+              user_id: m.id,
+              type: 'checkin',
+              message: `${userName} arrived at ${zone.name}`,
+              read: false,
+            }))
+          );
+          toast.success(`You arrived at ${zone.name}!`);
+        } else if (!inside && wasInside) {
+          insideZonesRef.current.delete(zone.id);
+          await supabase.from('feed_items').insert({
+            family_id: family.id,
+            user_id: currentUser.id,
+            user_name: userName,
+            user_avatar: currentUser.avatar,
+            type: 'checkin',
+            message: `${userName} left ${zone.name}`,
+          });
+          await supabase.from('notifications').insert(
+            members.filter((m) => m.id !== currentUser.id).map((m) => ({
+              user_id: m.id,
+              type: 'checkin',
+              message: `${userName} left ${zone.name}`,
+              read: false,
+            }))
+          );
+          toast(`You left ${zone.name}.`);
+        }
+      }
+    };
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        checkGeofences(pos.coords.latitude, pos.coords.longitude);
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [zoneMonitoring, geofences, family?.id, currentUser?.id]);
 
   const createCheckIn = useMutation({
     mutationFn: async ({ location: loc, latitude: lat, longitude: lng, note: noteVal }) => {
@@ -361,7 +459,7 @@ export default function CheckInPage() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-heading text-xl font-bold">Check-In</h2>
         {activeTab === 'checkin' && (
-          <>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {myCheckIn ? (
               <Button
                 size="sm"
@@ -378,6 +476,21 @@ export default function CheckInPage() {
                 {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
               </Button>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                const next = !zoneMonitoring;
+                setZoneMonitoring(next);
+                try {
+                  localStorage.setItem('fs_geofence_monitoring', String(next));
+                } catch {}
+                window.dispatchEvent(new CustomEvent('fs_zone_monitoring_change', { detail: next }));
+              }}
+              className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${zoneMonitoring ? 'bg-primary/20 text-primary border-primary/40' : 'border-border text-muted-foreground'}`}
+            >
+              <Shield className="w-3 h-3" />
+              {zoneMonitoring ? 'Zones On' : 'Zones Off'}
+            </button>
             {myCheckIn && (
               <button
                 type="button"
@@ -388,7 +501,7 @@ export default function CheckInPage() {
                 {liveTracking ? 'Live On' : 'Live Off'}
               </button>
             )}
-          </>
+          </div>
         )}
       </div>
 
