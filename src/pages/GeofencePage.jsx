@@ -61,12 +61,17 @@ export default function GeofencePage() {
   const addGeofence = useMutation({
     mutationFn: async () => {
       if (!name.trim() || !selectedCoords) return;
+      const r = parseInt(radius, 10);
+      if (Number.isNaN(r) || r < 50) {
+        toast.error('Radius must be at least 50 meters');
+        throw new Error('__radius_validation__');
+      }
       const { error } = await supabase.from('geofences').insert({
         family_id: family.id,
         name: name.trim(),
         latitude: selectedCoords.lat,
         longitude: selectedCoords.lng,
-        radius_meters: parseInt(radius) || 200,
+        radius_meters: r,
         created_by: currentUser.id,
       });
       if (error) throw error;
@@ -79,7 +84,10 @@ export default function GeofencePage() {
       setRadius('200');
       toast.success('Geofence added!');
     },
-    onError: () => toast.error('Could not add geofence.'),
+    onError: (error) => {
+      if (error?.message === '__radius_validation__') return;
+      toast.error(error?.message || 'Could not add geofence.');
+    },
   });
 
   const deleteGeofence = useMutation({
@@ -134,7 +142,14 @@ export default function GeofencePage() {
           </div>
           <div>
             <Label>Radius (meters)</Label>
-            <Input type="number" value={radius} onChange={(e) => setRadius(e.target.value)} className="mt-1" />
+            <Input
+              type="number"
+              min={50}
+              placeholder="e.g. 100"
+              value={radius}
+              onChange={(e) => setRadius(e.target.value)}
+              className="mt-1"
+            />
           </div>
           {isLoaded && (
             <div className="relative">

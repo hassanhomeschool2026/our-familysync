@@ -17,6 +17,28 @@ import { DEFAULT_MEMBER_ACCENT } from '@/lib/memberColors';
 
 const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
 
+const FS_INSIDE_ZONES_KEY = 'fs_inside_zones';
+
+function loadInsideZonesSetFromStorage() {
+  try {
+    const raw = localStorage.getItem(FS_INSIDE_ZONES_KEY);
+    if (raw == null || raw === '') return new Set();
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed);
+  } catch {
+    return new Set();
+  }
+}
+
+function persistInsideZonesSet(set) {
+  try {
+    localStorage.setItem(FS_INSIDE_ZONES_KEY, JSON.stringify([...set]));
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
 const geocodeLatLng = async (lat, lng) => {
   const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const response = await fetch(
@@ -101,7 +123,7 @@ export default function CheckInPage() {
   const [infoCheckIn, setInfoCheckIn] = useState(null);
   const [liveTracking, setLiveTracking] = useState(false);
   const watchIdRef = useRef(null);
-  const insideZonesRef = useRef(new Set());
+  const insideZonesRef = useRef(loadInsideZonesSetFromStorage());
   const [locationPermission, setLocationPermission] = useState('unknown');
   const [activeTab, setActiveTab] = useState('checkin');
   const [historyExpanded, setHistoryExpanded] = useState(false);
@@ -280,6 +302,7 @@ export default function CheckInPage() {
         const wasInside = insideZonesRef.current.has(zone.id);
         if (inside && !wasInside) {
           insideZonesRef.current.add(zone.id);
+          persistInsideZonesSet(insideZonesRef.current);
           const { error: feedError } = await supabase.from('feed_items').insert({
             family_id: family.id,
             user_id: currentUser.id,
@@ -306,6 +329,7 @@ export default function CheckInPage() {
           toast.success(`You arrived at ${zone.name}!`);
         } else if (!inside && wasInside) {
           insideZonesRef.current.delete(zone.id);
+          persistInsideZonesSet(insideZonesRef.current);
           const { error: feedError } = await supabase.from('feed_items').insert({
             family_id: family.id,
             user_id: currentUser.id,
