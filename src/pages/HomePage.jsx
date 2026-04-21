@@ -816,7 +816,14 @@ export default function HomePage() {
               target="_blank"
               rel="noopener noreferrer"
               whileTap={tapSmall}
-              className="rounded-xl px-3 py-2 text-right ml-3 flex-shrink-0 cursor-pointer transition-[filter,box-shadow,background-color] no-underline relative overflow-hidden min-w-[5.5rem] border border-white/22 shadow-[0_6px_30px_rgba(0,0,0,0.075),0_0_36px_rgba(255,255,255,0.16),0_1px_0_rgba(255,255,255,0.16)_inset] backdrop-blur-lg backdrop-saturate-125 ring-1 ring-white/10 dark:border-white/20 dark:shadow-[0_8px_36px_rgba(0,0,0,0.38),0_0_32px_rgba(255,255,255,0.07),0_1px_0_rgba(255,255,255,0.08)_inset] dark:ring-white/8 bg-white/24 hover:bg-white/32 hover:ring-[rgba(47,157,182,0.26)] dark:bg-white/17 dark:hover:bg-white/22 dark:hover:ring-[rgba(47,157,182,0.36)]"
+              className="rounded-xl px-3 py-2 text-right ml-3 flex-shrink-0 cursor-pointer no-underline transition-colors"
+              style={{
+                background: 'rgba(255,255,255,0.16)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.28)',
+                boxShadow: '0 4px 28px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.22)',
+              }}
             >
               <div className="relative z-[1] contrast-[1.07]">
                 <div className={`text-xs mb-0.5 font-medium ${theme.subColor}`}>

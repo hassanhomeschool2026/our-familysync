@@ -40,6 +40,14 @@ export default function GeofencePage() {
     return () => window.removeEventListener('fs_zone_monitoring_change', onSync);
   }, []);
 
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {} // silent — map just falls back to first zone center
+    );
+  }, []);
+
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '',
     libraries: ['places'],
@@ -60,7 +68,7 @@ export default function GeofencePage() {
 
   const addGeofence = useMutation({
     mutationFn: async () => {
-      if (!name.trim() || !selectedCoords) return;
+      if (!name.trim() || !selectedCoords) throw new Error('Name and location are required.');
       const r = parseInt(radius, 10);
       if (Number.isNaN(r) || r < 50) {
         toast.error('Radius must be at least 50 meters');

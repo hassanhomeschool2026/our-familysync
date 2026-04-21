@@ -268,52 +268,15 @@ export default function CheckInPage() {
   }, [activeCheckIns, infoCheckIn]);
 
   useEffect(() => {
-    if (liveTracking) {
-      if (!navigator.geolocation) return;
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        async (pos) => {
-          const { latitude: lat, longitude: lng } = pos.coords;
-          const center = { lat, lng };
-          setUserGeo(center);
-          setOverrideMapView({ center, zoom: 14 });
-          try {
-            const geo = await geocodeLatLngDetailed(lat, lng);
-            setLocationName(geo.shortLabel);
-            setLocationAddress(geo.formattedAddress);
-            setCoords(center);
-            if (myCheckIn) {
-              await supabase.from('checkins').update({
-                latitude: lat,
-                longitude: lng,
-                location: geo.shortLabel,
-                address: geo.formattedAddress,
-              }).eq('id', myCheckIn.id);
-              queryClient.invalidateQueries({ queryKey: ['checkins', family?.id] });
-            }
-          } catch {
-            setCoords(center);
-          }
-        },
-        () => {},
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
-      );
-    } else {
+    if (!liveTracking && !zoneMonitoring) {
       if (watchIdRef.current != null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
       }
+      return;
     }
-    return () => {
-      if (watchIdRef.current != null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-    };
-  }, [liveTracking, myCheckIn]);
 
-  useEffect(() => {
-    console.log('[ZoneMonitoring] effect ran — zoneMonitoring:', zoneMonitoring, 'geofences:', geofences.length, 'members:', members.length);
-    if (!zoneMonitoring || !navigator.geolocation) return;
+    if (!navigator.geolocation) return;
 
     const checkGeofences = async (lat, lng) => {
       if (!geofences.length) return;
@@ -329,9 +292,10 @@ export default function CheckInPage() {
             Math.sin(dLng / 2) *
             Math.sin(dLng / 2);
         const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const accuracyBuffer = 50;
-        const inside = dist <= zone.radius_meters + accuracyBuffer;
         const wasInside = insideZonesRef.current.has(zone.id);
+        const enterThreshold = zone.radius_meters;
+        const exitThreshold = zone.radius_meters + 20;
+        const inside = wasInside ? dist <= exitThreshold : dist <= enterThreshold;
         if (inside && !wasInside) {
           playSound('/checkinchime.mp3');
           insideZonesRef.current.add(zone.id);
@@ -347,7 +311,6 @@ export default function CheckInPage() {
           if (feedError) console.error('Geofence feed insert error:', feedError);
 
           const notifTargets = members.filter((m) => m.id !== currentUser.id);
-          console.log('Notifying members:', notifTargets.map((m) => m.display_name || m.id));
           if (notifTargets.length > 0) {
             const { error: notifError } = await supabase.from('notifications').insert(
               notifTargets.map((m) => ({
@@ -374,7 +337,6 @@ export default function CheckInPage() {
           if (feedError) console.error('Geofence feed insert error:', feedError);
 
           const notifTargets = members.filter((m) => m.id !== currentUser.id);
-          console.log('Notifying members:', notifTargets.map((m) => m.display_name || m.id));
           if (notifTargets.length > 0) {
             const { error: notifError } = await supabase.from('notifications').insert(
               notifTargets.map((m) => ({
@@ -391,15 +353,58 @@ export default function CheckInPage() {
       }
     };
 
-    const watchId = navigator.geolocation.watchPosition(
-      (pos) => {
-        checkGeofences(pos.coords.latitude, pos.coords.longitude);
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        if (liveTracking) {
+          const center = { lat, lng };
+          setUserGeo(center);
+          setOverrideMapView({ center, zoom: 14 });
+          try {
+            const geo = await geocodeLatLngDetailed(lat, lng);
+            setLocationName(geo.shortLabel);
+            setLocationAddress(geo.formattedAddress);
+            setCoords(center);
+            if (myCheckIn) {
+              await supabase.from('checkins').update({
+                latitude: lat,
+                longitude: lng,
+                location: geo.shortLabel,
+                address: geo.formattedAddress,
+              }).eq('id', myCheckIn.id);
+              queryClient.invalidateQueries({ queryKey: ['checkins', family?.id] });
+            }
+          } catch {
+            setCoords(center);
+          }
+        }
+        if (zoneMonitoring) {
+          checkGeofences(lat, lng);
+        }
       },
-      () => {},
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setLiveTracking(false);
+          setZoneMonitoring(false);
+          localStorage.setItem('fs_geofence_monitoring', 'false');
+          window.dispatchEvent(new CustomEvent('fs_zone_monitoring_change', { detail: false }));
+          toast.error('Location permission blocked. Live tracking and zone monitoring have been turned off.');
+        } else if (err.code === err.TIMEOUT) {
+          toast.error('Location timed out. Check your GPS signal.');
+        } else {
+          toast.error('Could not get your location.');
+        }
+      },
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
     );
-    return () => navigator.geolocation.clearWatch(watchId);
-  }, [zoneMonitoring, geofences, family?.id, currentUser?.id, members]);
+
+    return () => {
+      if (watchIdRef.current != null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+    };
+  }, [liveTracking, zoneMonitoring, myCheckIn, geofences, family?.id, currentUser?.id, members]);
 
   const createCheckIn = useMutation({
     mutationFn: async ({ location: loc, address: addr, latitude: lat, longitude: lng, note: noteVal }) => {
@@ -848,7 +853,7 @@ export default function CheckInPage() {
         </>
       )}
 
-      {activeTab === 'zones' && <GeofencePage embedded={true} />}
+      {activeTab === 'zones' && <GeofencePage />}
     </div>
   );
 }
