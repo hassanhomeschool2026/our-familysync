@@ -38,6 +38,9 @@ export default function ProfilePage() {
   const [sendingLeave, setSendingLeave] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [soundsEnabled, setSoundsEnabled] = useState(
+    () => localStorage.getItem('fs_sounds_enabled') !== 'false'
+  );
 
   const prefs = currentUser?.notification_prefs || {};
 
@@ -183,7 +186,9 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <h2 className="font-heading text-xl font-bold mb-4">Profile</h2>
+      <div className="surface-3 p-4 mb-2">
+        <h2 className="font-heading text-xl font-bold">Profile</h2>
+      </div>
 
       {/* Profile Card */}
       <div className="bg-gradient-to-br from-card to-[#7f30cb]/[0.04] dark:to-[#7f30cb]/[0.08] border border-border rounded-xl p-4 mb-4">
@@ -272,7 +277,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Menu Items */}
-      <div className="bg-gradient-to-br from-card to-[#2f9db6]/[0.04] dark:from-card dark:to-[#2f9db6]/[0.08] border border-border rounded-xl divide-y divide-border overflow-hidden mb-4">
+      <div className="surface-1 divide-y divide-border overflow-hidden mb-4">
         <div className="p-4">
           <div className="flex items-center gap-3 mb-3">
             <Sun className="w-5 h-5 text-muted-foreground" />
@@ -295,6 +300,22 @@ export default function ProfilePage() {
               </button>
             ))}
           </div>
+        </div>
+        <div className="p-4 flex items-center justify-between gap-3">
+          <div className="space-y-0.5 min-w-0 pr-2">
+            <Label htmlFor="sound-effects" className="text-sm">
+              Sound Effects
+            </Label>
+            <p className="text-xs text-muted-foreground">Chimes for check-ins and completed tasks</p>
+          </div>
+          <Switch
+            id="sound-effects"
+            checked={soundsEnabled}
+            onCheckedChange={(v) => {
+              localStorage.setItem('fs_sounds_enabled', String(v));
+              setSoundsEnabled(v);
+            }}
+          />
         </div>
         <button onClick={() => setShowNotifPrefs(!showNotifPrefs)} className="flex items-center justify-between w-full p-4 hover:bg-secondary/50 transition-colors">
           <div className="flex items-center gap-3">
@@ -346,7 +367,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <div className="bg-card border border-border rounded-xl divide-y divide-border overflow-hidden">
+      <div className="surface-1 divide-y divide-border overflow-hidden">
         <button onClick={handleLogout} className="flex items-center gap-3 w-full p-4 hover:bg-secondary/50 transition-colors">
           <LogOut className="w-5 h-5 text-muted-foreground" />
           <span className="text-sm font-medium">Sign Out</span>

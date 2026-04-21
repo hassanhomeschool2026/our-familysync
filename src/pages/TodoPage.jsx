@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,6 +18,7 @@ import MemberAvatar from '@/components/shared/MemberAvatar';
 import confetti from 'canvas-confetti';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { playSound } from '@/lib/sounds';
 
 const priorityStyles = {
   high: 'bg-[rgba(239,68,68,0.12)] text-red-700',
@@ -25,7 +26,7 @@ const priorityStyles = {
   low: 'bg-[rgba(47,157,182,0.12)] text-[#247a8f]',
 };
 
-function TaskItemRow({ task, onToggle, onDelete }) {
+function TaskItemRow({ task, onToggle, onDelete, onEdit }) {
   const { members, isAdmin, currentUser, getMemberColor } = useFamily();
 
   const getMemberName = (userId) => {
@@ -43,7 +44,7 @@ function TaskItemRow({ task, onToggle, onDelete }) {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -100 }}
-      className={`flex items-start gap-3 p-3 rounded-xl bg-card border border-border ${
+      className={`flex items-start gap-3 p-3 surface-2 ${
         !task.completed ? 'border-l-[3px]' : ''
       } ${task.completed ? 'opacity-60' : ''}`}
       style={!task.completed ? { borderLeftColor: getMemberColor(task.assigned_to) } : undefined}
@@ -86,19 +87,32 @@ function TaskItemRow({ task, onToggle, onDelete }) {
         {task.notes && <p className="text-xs text-muted-foreground mt-1">{task.notes}</p>}
       </div>
       {canDelete && (
-        <button
-          type="button"
-          onClick={() => onDelete(task.id)}
-          className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-0.5 shrink-0">
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => onEdit(task)}
+              className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+              aria-label="Edit task"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => onDelete(task.id)}
+            className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+            aria-label="Delete task"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
       )}
     </motion.div>
   );
 }
 
-function AddTaskSheet({ open, onClose, onSave }) {
+function AddTaskSheet({ open, onClose, onSave, editingTask }) {
   const { members, isAdmin } = useFamily();
   const [form, setForm] = useState({
     title: '',
@@ -108,6 +122,27 @@ function AddTaskSheet({ open, onClose, onSave }) {
     notes: '',
   });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    if (editingTask) {
+      const d = editingTask.due_date;
+      const dueStr = d
+        ? typeof d === 'string'
+          ? d.slice(0, 10)
+          : format(new Date(d), 'yyyy-MM-dd')
+        : '';
+      setForm({
+        title: editingTask.title ?? '',
+        assigned_to: editingTask.assigned_to ?? '',
+        due_date: dueStr,
+        priority: editingTask.priority ?? 'medium',
+        notes: editingTask.notes ?? '',
+      });
+    } else {
+      setForm({ title: '', assigned_to: '', due_date: '', priority: 'medium', notes: '' });
+    }
+  }, [open, editingTask]);
 
   const handleSave = async () => {
     if (!form.title.trim()) return;
@@ -129,7 +164,7 @@ function AddTaskSheet({ open, onClose, onSave }) {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-sm mx-auto">
         <DialogHeader>
-          <DialogTitle className="font-heading">New Task</DialogTitle>
+          <DialogTitle className="font-heading">{editingTask ? 'Edit Task' : 'New Task'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -199,7 +234,7 @@ function AddTaskSheet({ open, onClose, onSave }) {
             disabled={saving || !form.title.trim()}
             className="w-full h-12 rounded-xl"
           >
-            {saving ? 'Saving...' : 'Add Task'}
+            {saving ? 'Saving...' : editingTask ? 'Save Changes' : 'Add Task'}
           </Button>
         </div>
       </DialogContent>
@@ -217,6 +252,7 @@ export default function TodoPage() {
   const [editingShopItem, setEditingShopItem] = useState(null);
   const [shopTab, setShopTab] = useState('todo');
   const [showCompleted, setShowCompleted] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks', family?.id],
@@ -256,6 +292,23 @@ export default function TodoPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
   });
 
+  const updateTask = useMutation({
+    mutationFn: async ({ id, title, assigned_to, due_date, priority, notes }) => {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          title: title.trim(),
+          assigned_to: assigned_to ?? null,
+          due_date,
+          priority,
+          notes: notes?.trim() ? notes.trim() : null,
+        })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+  });
+
   const toggleTask = useMutation({
     mutationFn: async (task) => {
       const isCompleting = !task.completed;
@@ -282,7 +335,10 @@ export default function TodoPage() {
         });
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
+    onSuccess: (_data, task) => {
+      if (!task.completed) playSound('/TaskCompleteChime.mp3');
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+    },
   });
 
   const deleteTask = useMutation({
@@ -356,19 +412,23 @@ export default function TodoPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-heading text-xl font-bold">To-Do List</h2>
-        <Button
-          size="sm"
-          onClick={() => {
-            if (!canAddTask) return;
-            setShowAdd(true);
-          }}
-          className="rounded-full h-9 w-9 p-0"
-          disabled={!canAddTask}
-        >
-          <Plus className="w-5 h-5" />
-        </Button>
+      <div className="surface-3 p-4 mb-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-heading text-xl font-bold">To-Do List</h2>
+          <button
+            type="button"
+            onClick={() => {
+              if (!canAddTask) return;
+              setEditingTask(null);
+              setShowAdd(true);
+            }}
+            disabled={!canAddTask}
+            className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none"
+          >
+            <Plus className="w-3 h-3 shrink-0" aria-hidden />
+            Add Task
+          </button>
+        </div>
       </div>
 
       {!canAddTask && (
@@ -414,7 +474,7 @@ export default function TodoPage() {
       {filtered.length === 0 ? (
         <EmptyState emoji="🎯" title="All caught up!" description="No tasks here yet. Tap + to add one." />
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 surface-1 p-4">
           {myTasks.length > 0 && (
             <div>
               <p className="text-xs font-bold text-foreground tracking-wide mb-2">My tasks</p>
@@ -443,6 +503,10 @@ export default function TodoPage() {
                       task={t}
                       onToggle={(task) => toggleTask.mutate(task)}
                       onDelete={(id) => deleteTask.mutate(id)}
+                      onEdit={(task) => {
+                        setEditingTask(task);
+                        setShowAdd(true);
+                      }}
                     />
                   ))}
                 </AnimatePresence>
@@ -498,10 +562,31 @@ export default function TodoPage() {
         </>
       )}
 
-      <AddTaskSheet open={showAdd} onClose={() => setShowAdd(false)} onSave={(data) => createTask.mutateAsync(data)} />
+      <AddTaskSheet
+        open={showAdd}
+        editingTask={editingTask}
+        onClose={() => {
+          setShowAdd(false);
+          setEditingTask(null);
+        }}
+        onSave={async (data) => {
+          if (editingTask) {
+            await updateTask.mutateAsync({
+              id: editingTask.id,
+              title: data.title,
+              assigned_to: data.assigned_to,
+              due_date: data.due_date,
+              priority: data.priority,
+              notes: data.notes,
+            });
+          } else {
+            await createTask.mutateAsync(data);
+          }
+        }}
+      />
 
       {shopTab !== 'shop' && (
-        <div className="mt-4 pt-4 border-t border-border">
+        <div className="mt-4 pt-4 border-t border-border surface-1 p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <ShoppingCart className="w-4 h-4 text-foreground" />
@@ -527,7 +612,7 @@ export default function TodoPage() {
             <div className="space-y-2">
               {shopItems.map((item) =>
                 editingShopItem?.id === item.id ? (
-                  <div key={item.id} className="bg-card border border-purple-200 rounded-xl p-3 space-y-2">
+                  <div key={item.id} className="surface-2 p-3 space-y-2">
                     <input
                       className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
                       value={editingShopItem.name}
@@ -568,8 +653,8 @@ export default function TodoPage() {
                 ) : (
                   <div
                     key={item.id}
-                    className={`bg-card border rounded-xl px-3 py-2.5 flex items-center gap-3 ${
-                      item.purchased ? 'border-border opacity-60' : 'border-border'
+                    className={`surface-2 px-3 py-2.5 flex items-center gap-3 ${
+                      item.purchased ? 'opacity-60' : ''
                     }`}
                   >
                     <button
@@ -617,7 +702,7 @@ export default function TodoPage() {
       )}
 
       {shopTab === 'shop' && (
-        <div>
+        <div className="surface-1 p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <ShoppingCart className="w-4 h-4 text-foreground" />
@@ -639,7 +724,7 @@ export default function TodoPage() {
             <div className="space-y-2">
               {shopItems.map((item) =>
                 editingShopItem?.id === item.id ? (
-                  <div key={item.id} className="bg-card border border-purple-200 rounded-xl p-3 space-y-2">
+                  <div key={item.id} className="surface-2 p-3 space-y-2">
                     <input
                       className="w-full text-sm border border-border rounded-lg px-3 py-1.5 bg-background"
                       value={editingShopItem.name}
@@ -680,8 +765,8 @@ export default function TodoPage() {
                 ) : (
                   <div
                     key={item.id}
-                    className={`bg-card border rounded-xl px-3 py-2.5 flex items-center gap-3 ${
-                      item.purchased ? 'border-border opacity-60' : 'border-border'
+                    className={`surface-2 px-3 py-2.5 flex items-center gap-3 ${
+                      item.purchased ? 'opacity-60' : ''
                     }`}
                   >
                     <button

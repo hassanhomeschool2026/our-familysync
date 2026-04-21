@@ -14,8 +14,23 @@ import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { toast } from 'sonner';
 import GeofencePage from './GeofencePage';
 import { DEFAULT_MEMBER_ACCENT } from '@/lib/memberColors';
+import { playSound } from '@/lib/sounds';
 
 const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
+
+const CLEAN_MAP_STYLE = [
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.park', stylers: [{ visibility: 'simplified' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
+  { featureType: 'road.local', elementType: 'geometry', stylers: [{ color: '#fafafa' }] },
+  { featureType: 'water', stylers: [{ color: '#c9e8f0' }] },
+  { featureType: 'landscape', stylers: [{ color: '#f2f6f3' }] },
+  { featureType: 'administrative', elementType: 'labels.text.fill', stylers: [{ color: '#888888' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#999999' }] },
+];
 
 const FS_INSIDE_ZONES_KEY = 'fs_inside_zones';
 
@@ -39,22 +54,30 @@ function persistInsideZonesSet(set) {
   }
 }
 
-const geocodeLatLng = async (lat, lng) => {
+/** Reverse geocode: short label for "place" line + Google's full formatted_address */
+const geocodeLatLngDetailed = async (lat, lng) => {
   const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   const response = await fetch(
     `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${key}`
   );
   const data = await response.json();
   if (data.results && data.results[0]) {
-    const components = data.results[0].address_components;
+    const result = data.results[0];
+    const formattedAddress = (result.formatted_address || '').trim();
+    const components = result.address_components;
     const streetNumber = components.find((c) => c.types.includes('street_number'))?.long_name || '';
     const street = components.find((c) => c.types.includes('route'))?.long_name || '';
     const city = components.find((c) => c.types.includes('locality'))?.long_name || '';
     const state =
       components.find((c) => c.types.includes('administrative_area_level_1'))?.short_name || '';
-    return `${streetNumber} ${street}, ${city}, ${state}`.trim();
+    const shortLabel = `${streetNumber} ${street}, ${city}, ${state}`.trim();
+    return {
+      shortLabel: shortLabel || formattedAddress,
+      formattedAddress: formattedAddress || shortLabel || `${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+    };
   }
-  return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  const fallback = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  return { shortLabel: fallback, formattedAddress: fallback };
 };
 
 function trimAddress(s, max = 52) {
@@ -62,6 +85,12 @@ function trimAddress(s, max = 52) {
   const t = s.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max - 1)}…`;
+}
+
+function checkInHasDistinctAddress(ci) {
+  const addr = ci?.address?.trim();
+  const loc = (ci?.location || '').trim();
+  return Boolean(addr && addr !== loc);
 }
 
 function markerIcon(color) {
@@ -114,6 +143,7 @@ export default function CheckInPage() {
   });
 
   const [locationName, setLocationName] = useState('');
+  const [locationAddress, setLocationAddress] = useState('');
   const [note, setNote] = useState('');
   const [gettingLocation, setGettingLocation] = useState(false);
   const [coords, setCoords] = useState(null);
@@ -247,19 +277,21 @@ export default function CheckInPage() {
           setUserGeo(center);
           setOverrideMapView({ center, zoom: 14 });
           try {
-            const name = await geocodeLatLng(lat, lng);
-            setLocationName(name);
+            const geo = await geocodeLatLngDetailed(lat, lng);
+            setLocationName(geo.shortLabel);
+            setLocationAddress(geo.formattedAddress);
             setCoords(center);
+            if (myCheckIn) {
+              await supabase.from('checkins').update({
+                latitude: lat,
+                longitude: lng,
+                location: geo.shortLabel,
+                address: geo.formattedAddress,
+              }).eq('id', myCheckIn.id);
+              queryClient.invalidateQueries({ queryKey: ['checkins', family?.id] });
+            }
           } catch {
             setCoords(center);
-          }
-          if (myCheckIn) {
-            await supabase.from('checkins').update({
-              latitude: lat,
-              longitude: lng,
-              location: await geocodeLatLng(lat, lng),
-            }).eq('id', myCheckIn.id);
-            queryClient.invalidateQueries({ queryKey: ['checkins', family?.id] });
           }
         },
         () => {},
@@ -301,6 +333,7 @@ export default function CheckInPage() {
         const inside = dist <= zone.radius_meters + accuracyBuffer;
         const wasInside = insideZonesRef.current.has(zone.id);
         if (inside && !wasInside) {
+          playSound('/checkinchime.mp3');
           insideZonesRef.current.add(zone.id);
           persistInsideZonesSet(insideZonesRef.current);
           const { error: feedError } = await supabase.from('feed_items').insert({
@@ -369,7 +402,7 @@ export default function CheckInPage() {
   }, [zoneMonitoring, geofences, family?.id, currentUser?.id, members]);
 
   const createCheckIn = useMutation({
-    mutationFn: async ({ location: loc, latitude: lat, longitude: lng, note: noteVal }) => {
+    mutationFn: async ({ location: loc, address: addr, latitude: lat, longitude: lng, note: noteVal }) => {
       if (myCheckIn) await supabase.from('checkins').update({ cleared_at: new Date().toISOString() }).eq('id', myCheckIn.id);
       const { data: newCheckIn, error } = await supabase
         .from('checkins')
@@ -379,6 +412,7 @@ export default function CheckInPage() {
           user_name: currentUser.display_name || currentUser.full_name || currentUser.email,
           user_avatar: currentUser.avatar || String.fromCodePoint(0x1f60a),
           location: loc,
+          address: addr?.trim() || null,
           latitude: lat,
           longitude: lng,
           note: noteVal?.trim() || null,
@@ -389,6 +423,7 @@ export default function CheckInPage() {
       return newCheckIn;
     },
     onSuccess: async (_newCheckIn, data) => {
+      playSound('/checkinchime.mp3');
       queryClient.invalidateQueries({ queryKey: ['checkins', family?.id] });
       await supabase.from('feed_items').insert({
         family_id: family.id,
@@ -401,8 +436,13 @@ export default function CheckInPage() {
       setShowForm(false);
       setCoords(null);
       setLocationName('');
+      setLocationAddress('');
       setNote('');
       setOverrideMapView(null);
+    },
+    onError: (error) => {
+      console.error('Check-in failed:', error);
+      toast.error('Check-in failed. Please try again.');
     },
   });
 
@@ -431,10 +471,13 @@ export default function CheckInPage() {
       setUserGeo(center);
       setOverrideMapView({ center, zoom: 14 });
       try {
-        const name = await geocodeLatLng(lat, lng);
-        setLocationName(name);
+        const geo = await geocodeLatLngDetailed(lat, lng);
+        setLocationName(geo.shortLabel);
+        setLocationAddress(geo.formattedAddress);
       } catch {
-        setLocationName(`${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+        const fallback = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+        setLocationName(fallback);
+        setLocationAddress(fallback);
       } finally {
         setGettingLocation(false);
         setShowForm(true);
@@ -462,6 +505,7 @@ export default function CheckInPage() {
     if (!coords || !locationName.trim()) return;
     createCheckIn.mutate({
       location: locationName.trim(),
+      address: locationAddress.trim() || null,
       latitude: coords.lat,
       longitude: coords.lng,
       note: note.trim(),
@@ -478,7 +522,10 @@ export default function CheckInPage() {
     const lng = loc.lng();
     const center = { lat, lng };
     setCoords(center);
-    setLocationName(place.name || place.formatted_address || '');
+    const formatted = (place.formatted_address || '').trim();
+    const name = (place.name || '').trim();
+    setLocationName(name || formatted || '');
+    setLocationAddress(formatted || '');
     setOverrideMapView({ center, zoom: 15 });
     setShowForm(true);
   };
@@ -488,6 +535,7 @@ export default function CheckInPage() {
     setOverrideMapView(null);
     setCoords(null);
     setLocationName('');
+    setLocationAddress('');
     setNote('');
   };
 
@@ -497,78 +545,80 @@ export default function CheckInPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="font-heading text-xl font-bold">Check-In</h2>
-        {activeTab === 'checkin' && (
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            {myCheckIn ? (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => clearCheckIn.mutate()}
-                className="rounded-full text-xs"
-                disabled={clearCheckIn.isPending}
-              >
-                <X className="w-3 h-3 mr-1" /> Clear My Pin
-              </Button>
-            ) : (
-              <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs shadow-md">
-                <Navigation className="w-3 h-3 mr-1" />
-                {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
-              </Button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                const next = !zoneMonitoring;
-                setZoneMonitoring(next);
-                try {
-                  localStorage.setItem('fs_geofence_monitoring', String(next));
-                } catch {}
-                window.dispatchEvent(new CustomEvent('fs_zone_monitoring_change', { detail: next }));
-              }}
-              className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${zoneMonitoring ? 'bg-primary/20 text-primary border-primary/40' : 'border-border text-muted-foreground'}`}
-            >
-              <Shield className="w-3 h-3" />
-              {zoneMonitoring ? 'Zones On' : 'Zones Off'}
-            </button>
-            {myCheckIn && (
+      <div className="surface-3 p-4 mb-2">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-heading text-xl font-bold">Check-In</h2>
+          {activeTab === 'checkin' && (
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              {myCheckIn ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => clearCheckIn.mutate()}
+                  className="rounded-full text-xs"
+                  disabled={clearCheckIn.isPending}
+                >
+                  <X className="w-3 h-3 mr-1" /> Clear My Pin
+                </Button>
+              ) : (
+                <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs shadow-md">
+                  <Navigation className="w-3 h-3 mr-1" />
+                  {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
+                </Button>
+              )}
               <button
                 type="button"
-                onClick={() => setLiveTracking((v) => !v)}
-                className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${liveTracking ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'}`}
+                onClick={() => {
+                  const next = !zoneMonitoring;
+                  setZoneMonitoring(next);
+                  try {
+                    localStorage.setItem('fs_geofence_monitoring', String(next));
+                  } catch {}
+                  window.dispatchEvent(new CustomEvent('fs_zone_monitoring_change', { detail: next }));
+                }}
+                className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${zoneMonitoring ? 'bg-primary/20 text-primary border-primary/40' : 'border-border text-muted-foreground'}`}
               >
-                <Radio className="w-3 h-3" />
-                {liveTracking ? 'Live On' : 'Live Off'}
+                <Shield className="w-3 h-3" />
+                {zoneMonitoring ? 'Zones On' : 'Zones Off'}
               </button>
-            )}
-          </div>
-        )}
-      </div>
+              {myCheckIn && (
+                <button
+                  type="button"
+                  onClick={() => setLiveTracking((v) => !v)}
+                  className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${liveTracking ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'}`}
+                >
+                  <Radio className="w-3 h-3" />
+                  {liveTracking ? 'Live On' : 'Live Off'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
-      <div className="flex gap-2 mb-4">
-        <button
-          type="button"
-          onClick={() => setActiveTab('checkin')}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-            activeTab === 'checkin'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary text-muted-foreground'
-          }`}
-        >
-          Check-In
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab('zones')}
-          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-            activeTab === 'zones'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-secondary text-muted-foreground'
-          }`}
-        >
-          Zones
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab('checkin')}
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+              activeTab === 'checkin'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-muted-foreground'
+            }`}
+          >
+            Check-In
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('zones')}
+            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
+              activeTab === 'zones'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-secondary text-muted-foreground'
+            }`}
+          >
+            Zones
+          </button>
+        </div>
       </div>
 
       {activeTab === 'checkin' && (
@@ -576,11 +626,11 @@ export default function CheckInPage() {
       <div className="mb-4">
         {isLoaded ? (
           <GoogleMap
-            mapContainerStyle={{ width: '100%', height: '300px', borderRadius: '12px' }}
+            mapContainerStyle={{ width: '100%', height: '180px', borderRadius: '12px' }}
             mapContainerClassName="relative"
             center={mapCenter}
             zoom={mapZoom}
-            options={{ fullscreenControl: false, mapTypeControl: false }}
+            options={{ fullscreenControl: false, mapTypeControl: false, styles: CLEAN_MAP_STYLE }}
           >
             <Autocomplete
               className="absolute top-3 left-0 right-0 z-10 px-3 w-full box-border"
@@ -629,6 +679,11 @@ export default function CheckInPage() {
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {trimAddress(infoCheckIn.location, 200)}
                     </p>
+                    {checkInHasDistinctAddress(infoCheckIn) ? (
+                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                        {trimAddress(infoCheckIn.address, 240)}
+                      </p>
+                    ) : null}
                     {infoCheckIn.note ? <p className="text-xs mt-1">{infoCheckIn.note}</p> : null}
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {formatCheckInDetailTime(infoCheckIn.created_at)}
@@ -639,7 +694,7 @@ export default function CheckInPage() {
           </GoogleMap>
         ) : (
           <div
-            style={{ width: '100%', height: '300px' }}
+            style={{ width: '100%', height: '180px' }}
             className="bg-secondary rounded-xl flex items-center justify-center"
           >
             <p className="text-muted-foreground text-sm">Loading map...</p>
@@ -693,7 +748,7 @@ export default function CheckInPage() {
             return (
               <div
                 key={ci.id}
-                className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border"
+                className="flex items-start gap-3 p-3 surface-2"
                 style={{ borderLeftWidth: '4px', borderLeftColor: color }}
               >
                 <MemberAvatar
@@ -705,10 +760,15 @@ export default function CheckInPage() {
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{displayName}</p>
-                  <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">
-                    <MapPin className="w-3 h-3 shrink-0 mt-0.5" />
+                  <p className="text-sm text-foreground flex items-start gap-1 mt-0.5">
+                    <MapPin className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground" />
                     <span className="truncate">{trimAddress(ci.location ?? '')}</span>
                   </p>
+                  {checkInHasDistinctAddress(ci) ? (
+                    <p className="text-xs text-muted-foreground mt-0.5 pl-4 leading-snug">
+                      {ci.address}
+                    </p>
+                  ) : null}
                   {ci.note ? (
                     <p className="text-xs mt-1 text-foreground/90 truncate">{ci.note}</p>
                   ) : null}
@@ -752,7 +812,7 @@ export default function CheckInPage() {
                   return (
                     <div
                       key={ci.id}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
+                      className="flex items-center gap-3 p-3 surface-2"
                       style={{ borderLeftWidth: '4px', borderLeftColor: color }}
                     >
                       <MemberAvatar
@@ -764,10 +824,13 @@ export default function CheckInPage() {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{displayName}</p>
-                        <p className="text-xs text-muted-foreground flex items-start gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 shrink-0 mt-0.5" />
-                          <span>{trimAddress(ci.location ?? '')}</span>
+                        <p className="text-sm text-foreground flex items-start gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground" />
+                          <span className="min-w-0">{trimAddress(ci.location ?? '')}</span>
                         </p>
+                        {checkInHasDistinctAddress(ci) ? (
+                          <p className="text-xs text-muted-foreground mt-0.5 pl-4 leading-snug">{ci.address}</p>
+                        ) : null}
                         {ci.note ? <p className="text-xs mt-1 text-foreground/90">{ci.note}</p> : null}
                         <p className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1">
                           <Clock className="w-3 h-3 shrink-0 mt-0.5" />

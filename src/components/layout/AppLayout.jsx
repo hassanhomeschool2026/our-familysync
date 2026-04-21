@@ -8,7 +8,7 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-background pb-20">
       <UpdateBanner />
-      <header className="sticky top-0 z-40 border-b border-purple-200/40 dark:border-white/[0.08] bg-gradient-to-br from-[#f3f0ff] via-[#ede9fe] to-[#e8f7f4] dark:from-[#1D2A36] dark:via-[#1D2A36] dark:to-[#18212B]">
+      <header className="sticky top-0 z-40 border-b border-purple-200/40 dark:border-white/[0.08] bg-background">
         <div className="flex items-center justify-between px-4 h-14 max-w-lg mx-auto">
           <div className="flex items-center gap-1">
             <img

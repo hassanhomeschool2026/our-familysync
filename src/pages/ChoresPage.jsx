@@ -13,6 +13,7 @@ import SkeletonCard from '@/components/shared/SkeletonCard';
 import { CheckCircle2, Plus, Pencil, Trash2, Flame } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isToday, startOfWeek, isAfter, isBefore, startOfMonth, formatDistanceToNow } from 'date-fns';
+import { playSound } from '@/lib/sounds';
 
 const UNASSIGNED = '__unassigned__';
 
@@ -189,6 +190,7 @@ export default function ChoresPage() {
       });
     },
     onSuccess: (_data, chore) => {
+      playSound('/TaskCompleteChime.mp3');
       queryClient.invalidateQueries({ queryKey: ['chores'] });
       toast.success(
         `Great job! +${chore.point_value ?? 1} pts ${String.fromCodePoint(0x1f389)}`
@@ -267,29 +269,41 @@ export default function ChoresPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="font-heading text-xl font-bold">Chores</h2>
-        {isAdmin && (
-          <Button
-            size="sm"
-            variant="default"
-            className="rounded-full"
-            disabled={choresLimitReached && !showAddForm && !editingChore}
-            onClick={() => {
-              if (showAddForm || editingChore) {
-                closeForm();
-              } else if (!canOpenNewChore) {
-                return;
-              } else {
-                setEditingChore(null);
-                setForm(emptyForm());
-                setShowAddForm(true);
-              }
-            }}
-          >
-            Add +
-          </Button>
-        )}
+      <div className="surface-3 p-4 mb-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-heading text-xl font-bold">Chores</h2>
+          {isAdmin && (
+            <button
+              type="button"
+              disabled={choresLimitReached && !showAddForm && !editingChore}
+              onClick={() => {
+                if (showAddForm || editingChore) {
+                  closeForm();
+                } else if (!canOpenNewChore) {
+                  return;
+                } else {
+                  setEditingChore(null);
+                  setForm(emptyForm());
+                  setShowAddForm(true);
+                }
+              }}
+              className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none ${
+                showAddForm || editingChore
+                  ? 'border border-primary text-primary bg-background hover:bg-primary/10'
+                  : 'bg-primary text-primary-foreground'
+              }`}
+            >
+              {showAddForm || editingChore ? (
+                'Close'
+              ) : (
+                <>
+                  <Plus className="w-3 h-3 shrink-0" aria-hidden />
+                  Add Chore
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </div>
 
       {isAdmin && choresLimitReached && (
@@ -401,7 +415,7 @@ export default function ChoresPage() {
         </div>
       )}
 
-      <section>
+      <section className="surface-3 p-4">
         <h3 className="text-base font-bold text-[#7f30cb] mb-2 flex items-center gap-2">
           <span className="w-7 h-7 rounded-full bg-[rgba(127,48,203,0.12)] flex items-center justify-center">
             <Flame className="w-4 h-4 text-[#7f30cb]" />
@@ -442,11 +456,11 @@ export default function ChoresPage() {
         )}
       </section>
 
-      <section className="bg-gradient-to-br from-card to-[#2f9db6]/[0.06] border border-border rounded-xl p-4">
+      <section className="surface-1 p-4">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-base font-bold text-[#247a8f] flex items-center gap-2">
             Daily Progress
-            <span className="text-base">🎉</span>
+            <span className="text-base">🌟</span>
           </h3>
           <span className="text-xs font-semibold text-[#2f9db6]">{dailyPct}%</span>
         </div>
@@ -478,7 +492,7 @@ export default function ChoresPage() {
               return (
                 <li
                   key={chore.id}
-                  className="flex items-start gap-3 rounded-xl border border-border bg-card p-3"
+                  className="flex items-start gap-3 surface-2 p-3"
                   style={{
                     borderLeftWidth: '3px',
                     borderLeftColor: getMemberColor(chore.assigned_to),
@@ -591,7 +605,7 @@ export default function ChoresPage() {
               return (
                 <li
                   key={chore.id}
-                  className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-sm text-muted-foreground"
+                  className="surface-2 px-3 py-2 text-sm text-muted-foreground"
                 >
                   <p className="line-through text-foreground/70">{chore.title}</p>
                   <p className="mt-1 text-xs">

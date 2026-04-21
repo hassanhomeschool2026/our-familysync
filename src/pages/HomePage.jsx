@@ -48,6 +48,215 @@ function getWeatherDesc(code) {
   return 'Mixed';
 }
 
+/** Night for hero weather scenes: before 6am or from 8pm onward */
+function isNightHour(hour) {
+  return hour < 6 || hour >= 20;
+}
+
+function wmoToCondition(code) {
+  if (code == null || code < 0) return null;
+  if (code === 0) return 'clear';
+  if ([1, 2, 3].includes(code)) return 'clouds';
+  if ([45, 48].includes(code)) return 'mist';
+  if ([51, 53, 55, 56].includes(code)) return 'drizzle';
+  if ([61, 63, 65, 66, 67, 68, 80, 81, 82].includes(code)) return 'rain';
+  if ([95, 96, 99].includes(code)) return 'thunderstorm';
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return 'snow';
+  return null;
+}
+
+/**
+ * Prefer Open-Meteo WMO code; if `main` exists (OpenWeather-style), use it with lowercase comparison.
+ */
+function normalizeWeatherCondition(main, wmoCode) {
+  if (main != null && typeof main === 'string' && main.trim()) {
+    const m = main.trim().toLowerCase();
+    const map = {
+      clear: 'clear',
+      clouds: 'clouds',
+      overcast: 'clouds',
+      rain: 'rain',
+      drizzle: 'drizzle',
+      thunderstorm: 'thunderstorm',
+      snow: 'snow',
+      mist: 'mist',
+      fog: 'fog',
+      haze: 'mist',
+      smoke: 'mist',
+      dust: 'mist',
+      sand: 'mist',
+      ash: 'mist',
+      squall: 'thunderstorm',
+      tornado: 'thunderstorm',
+    };
+    if (map[m]) return map[m];
+  }
+  return wmoToCondition(wmoCode);
+}
+
+const BRAND_SCENE_GRADIENT =
+  'linear-gradient(135deg, #7f30cb 0%, #3a7fd5 50%, #01dcba 100%)';
+
+/**
+ * @returns {{ gradient: string, animation: 'rain' | 'clearDay' | 'stars' | 'drift' }}
+ */
+function getWeatherScene(condition, isNight) {
+  const c = (condition || '').toLowerCase();
+  if (c === 'clear') {
+    if (isNight) {
+      return {
+        gradient: 'linear-gradient(160deg, #0f0c29 0%, #1a1a4e 50%, #24243e 100%)',
+        animation: 'stars',
+      };
+    }
+    return {
+      gradient: 'linear-gradient(160deg, #f5a623 0%, #e8820a 50%, #c45c1a 100%)',
+      animation: 'clearDay',
+    };
+  }
+  if (c === 'clouds' || c === 'overcast') {
+    return {
+      gradient: 'linear-gradient(160deg, #2d3a4a 0%, #3d5068 50%, #2a3d52 100%)',
+      animation: 'drift',
+    };
+  }
+  if (c === 'rain' || c === 'drizzle') {
+    return {
+      gradient: 'linear-gradient(160deg, #1e3a5f 0%, #2d5282 50%, #1a3a52 100%)',
+      animation: 'rain',
+    };
+  }
+  if (c === 'thunderstorm') {
+    return {
+      gradient: 'linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+      animation: 'rain',
+    };
+  }
+  if (c === 'snow') {
+    return {
+      gradient: 'linear-gradient(160deg, #e8eaf6 0%, #c5cae9 50%, #9fa8da 100%)',
+      animation: 'drift',
+    };
+  }
+  if (c === 'mist' || c === 'fog') {
+    return {
+      gradient: 'linear-gradient(160deg, #b0bec5 0%, #90a4ae 50%, #78909c 100%)',
+      animation: 'drift',
+    };
+  }
+  return {
+    gradient: BRAND_SCENE_GRADIENT,
+    animation: 'drift',
+  };
+}
+
+function HeroWeatherAnimLayer({ animation, reduceMotion }) {
+  if (reduceMotion) return null;
+
+  if (animation === 'rain') {
+    return (
+      <>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className="absolute top-0 w-0.5 rounded-full bg-white/45 hero-weather-rain pointer-events-none"
+            style={{
+              left: `${6 + i * 15}%`,
+              height: '22px',
+              animationDelay: `${i * 0.14}s`,
+              boxShadow: '0 0 3px rgba(255,255,255,0.35)',
+            }}
+            aria-hidden
+          />
+        ))}
+      </>
+    );
+  }
+
+  if (animation === 'clearDay') {
+    const orbs = [
+      { top: '8%', left: '6%', size: 88 },
+      { top: '14%', right: '10%', size: 72 },
+      { bottom: '28%', left: '18%', size: 76 },
+    ];
+    return (
+      <>
+        {orbs.map((o, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-[#fcd34d]/50 blur-2xl hero-weather-orb pointer-events-none"
+            style={{
+              top: o.top,
+              left: o.left,
+              right: o.right,
+              width: o.size,
+              height: o.size,
+              animationDelay: `${i * 0.45}s`,
+            }}
+            aria-hidden
+          />
+        ))}
+      </>
+    );
+  }
+
+  if (animation === 'stars') {
+    const stars = [
+      { top: '12%', left: '12%' },
+      { top: '8%', left: '48%' },
+      { top: '20%', right: '18%' },
+      { top: '16%', left: '72%' },
+      { bottom: '38%', left: '28%' },
+    ];
+    return (
+      <>
+        {stars.map((s, i) => (
+          <div
+            key={i}
+            className="absolute w-[3px] h-[3px] rounded-full bg-white hero-weather-star pointer-events-none"
+            style={{
+              top: s.top,
+              left: s.left,
+              right: s.right,
+              bottom: s.bottom,
+              animationDelay: `${i * 0.35}s`,
+            }}
+            aria-hidden
+          />
+        ))}
+      </>
+    );
+  }
+
+  if (animation === 'drift') {
+    const dots = [
+      { top: '22%', left: '14%' },
+      { top: '18%', left: '52%' },
+      { bottom: '32%', right: '16%' },
+    ];
+    return (
+      <>
+        {dots.map((d, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 rounded-full bg-white/30 hero-weather-drift pointer-events-none"
+            style={{
+              top: d.top,
+              left: d.left,
+              right: d.right,
+              bottom: d.bottom,
+              animationDelay: `${i * 0.6}s`,
+            }}
+            aria-hidden
+          />
+        ))}
+      </>
+    );
+  }
+
+  return null;
+}
+
 function getHeaderTheme(hour, weatherCode, isDark) {
   const sky = getSkyKind(weatherCode);
   const isCloudy = sky === 'cloudy';
@@ -499,6 +708,12 @@ export default function HomePage() {
   const hour = new Date().getHours();
   const isDarkMode = themeMounted && resolvedTheme === 'dark';
   const theme = getHeaderTheme(hour, weather?.weathercode ?? -1, isDarkMode);
+  const weatherScene = weather
+    ? getWeatherScene(
+        normalizeWeatherCondition(weather?.main, weather?.weathercode) ?? '',
+        isNightHour(hour)
+      )
+    : null;
 
   const heroLightForeground =
     isDarkMode ||
@@ -524,43 +739,62 @@ export default function HomePage() {
         variants={heroVariants}
         whileHover={reduceMotion ? undefined : hoverCard}
         className={`rounded-2xl p-5 relative overflow-hidden shadow-md ${cardSurface}`}
-        style={{ background: theme.bg }}
+        style={{ background: weatherScene ? weatherScene.gradient : theme.bg }}
       >
-        <div className="absolute inset-0 opacity-10 bg-white/5" />
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              'linear-gradient(135deg, rgba(127,48,203,0.045) 0%, transparent 42%, rgba(47,157,182,0.065) 100%)',
-          }}
-        />
-        <div
-          className="absolute inset-0 pointer-events-none z-[1] mix-blend-soft-light opacity-[0.35] dark:opacity-[0.22]"
-          style={{
-            background:
-              'radial-gradient(ellipse 85% 65% at 18% 22%, rgba(255,255,255,0.5) 0%, transparent 55%), linear-gradient(180deg, rgba(255,255,255,0.14) 0%, transparent 42%, rgba(0,0,0,0.04) 100%)',
-          }}
-          aria-hidden
-        />
-        <div
-          className="absolute inset-0 pointer-events-none z-[2]"
-          style={{
-            background: isDarkMode
-              ? 'linear-gradient(to bottom, transparent 0%, transparent 45%, rgba(0,0,0,0.28) 82%, rgba(0,0,0,0.42) 100%)'
-              : 'linear-gradient(to bottom, transparent 0%, transparent 52%, rgba(15,23,32,0.12) 88%, rgba(15,23,32,0.2) 100%)',
-          }}
-          aria-hidden
-        />
-        <motion.div
-          className="absolute bottom-0 right-0 z-[3] opacity-[0.52] pointer-events-none"
-          aria-hidden
-          initial={reduceMotion ? false : { opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 0.52, scale: 1 }}
-          transition={{ delay: 0.22, duration: 0.65, ease: easeOut }}
-        >
-          <HeaderScene scene={theme.scene} reduceMotion={reduceMotion} />
-        </motion.div>
-        <div className="flex items-start justify-between relative z-10">
+        {!weatherScene && (
+          <>
+            <div className="absolute inset-0 opacity-10 bg-white/5" />
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  'linear-gradient(135deg, rgba(127,48,203,0.045) 0%, transparent 42%, rgba(47,157,182,0.065) 100%)',
+              }}
+            />
+            <div
+              className="absolute inset-0 pointer-events-none z-[1] mix-blend-soft-light opacity-[0.35] dark:opacity-[0.22]"
+              style={{
+                background:
+                  'radial-gradient(ellipse 85% 65% at 18% 22%, rgba(255,255,255,0.5) 0%, transparent 55%), linear-gradient(180deg, rgba(255,255,255,0.14) 0%, transparent 42%, rgba(0,0,0,0.04) 100%)',
+              }}
+              aria-hidden
+            />
+            <div
+              className="absolute inset-0 pointer-events-none z-[2]"
+              style={{
+                background: isDarkMode
+                  ? 'linear-gradient(to bottom, transparent 0%, transparent 45%, rgba(0,0,0,0.28) 82%, rgba(0,0,0,0.42) 100%)'
+                  : 'linear-gradient(to bottom, transparent 0%, transparent 52%, rgba(15,23,32,0.12) 88%, rgba(15,23,32,0.2) 100%)',
+              }}
+              aria-hidden
+            />
+            <motion.div
+              className="absolute bottom-0 right-0 z-[3] opacity-[0.52] pointer-events-none"
+              aria-hidden
+              initial={reduceMotion ? false : { opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 0.52, scale: 1 }}
+              transition={{ delay: 0.22, duration: 0.65, ease: easeOut }}
+            >
+              <HeaderScene scene={theme.scene} reduceMotion={reduceMotion} />
+            </motion.div>
+          </>
+        )}
+        {weatherScene && (
+          <div
+            className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
+            aria-hidden
+          >
+            <HeroWeatherAnimLayer
+              animation={weatherScene.animation}
+              reduceMotion={reduceMotion}
+            />
+            <div
+              className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/[0.14] pointer-events-none"
+              aria-hidden
+            />
+          </div>
+        )}
+        <div className="flex items-start justify-between relative z-[1]">
           <div
             className={`flex-1 min-w-0 ${
               heroLightForeground
@@ -584,7 +818,7 @@ export default function HomePage() {
               whileTap={tapSmall}
               className="rounded-xl px-3 py-2 text-right ml-3 flex-shrink-0 cursor-pointer transition-[filter,box-shadow,background-color] no-underline relative overflow-hidden min-w-[5.5rem] border border-white/22 shadow-[0_6px_30px_rgba(0,0,0,0.075),0_0_36px_rgba(255,255,255,0.16),0_1px_0_rgba(255,255,255,0.16)_inset] backdrop-blur-lg backdrop-saturate-125 ring-1 ring-white/10 dark:border-white/20 dark:shadow-[0_8px_36px_rgba(0,0,0,0.38),0_0_32px_rgba(255,255,255,0.07),0_1px_0_rgba(255,255,255,0.08)_inset] dark:ring-white/8 bg-white/24 hover:bg-white/32 hover:ring-[rgba(47,157,182,0.26)] dark:bg-white/17 dark:hover:bg-white/22 dark:hover:ring-[rgba(47,157,182,0.36)]"
             >
-              <div className="relative z-10 contrast-[1.07]">
+              <div className="relative z-[1] contrast-[1.07]">
                 <div className={`text-xs mb-0.5 font-medium ${theme.subColor}`}>
                   {getWeatherIcon(weather.weathercode)} Forecast
                 </div>
@@ -606,18 +840,20 @@ export default function HomePage() {
       <motion.div
         variants={itemVariants}
         whileHover={reduceMotion ? undefined : hoverCard}
-        className={`bg-gradient-to-br from-card to-[#2f9db6]/[0.05] border border-border rounded-xl p-4 ${cardSurface}`}
+        className={`surface-1 p-4 ${cardSurface}`}
       >
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-sm font-semibold">Family check-ins</p>
-          <motion.button
-            type="button"
-            onClick={() => navigate('/checkin')}
-            whileTap={tapSmall}
-            className={`text-xs flex items-center gap-0.5 ${actionLinkClass}`}
-          >
-            View Map <ChevronRight className="w-3 h-3" />
-          </motion.button>
+        <div className="surface-3 p-4 mb-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">Family check-ins</p>
+            <motion.button
+              type="button"
+              onClick={() => navigate('/checkin')}
+              whileTap={tapSmall}
+              className={`text-xs flex items-center gap-0.5 ${actionLinkClass}`}
+            >
+              View Map <ChevronRight className="w-3 h-3" />
+            </motion.button>
+          </div>
         </div>
         {members.length === 0 ? (
           <p className="text-xs text-muted-foreground">No members yet.</p>
@@ -657,18 +893,20 @@ export default function HomePage() {
         <motion.div
           variants={itemVariants}
           whileHover={reduceMotion ? undefined : hoverCard}
-          className={`bg-gradient-to-br from-card to-[#7f30cb]/[0.04] border border-border rounded-xl p-3 ${cardSurface}`}
+          className={`surface-1 p-3 ${cardSurface}`}
         >
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-[#247a8f]">Today&apos;s events</p>
-            <motion.span
-              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[rgba(47,157,182,0.14)] text-[#247a8f]"
-              initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.08, duration: 0.28, ease: easeOut }}
-            >
-              {todayEvents.length}
-            </motion.span>
+          <div className="surface-3 p-4 mb-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-[#247a8f]">Today&apos;s events</p>
+              <motion.span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[rgba(47,157,182,0.14)] text-[#247a8f]"
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.08, duration: 0.28, ease: easeOut }}
+              >
+                {todayEvents.length}
+              </motion.span>
+            </div>
           </div>
           {todayEvents.length === 0 ? (
             <p className="text-[10px] text-muted-foreground">No events today</p>
@@ -703,18 +941,20 @@ export default function HomePage() {
         <motion.div
           variants={itemVariants}
           whileHover={reduceMotion ? undefined : hoverCard}
-          className={`bg-gradient-to-br from-card to-[#2f9db6]/[0.06] border border-border rounded-xl p-3 ${cardSurface}`}
+          className={`surface-1 p-3 ${cardSurface}`}
         >
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-[#247a8f]">Tasks due</p>
-            <motion.span
-              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[rgba(47,157,182,0.14)] text-[#247a8f]"
-              initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.08, duration: 0.28, ease: easeOut }}
-            >
-              {dueTasks.length}
-            </motion.span>
+          <div className="surface-3 p-4 mb-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-[#247a8f]">Tasks due</p>
+              <motion.span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[rgba(47,157,182,0.14)] text-[#247a8f]"
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.08, duration: 0.28, ease: easeOut }}
+              >
+                {dueTasks.length}
+              </motion.span>
+            </div>
           </div>
           {dueTasks.length === 0 ? (
             <p className="text-[10px] text-muted-foreground">All caught up!</p>
@@ -746,20 +986,22 @@ export default function HomePage() {
       <motion.div
         variants={itemVariants}
         whileHover={reduceMotion ? undefined : hoverCard}
-        className={`bg-gradient-to-br from-card to-[#7f30cb]/[0.05] border border-border rounded-xl p-4 ${cardSurface}`}
+        className={`surface-1 p-4 ${cardSurface}`}
       >
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-semibold">Chore progress</p>
-          {maxStreak > 0 && (
-            <motion.span
-              className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[rgba(127,48,203,0.14)] text-[#7f30cb]"
-              initial={reduceMotion ? false : { opacity: 0, scale: 0.94 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.06, duration: 0.3, ease: easeOut }}
-            >
-              {maxStreak}-day streak
-            </motion.span>
-          )}
+        <div className="surface-3 p-4 mb-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold">Chore progress</p>
+            {maxStreak > 0 && (
+              <motion.span
+                className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[rgba(127,48,203,0.14)] text-[#7f30cb]"
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.94 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.06, duration: 0.3, ease: easeOut }}
+              >
+                {maxStreak}-day streak
+              </motion.span>
+            )}
+          </div>
         </div>
         <p className="text-xs text-muted-foreground mb-2">
           {completedChores.length} of {totalChores} completed today
@@ -826,17 +1068,19 @@ export default function HomePage() {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <p className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-          <motion.span
-            className="inline-flex"
-            initial={reduceMotion ? false : { opacity: 0, rotate: -6 }}
-            animate={{ opacity: 1, rotate: 0 }}
-            transition={{ duration: 0.32, ease: easeOut }}
-          >
-            <Zap className="w-4 h-4 text-[#2f9db6]" />
-          </motion.span>
-          Quick actions
-        </p>
+        <div className="surface-3 p-4 mb-2">
+          <p className="text-sm font-semibold flex items-center gap-1.5">
+            <motion.span
+              className="inline-flex"
+              initial={reduceMotion ? false : { opacity: 0, rotate: -6 }}
+              animate={{ opacity: 1, rotate: 0 }}
+              transition={{ duration: 0.32, ease: easeOut }}
+            >
+              <Zap className="w-4 h-4 text-[#2f9db6]" />
+            </motion.span>
+            Quick actions
+          </p>
+        </div>
         <div className="grid grid-cols-4 gap-2">
           {[
             {

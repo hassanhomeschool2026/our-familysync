@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
@@ -8,7 +8,7 @@ import WeekView from '@/components/calendar/WeekView';
 import DayView from '@/components/calendar/DayView';
 import AddEventSheet from '@/components/calendar/AddEventSheet';
 import SkeletonCard from '@/components/shared/SkeletonCard';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 
 export default function CalendarPage() {
   const { family, currentUser } = useFamily();
@@ -98,10 +98,25 @@ export default function CalendarPage() {
     setShowAddEvent(true);
   };
 
+  const selectedDayEventCount = useMemo(
+    () => events.filter((e) => isSameDay(new Date(e.date + 'T00:00:00'), selectedDay)).length,
+    [events, selectedDay]
+  );
+
+  const currentDayEventCount = useMemo(
+    () => events.filter((e) => isSameDay(new Date(e.date + 'T00:00:00'), currentDate)).length,
+    [events, currentDate]
+  );
+
   if (isLoading) return <SkeletonCard count={5} />;
 
   return (
-    <div>
+    <div
+      className="min-h-0"
+      style={{
+        background: 'linear-gradient(180deg, rgba(47,157,182,0.04) 0%, transparent 300px)',
+      }}
+    >
       <CalendarHeader
         view={view}
         setView={setView}
@@ -114,18 +129,32 @@ export default function CalendarPage() {
         <>
           <MonthView currentDate={currentDate} events={events} onDayClick={handleDayClick} selectedDay={selectedDay} />
           <div className="mt-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm font-semibold text-foreground">
-                {format(selectedDay, 'EEEE, MMMM d')}
-              </p>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">{format(selectedDay, 'EEEE, MMMM d')}</p>
+                {selectedDayEventCount > 0 && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {selectedDayEventCount} event{selectedDayEventCount !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
               <button
+                type="button"
+                aria-label="Add event"
                 onClick={() => {
-                  setCurrentDate(selectedDay);
+                  setEditingEvent(null);
+                  setSelectedDate(selectedDay);
                   setShowAddEvent(true);
                 }}
-                className="text-xs text-primary font-medium hover:underline"
+                className="shrink-0 rounded-[20px] text-white border-0 cursor-pointer font-semibold transition-opacity hover:opacity-95 active:opacity-90"
+                style={{
+                  background: 'linear-gradient(135deg, #7f30cb, #2f9db6)',
+                  padding: '4px 12px',
+                  fontSize: '12px',
+                  boxShadow: '0 4px 12px rgba(127,48,203,0.3)',
+                }}
               >
-                + Add event
+                + Event
               </button>
             </div>
             <DayView
@@ -138,15 +167,28 @@ export default function CalendarPage() {
         </>
       )}
       {view === 'week' && (
-        <WeekView currentDate={currentDate} events={events} onDayClick={handleDayClick} />
-      )}
-      {view === 'day' && (
-        <DayView
+        <WeekView
           currentDate={currentDate}
           events={events}
+          onDayClick={handleDayClick}
           onDeleteEvent={(id) => deleteEvent.mutate(id)}
           onEditEvent={handleEditEvent}
         />
+      )}
+      {view === 'day' && (
+        <>
+          {currentDayEventCount > 0 && (
+            <p className="text-xs text-muted-foreground mb-4">
+              {currentDayEventCount} event{currentDayEventCount !== 1 ? 's' : ''}
+            </p>
+          )}
+          <DayView
+            currentDate={currentDate}
+            events={events}
+            onDeleteEvent={(id) => deleteEvent.mutate(id)}
+            onEditEvent={handleEditEvent}
+          />
+        </>
       )}
 
       <AddEventSheet
