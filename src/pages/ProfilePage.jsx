@@ -14,6 +14,69 @@ import {
   Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2, Camera, X, Sun, Moon, Monitor,
 } from 'lucide-react';
 
+const sectionHeaderBarStyle = {
+  background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+  boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+  padding: '12px 16px',
+};
+
+const sectionHeaderOverlayStyle = {
+  background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+};
+
+const GRADIENT_HEADER_STAR_TWINKLE_CSS = `
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+`;
+
+const GRADIENT_HEADER_STARS = [
+  { left: '5%', top: '25%', size: 1.8, delay: '0s', dur: '2.2s' },
+  { left: '12%', top: '65%', size: 1.4, delay: '0.6s', dur: '3s' },
+  { left: '22%', top: '30%', size: 2.2, delay: '1.1s', dur: '2.5s' },
+  { left: '33%', top: '70%', size: 1.4, delay: '0.3s', dur: '2.8s' },
+  { left: '45%', top: '20%', size: 1.8, delay: '1.5s', dur: '2s' },
+  { left: '56%', top: '68%', size: 1.4, delay: '0.8s', dur: '3.2s' },
+  { left: '66%', top: '28%', size: 2, delay: '0.4s', dur: '2.4s' },
+  { left: '76%', top: '72%', size: 1.4, delay: '1.3s', dur: '2.7s' },
+  { left: '86%', top: '35%', size: 2.2, delay: '0.2s', dur: '2.1s' },
+  { left: '94%', top: '68%', size: 1.4, delay: '1.8s', dur: '3.1s' },
+];
+
+function GradientHeaderStarField() {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        borderRadius: 'inherit',
+        zIndex: 0,
+      }}
+    >
+      {GRADIENT_HEADER_STARS.map((s, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: s.left,
+            top: s.top,
+            width: `${s.size}px`,
+            height: `${s.size}px`,
+            borderRadius: '50%',
+            background: 'white',
+            animation: `starTwinkle ${s.dur} ease-in-out infinite`,
+            animationDelay: s.delay,
+            boxShadow: `0 0 ${s.size * 2}px rgba(255,255,255,0.8)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 const THEME_OPTIONS = [
   { value: 'light', label: 'Light', Icon: Sun },
   { value: 'dark', label: 'Dark', Icon: Moon },
@@ -38,8 +101,8 @@ export default function ProfilePage() {
   const [sendingLeave, setSendingLeave] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [soundsEnabled, setSoundsEnabled] = useState(
-    () => localStorage.getItem('fs_sounds_enabled') !== 'false'
+  const [soundEnabled, setSoundEnabled] = useState(
+    () => localStorage.getItem('fs_sound_effects') !== 'false'
   );
 
   const prefs = currentUser?.notification_prefs || {};
@@ -186,8 +249,18 @@ export default function ProfilePage() {
 
   return (
     <div>
-      <div className="surface-3 p-4 mb-2">
-        <h2 className="font-heading text-xl font-bold">Profile</h2>
+      <div
+        className="surface-3 mb-2 relative overflow-hidden"
+        style={sectionHeaderBarStyle}
+      >
+        <GradientHeaderStarField />
+        <style>{GRADIENT_HEADER_STAR_TWINKLE_CSS}</style>
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={sectionHeaderOverlayStyle}
+          aria-hidden
+        />
+        <h2 className="relative z-[1] font-heading text-xl font-bold text-white">Settings</h2>
       </div>
 
       {/* Profile Card */}
@@ -279,9 +352,20 @@ export default function ProfilePage() {
       {/* Menu Items */}
       <div className="surface-1 divide-y divide-border overflow-hidden mb-4">
         <div className="p-4">
-          <div className="flex items-center gap-3 mb-3">
-            <Sun className="w-5 h-5 text-muted-foreground" />
-            <span className="text-sm font-medium">Theme</span>
+          <div
+            className="relative mb-3 overflow-hidden rounded-xl"
+            style={sectionHeaderBarStyle}
+          >
+            <GradientHeaderStarField />
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={sectionHeaderOverlayStyle}
+              aria-hidden
+            />
+            <div className="relative z-[1] flex items-center gap-3">
+              <Sun className="w-5 h-5 shrink-0 text-[rgba(255,255,255,0.9)]" />
+              <span className="text-sm font-medium text-white">Theme</span>
+            </div>
           </div>
           <div className="flex rounded-lg bg-secondary/60 dark:bg-secondary/40 p-0.5 gap-0.5">
             {THEME_OPTIONS.map(({ value, label, Icon }) => (
@@ -310,19 +394,32 @@ export default function ProfilePage() {
           </div>
           <Switch
             id="sound-effects"
-            checked={soundsEnabled}
-            onCheckedChange={(v) => {
-              localStorage.setItem('fs_sounds_enabled', String(v));
-              setSoundsEnabled(v);
+            checked={soundEnabled}
+            onCheckedChange={(checked) => {
+              localStorage.setItem('fs_sound_effects', String(checked));
+              setSoundEnabled(checked);
             }}
           />
         </div>
-        <button onClick={() => setShowNotifPrefs(!showNotifPrefs)} className="flex items-center justify-between w-full p-4 hover:bg-secondary/50 transition-colors">
-          <div className="flex items-center gap-3">
-            <Bell className="w-5 h-5 text-muted-foreground" />
-            <span className="text-sm font-medium">Notification Preferences</span>
+        <button
+          type="button"
+          onClick={() => setShowNotifPrefs(!showNotifPrefs)}
+          className="relative flex items-center justify-between w-full overflow-hidden text-left transition-opacity hover:opacity-95"
+          style={sectionHeaderBarStyle}
+        >
+          <GradientHeaderStarField />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={sectionHeaderOverlayStyle}
+            aria-hidden
+          />
+          <div className="relative z-[1] flex items-center gap-3">
+            <Bell className="w-5 h-5 shrink-0 text-[rgba(255,255,255,0.9)]" />
+            <span className="text-sm font-medium text-white">Notification Preferences</span>
           </div>
-          <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${showNotifPrefs ? 'rotate-90' : ''}`} />
+          <ChevronRight
+            className={`relative z-[1] w-4 h-4 shrink-0 text-[rgba(255,255,255,0.9)] transition-transform ${showNotifPrefs ? 'rotate-90' : ''}`}
+          />
         </button>
 
         {showNotifPrefs && (

@@ -9,6 +9,68 @@ import SkeletonCard from '@/components/shared/SkeletonCard';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Calendar, CheckCircle2, MapPin, UserPlus, Megaphone } from 'lucide-react';
 
+const sectionHeaderBarStyle = {
+  background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+  boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+};
+
+const sectionHeaderOverlayStyle = {
+  background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+};
+
+const GRADIENT_HEADER_STAR_TWINKLE_CSS = `
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+`;
+
+const GRADIENT_HEADER_STARS = [
+  { left: '5%', top: '25%', size: 1.8, delay: '0s', dur: '2.2s' },
+  { left: '12%', top: '65%', size: 1.4, delay: '0.6s', dur: '3s' },
+  { left: '22%', top: '30%', size: 2.2, delay: '1.1s', dur: '2.5s' },
+  { left: '33%', top: '70%', size: 1.4, delay: '0.3s', dur: '2.8s' },
+  { left: '45%', top: '20%', size: 1.8, delay: '1.5s', dur: '2s' },
+  { left: '56%', top: '68%', size: 1.4, delay: '0.8s', dur: '3.2s' },
+  { left: '66%', top: '28%', size: 2, delay: '0.4s', dur: '2.4s' },
+  { left: '76%', top: '72%', size: 1.4, delay: '1.3s', dur: '2.7s' },
+  { left: '86%', top: '35%', size: 2.2, delay: '0.2s', dur: '2.1s' },
+  { left: '94%', top: '68%', size: 1.4, delay: '1.8s', dur: '3.1s' },
+];
+
+function GradientHeaderStarField() {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        borderRadius: 'inherit',
+        zIndex: 0,
+      }}
+    >
+      {GRADIENT_HEADER_STARS.map((s, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: s.left,
+            top: s.top,
+            width: `${s.size}px`,
+            height: `${s.size}px`,
+            borderRadius: '50%',
+            background: 'white',
+            animation: `starTwinkle ${s.dur} ease-in-out infinite`,
+            animationDelay: s.delay,
+            boxShadow: `0 0 ${s.size * 2}px rgba(255,255,255,0.8)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 const typeIcons = {
   event_added: Calendar,
   task_completed: CheckCircle2,
@@ -68,7 +130,21 @@ export default function FeedPage() {
 
   return (
     <div>
-      <h2 className="font-heading text-xl font-bold mb-4">Family Feed</h2>
+      <div
+        className="relative mb-4 overflow-hidden rounded-xl"
+        style={sectionHeaderBarStyle}
+      >
+        <GradientHeaderStarField />
+        <style>{GRADIENT_HEADER_STAR_TWINKLE_CSS}</style>
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={sectionHeaderOverlayStyle}
+          aria-hidden
+        />
+        <h2 className="relative z-[1] font-heading text-xl font-bold text-white">
+          Family Feed
+        </h2>
+      </div>
 
       {filtered.length === 0 ? (
         <EmptyState emoji="📰" title="No activity yet" description="Your family's activity will show up here." />

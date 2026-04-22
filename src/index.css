@@ -16,20 +16,20 @@
     --card-foreground: 220 25% 14%;
     --popover: 0 0% 100%;
     --popover-foreground: 220 25% 14%;
-    /* Brand teal #2f9db6 — interactive / primary */
-    --primary: 191 59% 45%;
+    /* Brand primary #1e3a8a */
+    --primary: 222 64% 33%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 30 30% 94%;
-    --secondary-foreground: 220 25% 20%;
-    --muted: 30 20% 94%;
-    --muted-foreground: 220 10% 46%;
+    --secondary: 270 40% 94%;
+    --secondary-foreground: 270 30% 25%;
+    --muted: 270 30% 94%;
+    --muted-foreground: 270 10% 46%;
     --accent: 12 80% 62%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 30 15% 88%;
-    --input: 30 15% 88%;
-    --ring: 191 59% 45%;
+    --border: 270 20% 88%;
+    --input: 270 20% 88%;
+    --ring: 222 64% 33%;
     --chart-1: 191 59% 45%;
     --chart-2: 12 80% 62%;
     --chart-3: 43 96% 56%;
@@ -40,9 +40,9 @@
     --sidebar-foreground: 220 25% 14%;
     --sidebar-primary: 191 59% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 30 30% 94%;
-    --sidebar-accent-foreground: 220 25% 20%;
-    --sidebar-border: 30 15% 88%;
+    --sidebar-accent: 270 40% 94%;
+    --sidebar-accent-foreground: 270 30% 25%;
+    --sidebar-border: 270 20% 88%;
     --sidebar-ring: 191 59% 45%;
 
     /* Calendar / premium surfaces (alias tokens) */

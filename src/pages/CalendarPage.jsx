@@ -129,33 +129,33 @@ export default function CalendarPage() {
         <>
           <MonthView currentDate={currentDate} events={events} onDayClick={handleDayClick} selectedDay={selectedDay} />
           <div className="mt-4">
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">{format(selectedDay, 'EEEE, MMMM d')}</p>
-                {selectedDayEventCount > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {selectedDayEventCount} event{selectedDayEventCount !== 1 ? 's' : ''}
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                aria-label="Add event"
-                onClick={() => {
-                  setEditingEvent(null);
-                  setSelectedDate(selectedDay);
-                  setShowAddEvent(true);
-                }}
-                className="shrink-0 rounded-[20px] text-white border-0 cursor-pointer font-semibold transition-opacity hover:opacity-95 active:opacity-90"
+            <div
+              className="relative overflow-hidden rounded-xl border border-border mb-4"
+              style={{
+                background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+                boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+              }}
+            >
+              <div
                 style={{
-                  background: 'linear-gradient(135deg, #7f30cb, #2f9db6)',
-                  padding: '4px 12px',
-                  fontSize: '12px',
-                  boxShadow: '0 4px 12px rgba(127,48,203,0.3)',
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
                 }}
-              >
-                + Event
-              </button>
+              />
+              <div className="relative z-[1] flex flex-col gap-0 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-foreground mb-3">
+                    {format(selectedDay, 'EEEE, MMMM d')}
+                  </p>
+                  {selectedDayEventCount > 0 && (
+                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                      {selectedDayEventCount} event{selectedDayEventCount !== 1 ? 's' : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
             <DayView
               currentDate={selectedDay}

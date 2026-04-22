@@ -8,13 +8,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MapPin, Navigation, X, Clock, Radio, Shield } from 'lucide-react';
 import MemberAvatar from '@/components/shared/MemberAvatar';
-import EmptyState from '@/components/shared/EmptyState';
 import SkeletonCard from '@/components/shared/SkeletonCard';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { toast } from 'sonner';
-import GeofencePage from './GeofencePage';
+import { useNavigate } from 'react-router-dom';
 import { DEFAULT_MEMBER_ACCENT } from '@/lib/memberColors';
-import { playSound } from '@/lib/sounds';
+import { playCheckInSound } from '@/lib/sounds';
 
 const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
 
@@ -133,9 +132,11 @@ function formatHistoryExactTime(iso) {
 }
 
 export default function CheckInPage() {
+  const navigate = useNavigate();
   const { family, currentUser, members, getMemberColor } = useFamily();
   const queryClient = useQueryClient();
   const autocompleteRef = useRef(null);
+  const formSectionRef = useRef(null);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '',
@@ -155,7 +156,6 @@ export default function CheckInPage() {
   const watchIdRef = useRef(null);
   const insideZonesRef = useRef(loadInsideZonesSetFromStorage());
   const [locationPermission, setLocationPermission] = useState('unknown');
-  const [activeTab, setActiveTab] = useState('checkin');
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [zoneMonitoring, setZoneMonitoring] = useState(() => {
     try {
@@ -297,7 +297,6 @@ export default function CheckInPage() {
         const exitThreshold = zone.radius_meters + 20;
         const inside = wasInside ? dist <= exitThreshold : dist <= enterThreshold;
         if (inside && !wasInside) {
-          playSound('/checkinchime.mp3');
           insideZonesRef.current.add(zone.id);
           persistInsideZonesSet(insideZonesRef.current);
           const { error: feedError } = await supabase.from('feed_items').insert({
@@ -428,7 +427,7 @@ export default function CheckInPage() {
       return newCheckIn;
     },
     onSuccess: async (_newCheckIn, data) => {
-      playSound('/checkinchime.mp3');
+      playCheckInSound();
       queryClient.invalidateQueries({ queryKey: ['checkins', family?.id] });
       await supabase.from('feed_items').insert({
         family_id: family.id,
@@ -453,9 +452,9 @@ export default function CheckInPage() {
 
   const clearCheckIn = useMutation({
     mutationFn: async () => {
-      const latestMine = checkins.find((c) => c.user_id === currentUser?.id);
-      if (!latestMine?.id) return;
-      const { error } = await supabase.from('checkins').update({ cleared_at: new Date().toISOString() }).eq('id', latestMine.id);
+      const id = myCheckIn?.id;
+      if (!id) throw new Error('No active check-in to clear.');
+      const { error } = await supabase.from('checkins').update({ cleared_at: new Date().toISOString() }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -470,28 +469,41 @@ export default function CheckInPage() {
       return;
     }
     setGettingLocation(true);
+    const fallbackLabel = (lat, lng) => `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
     const finish = async (lat, lng) => {
-      const center = { lat, lng };
-      setCoords(center);
-      setUserGeo(center);
-      setOverrideMapView({ center, zoom: 14 });
       try {
-        const geo = await geocodeLatLngDetailed(lat, lng);
+        const center = { lat, lng };
+        setCoords(center);
+        setUserGeo(center);
+        setOverrideMapView({ center, zoom: 14 });
+        const geo = await Promise.race([
+          geocodeLatLngDetailed(lat, lng),
+          new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('geocode_timeout')), 10000);
+          }),
+        ]).catch(() => ({
+          shortLabel: fallbackLabel(lat, lng),
+          formattedAddress: fallbackLabel(lat, lng),
+        }));
         setLocationName(geo.shortLabel);
         setLocationAddress(geo.formattedAddress);
+        setShowForm(true);
       } catch {
-        const fallback = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-        setLocationName(fallback);
-        setLocationAddress(fallback);
+        const fb = fallbackLabel(lat, lng);
+        setLocationName(fb);
+        setLocationAddress(fb);
+        setShowForm(true);
       } finally {
         setGettingLocation(false);
-        setShowForm(true);
       }
     };
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLocationPermission('granted');
-        finish(pos.coords.latitude, pos.coords.longitude);
+        void finish(pos.coords.latitude, pos.coords.longitude).catch(() => {
+          setGettingLocation(false);
+          toast.error('Could not open the check-in form. Try again or use the map search.');
+        });
       },
       (err) => {
         setGettingLocation(false);
@@ -544,94 +556,404 @@ export default function CheckInPage() {
     setNote('');
   };
 
+  useEffect(() => {
+    if (!showForm) return;
+    const id = window.setTimeout(() => {
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+    }, 150);
+    return () => clearTimeout(id);
+  }, [showForm]);
+
   const infoWindowMember = infoCheckIn ? getMemberForUser(infoCheckIn.user_id) : null;
 
   if (isLoading) return <SkeletonCard count={3} />;
 
   return (
-    <div>
-      <div className="surface-3 p-4 mb-2">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-heading text-xl font-bold">Check-In</h2>
-          {activeTab === 'checkin' && (
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              {myCheckIn ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => clearCheckIn.mutate()}
-                  className="rounded-full text-xs"
-                  disabled={clearCheckIn.isPending}
-                >
-                  <X className="w-3 h-3 mr-1" /> Clear My Pin
-                </Button>
-              ) : (
-                <Button size="sm" onClick={getLocation} disabled={gettingLocation} className="rounded-full text-xs shadow-md">
-                  <Navigation className="w-3 h-3 mr-1" />
-                  {gettingLocation ? 'Getting location...' : locationPermission === 'denied' ? 'Location Blocked' : 'Share My Location'}
-                </Button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  const next = !zoneMonitoring;
-                  setZoneMonitoring(next);
-                  try {
-                    localStorage.setItem('fs_geofence_monitoring', String(next));
-                  } catch {}
-                  window.dispatchEvent(new CustomEvent('fs_zone_monitoring_change', { detail: next }));
-                }}
-                className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${zoneMonitoring ? 'bg-primary/20 text-primary border-primary/40' : 'border-border text-muted-foreground'}`}
-              >
-                <Shield className="w-3 h-3" />
-                {zoneMonitoring ? 'Zones On' : 'Zones Off'}
-              </button>
-              {myCheckIn && (
-                <button
-                  type="button"
-                  onClick={() => setLiveTracking((v) => !v)}
-                  className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${liveTracking ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'}`}
-                >
-                  <Radio className="w-3 h-3" />
-                  {liveTracking ? 'Live On' : 'Live Off'}
-                </button>
-              )}
-            </div>
-          )}
+    <div className="space-y-5 pb-6">
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+          borderRadius: 20,
+          padding: '20px 20px 16px',
+          marginBottom: 20,
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 6px 20px rgba(30, 58, 138, 0.2)',
+        }}
+      >
+        <div
+          className="check-in-ping-layer"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            overflow: 'hidden',
+            borderRadius: 20,
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        >
+          <style>{`
+    .check-in-ping-layer, .check-in-ping-layer * {
+      pointer-events: none !important;
+    }
+    @keyframes pingRipple {
+      0% { transform: scale(0.8); opacity: 0.6; }
+      100% { transform: scale(2.8); opacity: 0; }
+    }
+    @keyframes pingRipple2 {
+      0% { transform: scale(0.8); opacity: 0.4; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    @keyframes pingRipple3 {
+      0% { transform: scale(0.8); opacity: 0.3; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+    @keyframes pingDot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.15); opacity: 0.85; }
+    }
+  `}</style>
+
+          <div
+            style={{
+              position: 'absolute',
+              right: 40,
+              top: '50%',
+              transform: 'translateY(-50%)',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                border: '2px solid rgba(255,255,255,0.5)',
+                animation: 'pingRipple 2.4s ease-out infinite',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                border: '2px solid rgba(255,255,255,0.35)',
+                animation: 'pingRipple2 2.4s ease-out infinite',
+                animationDelay: '0.6s',
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                width: 48,
+                height: 48,
+                borderRadius: '50%',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                border: '2px solid rgba(255,255,255,0.2)',
+                animation: 'pingRipple3 2.4s ease-out infinite',
+                animationDelay: '1.2s',
+              }}
+            />
+            <div
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.9)',
+                boxShadow: '0 0 12px rgba(255,255,255,0.6)',
+                animation: 'pingDot 2s ease-in-out infinite',
+                position: 'relative',
+                zIndex: 1,
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              position: 'absolute',
+              right: 100,
+              top: 14,
+              opacity: 0.5,
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                border: '1.5px solid rgba(255,255,255,0.5)',
+                animation: 'pingRipple 3s ease-out infinite',
+                animationDelay: '1s',
+              }}
+            />
+            <div
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.8)',
+                position: 'relative',
+                zIndex: 1,
+                animation: 'pingDot 3s ease-in-out infinite',
+                animationDelay: '1s',
+              }}
+            />
+          </div>
+
+          <div
+            style={{
+              position: 'absolute',
+              right: 24,
+              bottom: 14,
+              opacity: 0.35,
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                width: 20,
+                height: 20,
+                borderRadius: '50%',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                border: '1.5px solid rgba(255,255,255,0.5)',
+                animation: 'pingRipple 2.8s ease-out infinite',
+                animationDelay: '0.4s',
+              }}
+            />
+            <div
+              style={{
+                width: 5,
+                height: 5,
+                borderRadius: '50%',
+                background: 'rgba(255,255,255,0.8)',
+                position: 'relative',
+                zIndex: 1,
+              }}
+            />
+          </div>
         </div>
 
-        <div className="flex gap-2">
+        {/* Main content */}
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: '65%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                background: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                flexShrink: 0,
+              }}
+            >
+              <MapPin style={{ width: 22, height: 22, color: '#0d9488' }} />
+            </div>
+            <div>
+              <h2
+                style={{
+                  color: 'white',
+                  fontSize: 20,
+                  fontWeight: 900,
+                  margin: 0,
+                  fontFamily: 'var(--font-heading)',
+                  lineHeight: 1.1,
+                }}
+              >
+                Check-In
+              </h2>
+            </div>
+          </div>
+
           <button
             type="button"
-            onClick={() => setActiveTab('checkin')}
-            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-              activeTab === 'checkin'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-muted-foreground'
-            }`}
+            onClick={myCheckIn ? () => clearCheckIn.mutate() : getLocation}
+            disabled={gettingLocation || clearCheckIn.isPending}
+            style={{
+              background: 'white',
+              color: '#0d9488',
+              border: 'none',
+              borderRadius: 12,
+              padding: '11px 28px',
+              fontSize: 14,
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+              marginTop: 4,
+              width: '100%',
+              justifyContent: 'center',
+            }}
           >
-            Check-In
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('zones')}
-            className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${
-              activeTab === 'zones'
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-secondary text-muted-foreground'
-            }`}
-          >
-            Zones
+            <Navigation style={{ width: 16, height: 16 }} />
+            {myCheckIn
+              ? clearCheckIn.isPending
+                ? 'Clearing...'
+                : 'Clear My Pin'
+              : gettingLocation
+                ? 'Getting location...'
+                : locationPermission === 'denied'
+                  ? 'Location Blocked'
+                  : 'Share Location'}
           </button>
         </div>
       </div>
 
-      {activeTab === 'checkin' && (
-        <>
-      <div className="mb-4">
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 16,
+          padding: 16,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+        }}
+      >
+        <div
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 12,
+            flexShrink: 0,
+            background: 'linear-gradient(135deg, rgba(1,220,186,0.12), rgba(30,58,138,0.12))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Shield style={{ width: 20, height: 20, color: '#0d9488' }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 800, color: '#1a2030', marginBottom: 2 }}>Zones</p>
+          <p style={{ fontSize: 11, color: '#64748b' }}>
+            {zoneMonitoring ? '● Monitoring active' : 'Manage family safe places'}
+          </p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+          <button
+            type="button"
+            onClick={() => {
+              const next = !zoneMonitoring;
+              setZoneMonitoring(next);
+              try {
+                localStorage.setItem('fs_geofence_monitoring', String(next));
+              } catch {}
+              window.dispatchEvent(new CustomEvent('fs_zone_monitoring_change', { detail: next }));
+            }}
+            style={{
+              background: zoneMonitoring ? '#0d9488' : '#e8edf8',
+              color: zoneMonitoring ? 'white' : '#1e3a8a',
+              fontSize: 11,
+              fontWeight: 700,
+              borderRadius: 8,
+              padding: '5px 10px',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {zoneMonitoring ? 'Zones On ✓' : 'Zones Off'}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/geofence')}
+            style={{
+              background: '#e8edf8',
+              color: '#1e3a8a',
+              fontSize: 11,
+              fontWeight: 700,
+              borderRadius: 8,
+              padding: '5px 10px',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            Manage Zones →
+          </button>
+        </div>
+      </div>
+
+      {myCheckIn && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'white',
+            borderRadius: 12,
+            padding: '10px 16px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Radio style={{ width: 14, height: 14, color: '#0d9488' }} />
+            <p style={{ fontSize: 12, fontWeight: 700, color: '#1a2030' }}>Live Tracking</p>
+            <p style={{ fontSize: 11, color: '#94a3b8' }}>Updates location continuously</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLiveTracking((v) => !v)}
+            style={{
+              background: liveTracking ? '#0d9488' : '#e8edf8',
+              color: liveTracking ? 'white' : '#1e3a8a',
+              fontSize: 11,
+              fontWeight: 700,
+              borderRadius: 8,
+              padding: '5px 10px',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {liveTracking ? 'On' : 'Off'}
+          </button>
+        </div>
+      )}
+
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 16,
+          padding: 12,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+          marginTop: 4,
+        }}
+      >
+        <p
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: '#1a2030',
+            marginBottom: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <MapPin style={{ width: 14, height: 14, color: '#0d9488' }} />
+          Your Location
+        </p>
         {isLoaded ? (
           <GoogleMap
-            mapContainerStyle={{ width: '100%', height: '180px', borderRadius: '12px' }}
+            mapContainerStyle={{ width: '100%', height: '280px', borderRadius: '12px' }}
             mapContainerClassName="relative"
             center={mapCenter}
             zoom={mapZoom}
@@ -699,7 +1021,7 @@ export default function CheckInPage() {
           </GoogleMap>
         ) : (
           <div
-            style={{ width: '100%', height: '180px' }}
+            style={{ width: '100%', height: '280px' }}
             className="bg-secondary rounded-xl flex items-center justify-center"
           >
             <p className="text-muted-foreground text-sm">Loading map...</p>
@@ -708,152 +1030,232 @@ export default function CheckInPage() {
       </div>
 
       {showForm && (
-        <div className="bg-card border border-border rounded-xl p-4 mb-4 space-y-3">
+        <div
+          ref={formSectionRef}
+          role="region"
+          aria-label="Confirm check-in"
+          style={{
+            background: 'linear-gradient(180deg, #ecfdf5 0%, #ffffff 55%)',
+            borderRadius: 16,
+            padding: 18,
+            border: '2px solid #0d9488',
+            boxShadow:
+              '0 10px 40px rgba(13, 148, 136, 0.22), 0 2px 8px rgba(30, 58, 138, 0.12)',
+          }}
+        >
+          <p
+            style={{
+              fontSize: 16,
+              fontWeight: 800,
+              color: '#0f766e',
+              margin: '0 0 6px',
+              fontFamily: 'var(--font-heading)',
+            }}
+          >
+            Confirm your check-in
+          </p>
+          <p style={{ fontSize: 12, color: '#475569', margin: '0 0 14px', lineHeight: 1.45 }}>
+            Your location was found. Check the place name below, then tap{' '}
+            <strong style={{ color: '#0f172a' }}>Check In</strong> so your family can see you on the map.
+          </p>
           <Input
             placeholder="Location name (e.g. Home, Work)"
             value={locationName}
             onChange={(e) => setLocationName(e.target.value)}
+            style={{ marginBottom: 8 }}
           />
           <Input
             placeholder="What are you up to? (optional)"
             value={note}
             onChange={(e) => setNote(e.target.value)}
+            style={{ marginBottom: 12 }}
           />
-          <div className="flex gap-2">
+          <div style={{ display: 'flex', gap: 8 }}>
             <Button
               onClick={handleCheckIn}
               disabled={!locationName.trim() || createCheckIn.isPending}
-              className="flex-1 rounded-xl"
+              style={{ flex: 1 }}
             >
-              <MapPin className="w-4 h-4 mr-1" /> Check In
+              <MapPin style={{ width: 16, height: 16, marginRight: 4 }} />
+              {createCheckIn.isPending ? 'Checking in...' : 'Check In'}
             </Button>
-            <Button variant="outline" onClick={cancelForm} className="rounded-xl">
+            <Button variant="outline" onClick={cancelForm}>
               Cancel
             </Button>
           </div>
         </div>
       )}
 
-      <div className="space-y-2">
-        <p className="text-base font-bold text-foreground">Active Check-Ins</p>
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 16,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 16px 10px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />
+            <p style={{ fontSize: 14, fontWeight: 800, color: '#1a2030' }}>Active Check-Ins</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setHistoryExpanded((s) => !s)}
+            style={{
+              background: '#e8edf8',
+              color: '#1e3a8a',
+              fontSize: 11,
+              fontWeight: 700,
+              borderRadius: 8,
+              padding: '4px 10px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <Clock style={{ width: 11, height: 11 }} />
+            {historyExpanded ? 'Less' : 'History'}
+          </button>
+        </div>
+
         {activeCheckIns.length === 0 ? (
-          <div className="py-4">
-            <EmptyState
-              emoji={String.fromCodePoint(0x1f4cd)}
-              title="No active check-ins"
-              description="Tap 'Share My Location' to let your family know where you are."
-            />
+          <div style={{ padding: '14px 16px' }}>
+            <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
+              No active check-ins tap <strong style={{ color: '#0d9488' }}>Share Location</strong> to appear here.
+            </p>
           </div>
         ) : (
-          activeCheckIns.map((ci) => {
-            const member = getMemberForUser(ci.user_id);
-            const color = getMemberColor(ci.user_id);
-            const displayName = member?.display_name || member?.full_name || ci.user_name || 'Member';
-            const avatar = member?.avatar ?? ci.user_avatar;
-            return (
-              <div
-                key={ci.id}
-                className="flex items-start gap-3 p-3 surface-2"
-                style={{ borderLeftWidth: '4px', borderLeftColor: color }}
-              >
-                <MemberAvatar
-                  avatar={avatar}
-                  avatarUrl={member?.avatar_url}
-                  color={color}
-                  size="sm"
-                  name={displayName}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{displayName}</p>
-                  <p className="text-sm text-foreground flex items-start gap-1 mt-0.5">
-                    <MapPin className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground" />
-                    <span className="truncate">{trimAddress(ci.location ?? '')}</span>
-                  </p>
-                  {checkInHasDistinctAddress(ci) ? (
-                    <p className="text-xs text-muted-foreground mt-0.5 pl-4 leading-snug">
-                      {ci.address}
+          <div>
+            {activeCheckIns.map((ci, index) => {
+              const member = getMemberForUser(ci.user_id);
+              const color = getMemberColor(ci.user_id) || member?.member_color || '#6366f1';
+              const displayName = member?.display_name || member?.full_name || ci.user_name || 'Member';
+              const avatar = member?.avatar ?? ci.user_avatar;
+              return (
+                <div
+                  key={ci.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '12px 16px',
+                    borderTop: index === 0 ? '1px solid #f1f5f9' : '1px solid #f1f5f9',
+                  }}
+                >
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <MemberAvatar
+                      avatar={avatar}
+                      avatarUrl={member?.avatar_url}
+                      color={color}
+                      size="md"
+                      name={displayName}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        right: 0,
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        background: '#10b981',
+                        border: '2px solid white',
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: '#1a2030', marginBottom: 2 }}>{displayName}</p>
+                    <p style={{ fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <MapPin style={{ width: 10, height: 10, flexShrink: 0 }} />
+                      {trimAddress(ci.location ?? '')}
                     </p>
-                  ) : null}
-                  {ci.note ? (
-                    <p className="text-xs mt-1 text-foreground/90 truncate">{ci.note}</p>
-                  ) : null}
-                  <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3 shrink-0" />
-                    {formatCheckInDetailTime(ci.created_at)}
+                  </div>
+                  <p style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0, textAlign: 'right' }}>
+                    {formatCheckInDetailTime(ci.created_at).split('·')[0].trim()}
                   </p>
                 </div>
-              </div>
-            );
-          })
+              );
+            })}
+          </div>
         )}
-      </div>
 
-      <div className="flex items-center justify-between mt-4 mb-2">
-        <h3 className="text-base font-bold text-foreground">History</h3>
-        <button
-          type="button"
-          onClick={() => setHistoryExpanded((s) => !s)}
-          className="text-xs font-semibold text-primary bg-primary/10 px-3 py-1.5 rounded-full flex items-center gap-1"
-        >
-          <Clock className="w-3 h-3" />
-          {historyExpanded ? 'Collapse History' : 'Expand History'}
-        </button>
-      </div>
-
-      <div className="space-y-2 mt-6" aria-label="Check-in history">
-        {historyGrouped.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-2">No recent check-in history</p>
-        ) : (
-          (historyExpanded ? historyGrouped : historyGrouped.slice(0, 1)).map((group) => (
-            <div key={group.dateKey} className="space-y-1.5">
-              <p className="text-[11px] font-medium text-muted-foreground pl-1">{group.label}</p>
-              <div className="space-y-1.5">
-                {(historyExpanded ? group.items : group.items.slice(0, 3)).map((ci) => {
-                  const member = getMemberForUser(ci.user_id);
-                  const color = getMemberColor(ci.user_id);
-                  const displayName =
-                    member?.display_name || member?.full_name || ci.user_name || 'Member';
-                  const avatar = member?.avatar ?? ci.user_avatar;
-                  return (
-                    <div
-                      key={ci.id}
-                      className="flex items-center gap-3 p-3 surface-2"
-                      style={{ borderLeftWidth: '4px', borderLeftColor: color }}
-                    >
-                      <MemberAvatar
-                        avatar={avatar}
-                        avatarUrl={member?.avatar_url}
-                        color={color}
-                        size="sm"
-                        name={displayName}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{displayName}</p>
-                        <p className="text-sm text-foreground flex items-start gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground" />
-                          <span className="min-w-0">{trimAddress(ci.location ?? '')}</span>
-                        </p>
-                        {checkInHasDistinctAddress(ci) ? (
-                          <p className="text-xs text-muted-foreground mt-0.5 pl-4 leading-snug">{ci.address}</p>
-                        ) : null}
-                        {ci.note ? <p className="text-xs mt-1 text-foreground/90">{ci.note}</p> : null}
-                        <p className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1">
-                          <Clock className="w-3 h-3 shrink-0 mt-0.5" />
-                          {formatHistoryExactTime(ci.created_at)}
-                        </p>
-                      </div>
+        {historyExpanded && (
+          <div style={{ borderTop: '1px solid #f1f5f9', padding: '12px 16px' }}>
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: '#94a3b8',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                marginBottom: 10,
+              }}
+            >
+              History
+            </p>
+            <div className="space-y-2" aria-label="Check-in history">
+              {historyGrouped.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">No recent check-in history</p>
+              ) : (
+                historyGrouped.map((group) => (
+                  <div key={group.dateKey} className="space-y-1.5">
+                    <p className="text-[11px] font-medium text-muted-foreground pl-1">{group.label}</p>
+                    <div className="space-y-1.5">
+                      {group.items.map((ci) => {
+                        const member = getMemberForUser(ci.user_id);
+                        const color = getMemberColor(ci.user_id);
+                        const displayName =
+                          member?.display_name || member?.full_name || ci.user_name || 'Member';
+                        const avatar = member?.avatar ?? ci.user_avatar;
+                        return (
+                          <div
+                            key={ci.id}
+                            className="flex items-center gap-3 p-3 surface-2"
+                            style={{ borderLeftWidth: '4px', borderLeftColor: color }}
+                          >
+                            <MemberAvatar
+                              avatar={avatar}
+                              avatarUrl={member?.avatar_url}
+                              color={color}
+                              size="sm"
+                              name={displayName}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium">{displayName}</p>
+                              <p className="text-sm text-foreground flex items-start gap-1 mt-0.5">
+                                <MapPin className="w-3 h-3 shrink-0 mt-0.5 text-muted-foreground" />
+                                <span className="min-w-0">{trimAddress(ci.location ?? '')}</span>
+                              </p>
+                              {checkInHasDistinctAddress(ci) ? (
+                                <p className="text-xs text-muted-foreground mt-0.5 pl-4 leading-snug">{ci.address}</p>
+                              ) : null}
+                              {ci.note ? <p className="text-xs mt-1 text-foreground/90">{ci.note}</p> : null}
+                              <p className="text-[11px] text-muted-foreground mt-1 flex items-start gap-1">
+                                <Clock className="w-3 h-3 shrink-0 mt-0.5" />
+                                {formatHistoryExactTime(ci.created_at)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                ))
+              )}
             </div>
-          ))
+          </div>
         )}
       </div>
-        </>
-      )}
-
-      {activeTab === 'zones' && <GeofencePage />}
     </div>
   );
 }

@@ -9,15 +9,26 @@ import MemberAvatar from '@/components/shared/MemberAvatar';
 import { MapPin, Calendar, CheckSquare, Megaphone, Zap, ChevronRight } from 'lucide-react';
 import { format, isToday } from 'date-fns';
 
-const CLEAR_CODES = new Set([0]);
-const CLOUDY_CODES = new Set([1, 2, 3, 45, 48]);
-const RAINY_CODES = new Set([51, 53, 55, 61, 63, 65, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99]);
+const HeroBannerStyles = () => (
+  <style>{`
+    @keyframes sunPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
+    @keyframes sunAtmos { 0%,100%{transform:scale(1);opacity:0.6} 50%{transform:scale(1.08);opacity:0.8} }
+    @keyframes moonGlow { 0%,100%{opacity:0.3} 50%{opacity:0.5} }
+    @keyframes starTwinkle { 0%,100%{opacity:0.3;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
+    @keyframes cloudDrift { 0%{transform:translateX(0)} 100%{transform:translateX(20px)} }
+    @keyframes rainFall { 0%{transform:translateY(-20px) rotate(8deg);opacity:0} 10%{opacity:1} 100%{transform:translateY(300px) rotate(8deg);opacity:0} }
+    @keyframes snowDrift { 0%{transform:translateY(-10px) translateX(0);opacity:0} 10%{opacity:1} 100%{transform:translateY(300px) translateX(var(--drift));opacity:0} }
+    @keyframes fogDrift { 0%{transform:translateX(-8%)} 100%{transform:translateX(8%)} }
+  `}</style>
+);
 
 function getSkyKind(code) {
   if (code == null || code < 0) return 'clear';
-  if (CLEAR_CODES.has(code)) return 'clear';
-  if (CLOUDY_CODES.has(code)) return 'cloudy';
-  if (RAINY_CODES.has(code)) return 'rainy';
+  if ([0].includes(code)) return 'clear';
+  if ([1, 2, 3, 45, 48].includes(code)) return 'cloudy';
+  if ([71, 73, 75, 77].includes(code)) return 'snow';
+  if ([95, 96, 99].includes(code)) return 'storm';
+  if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 85, 86].includes(code)) return 'rainy';
   return 'cloudy';
 }
 
@@ -33,8 +44,8 @@ function getWeatherIcon(code) {
   const sky = getSkyKind(code);
   if (sky === 'clear') return '☀️';
   if (sky === 'cloudy') return '☁️';
-  if ([71, 73, 75, 77].includes(code)) return '❄️';
-  if ([95, 96, 99].includes(code)) return '⛈️';
+  if (sky === 'snow') return '❄️';
+  if (sky === 'storm') return '⛈️';
   return '🌧️';
 }
 
@@ -42,429 +53,376 @@ function getWeatherDesc(code) {
   const sky = getSkyKind(code);
   if (sky === 'clear') return 'Clear skies';
   if (sky === 'cloudy') return 'Cloudy';
-  if ([71, 73, 75, 77].includes(code)) return 'Snow';
-  if ([95, 96, 99].includes(code)) return 'Thunderstorm';
+  if (sky === 'snow') return 'Snow';
+  if (sky === 'storm') return 'Thunderstorm';
   if (sky === 'rainy') return 'Rain';
   return 'Mixed';
 }
 
-/** Night for hero weather scenes: before 6am or from 8pm onward */
-function isNightHour(hour) {
-  return hour < 6 || hour >= 20;
-}
-
-function wmoToCondition(code) {
-  if (code == null || code < 0) return null;
-  if (code === 0) return 'clear';
-  if ([1, 2, 3].includes(code)) return 'clouds';
-  if ([45, 48].includes(code)) return 'mist';
-  if ([51, 53, 55, 56].includes(code)) return 'drizzle';
-  if ([61, 63, 65, 66, 67, 68, 80, 81, 82].includes(code)) return 'rain';
-  if ([95, 96, 99].includes(code)) return 'thunderstorm';
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return 'snow';
-  return null;
-}
-
-/**
- * Prefer Open-Meteo WMO code; if `main` exists (OpenWeather-style), use it with lowercase comparison.
- */
-function normalizeWeatherCondition(main, wmoCode) {
-  if (main != null && typeof main === 'string' && main.trim()) {
-    const m = main.trim().toLowerCase();
-    const map = {
-      clear: 'clear',
-      clouds: 'clouds',
-      overcast: 'clouds',
-      rain: 'rain',
-      drizzle: 'drizzle',
-      thunderstorm: 'thunderstorm',
-      snow: 'snow',
-      mist: 'mist',
-      fog: 'fog',
-      haze: 'mist',
-      smoke: 'mist',
-      dust: 'mist',
-      sand: 'mist',
-      ash: 'mist',
-      squall: 'thunderstorm',
-      tornado: 'thunderstorm',
-    };
-    if (map[m]) return map[m];
-  }
-  return wmoToCondition(wmoCode);
-}
-
-const BRAND_SCENE_GRADIENT =
-  'linear-gradient(135deg, #7f30cb 0%, #3a7fd5 50%, #01dcba 100%)';
-
-/**
- * @returns {{ gradient: string, animation: 'rain' | 'clearDay' | 'stars' | 'drift' }}
- */
-function getWeatherScene(condition, isNight) {
-  const c = (condition || '').toLowerCase();
-  if (c === 'clear') {
-    if (isNight) {
-      return {
-        gradient: 'linear-gradient(160deg, #0f0c29 0%, #1a1a4e 50%, #24243e 100%)',
-        animation: 'stars',
-      };
-    }
-    return {
-      gradient: 'linear-gradient(160deg, #f5a623 0%, #e8820a 50%, #c45c1a 100%)',
-      animation: 'clearDay',
-    };
-  }
-  if (c === 'clouds' || c === 'overcast') {
-    return {
-      gradient: 'linear-gradient(160deg, #2d3a4a 0%, #3d5068 50%, #2a3d52 100%)',
-      animation: 'drift',
-    };
-  }
-  if (c === 'rain' || c === 'drizzle') {
-    return {
-      gradient: 'linear-gradient(160deg, #1e3a5f 0%, #2d5282 50%, #1a3a52 100%)',
-      animation: 'rain',
-    };
-  }
-  if (c === 'thunderstorm') {
-    return {
-      gradient: 'linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-      animation: 'rain',
-    };
-  }
-  if (c === 'snow') {
-    return {
-      gradient: 'linear-gradient(160deg, #e8eaf6 0%, #c5cae9 50%, #9fa8da 100%)',
-      animation: 'drift',
-    };
-  }
-  if (c === 'mist' || c === 'fog') {
-    return {
-      gradient: 'linear-gradient(160deg, #b0bec5 0%, #90a4ae 50%, #78909c 100%)',
-      animation: 'drift',
-    };
-  }
-  return {
-    gradient: BRAND_SCENE_GRADIENT,
-    animation: 'drift',
+function getHeroTheme(hour, sky) {
+  if (sky === 'storm') return {
+    skyBg: 'linear-gradient(180deg, #0a0a0f 0%, #141820 30%, #1a2030 60%, #22293c 100%)',
+    midLayer: 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(20,30,50,0.3) 100%)',
+    glowLayer: null,
+    textColor: '#ffffff',
+    subColor: 'rgba(180,200,230,0.75)',
+    textShadow: '0 2px 14px rgba(0,0,0,0.9)',
+    scene: 'storm',
+    sunPos: null, moonPos: null,
   };
-}
+  if (sky === 'rainy') return {
+    skyBg: 'linear-gradient(180deg, #1c2833 0%, #2c3e50 25%, #4a6174 60%, #607880 100%)',
+    midLayer: 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, transparent 50%)',
+    glowLayer: null,
+    textColor: '#ffffff',
+    subColor: 'rgba(200,220,235,0.8)',
+    textShadow: '0 2px 12px rgba(0,0,0,0.7)',
+    scene: 'rainy',
+    sunPos: null, moonPos: null,
+  };
+  if (sky === 'snow') return {
+    skyBg: 'linear-gradient(180deg, #b0bec5 0%, #cfd8dc 30%, #dde4e8 60%, #eff3f5 100%)',
+    midLayer: 'linear-gradient(180deg, transparent 50%, rgba(255,255,255,0.3) 100%)',
+    glowLayer: 'radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.5) 0%, transparent 50%)',
+    textColor: '#1a2a3a',
+    subColor: 'rgba(26,42,58,0.7)',
+    textShadow: '0 2px 8px rgba(255,255,255,0.6)',
+    scene: 'snow',
+    sunPos: null, moonPos: null,
+  };
 
-function HeroWeatherAnimLayer({ animation, reduceMotion }) {
-  if (reduceMotion) return null;
-
-  if (animation === 'rain') {
-    return (
-      <>
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <div
-            key={i}
-            className="absolute top-0 w-0.5 rounded-full bg-white/45 hero-weather-rain pointer-events-none"
-            style={{
-              left: `${6 + i * 15}%`,
-              height: '22px',
-              animationDelay: `${i * 0.14}s`,
-              boxShadow: '0 0 3px rgba(255,255,255,0.35)',
-            }}
-            aria-hidden
-          />
-        ))}
-      </>
-    );
-  }
-
-  if (animation === 'clearDay') {
-    const orbs = [
-      { top: '8%', left: '6%', size: 88 },
-      { top: '14%', right: '10%', size: 72 },
-      { bottom: '28%', left: '18%', size: 76 },
-    ];
-    return (
-      <>
-        {orbs.map((o, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full bg-[#fcd34d]/50 blur-2xl hero-weather-orb pointer-events-none"
-            style={{
-              top: o.top,
-              left: o.left,
-              right: o.right,
-              width: o.size,
-              height: o.size,
-              animationDelay: `${i * 0.45}s`,
-            }}
-            aria-hidden
-          />
-        ))}
-      </>
-    );
-  }
-
-  if (animation === 'stars') {
-    const stars = [
-      { top: '12%', left: '12%' },
-      { top: '8%', left: '48%' },
-      { top: '20%', right: '18%' },
-      { top: '16%', left: '72%' },
-      { bottom: '38%', left: '28%' },
-    ];
-    return (
-      <>
-        {stars.map((s, i) => (
-          <div
-            key={i}
-            className="absolute w-[3px] h-[3px] rounded-full bg-white hero-weather-star pointer-events-none"
-            style={{
-              top: s.top,
-              left: s.left,
-              right: s.right,
-              bottom: s.bottom,
-              animationDelay: `${i * 0.35}s`,
-            }}
-            aria-hidden
-          />
-        ))}
-      </>
-    );
-  }
-
-  if (animation === 'drift') {
-    const dots = [
-      { top: '22%', left: '14%' },
-      { top: '18%', left: '52%' },
-      { bottom: '32%', right: '16%' },
-    ];
-    return (
-      <>
-        {dots.map((d, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 rounded-full bg-white/30 hero-weather-drift pointer-events-none"
-            style={{
-              top: d.top,
-              left: d.left,
-              right: d.right,
-              bottom: d.bottom,
-              animationDelay: `${i * 0.6}s`,
-            }}
-            aria-hidden
-          />
-        ))}
-      </>
-    );
-  }
-
-  return null;
-}
-
-function getHeaderTheme(hour, weatherCode, isDark) {
-  const sky = getSkyKind(weatherCode);
   const isCloudy = sky === 'cloudy';
 
-  if (isDark) {
-    if (sky === 'rainy') {
-      return {
-        bg: 'linear-gradient(135deg, #2a3846 0%, #1D2A36 45%, #15202a 100%)',
-        textColor: 'text-[#F5F7FA]',
-        subColor: 'text-[#AAB4C3]',
-        scene: 'rainy',
-      };
-    }
-    if (hour >= 22 || hour < 6) {
-      return {
-        bg: 'linear-gradient(135deg, #243041 0%, #1D2A36 50%, #0F1720 100%)',
-        textColor: 'text-[#F5F7FA]',
-        subColor: 'text-[#AAB4C3]',
-        scene: 'night',
-      };
-    }
-    const scene =
-      hour >= 6 && hour < 12 ? (isCloudy ? 'cloudy' : 'morning')
-      : hour >= 12 && hour < 18 ? (isCloudy ? 'cloudy' : 'afternoon')
-      : 'evening';
-    return {
-      bg: 'linear-gradient(135deg, #232c36 0%, #18212B 50%, #152028 100%)',
-      textColor: 'text-[#F5F7FA]',
-      subColor: 'text-[#AAB4C3]',
-      scene,
-    };
-  }
+  if (hour >= 22 || hour < 5) return {
+    skyBg: isCloudy
+      ? 'linear-gradient(180deg, #1c2340 0%, #0f1628 50%, #080e1e 100%)'
+      : 'linear-gradient(180deg, #020408 0%, #050d1a 20%, #071428 50%, #102850 100%)',
+    midLayer: isCloudy
+      ? 'radial-gradient(ellipse at 50% 0%, rgba(60,70,120,0.3) 0%, transparent 60%)'
+      : 'radial-gradient(ellipse at 30% 20%, rgba(60,40,120,0.3) 0%, transparent 50%)',
+    glowLayer: null,
+    textColor: '#ffffff',
+    subColor: 'rgba(180,200,255,0.7)',
+    textShadow: '0 2px 12px rgba(0,0,0,0.9)',
+    scene: isCloudy ? 'night-cloudy' : 'night',
+    sunPos: null,
+    moonPos: isCloudy ? null : { x: '72%', y: '22%' },
+  };
 
-  if (sky === 'rainy') {
-    return {
-      bg: 'linear-gradient(135deg, #7d8fa3 0%, #5c6b7a 45%, #4a5d6a 100%)',
-      textColor: 'text-white',
-      subColor: 'text-white/80',
-      scene: 'rainy',
-    };
-  }
+  if (hour >= 5 && hour < 7) return {
+    skyBg: 'linear-gradient(180deg, #1a0533 0%, #4a1060 15%, #8b2252 30%, #c45c7a 45%, #e8956d 62%, #f5c97a 78%, #fde8b0 92%, #fff5d6 100%)',
+    midLayer: 'linear-gradient(180deg, transparent 40%, rgba(255,140,80,0.3) 70%, rgba(255,200,100,0.5) 100%)',
+    glowLayer: 'radial-gradient(ellipse at 50% 90%, rgba(255,160,60,0.6) 0%, rgba(255,100,80,0.3) 30%, transparent 65%)',
+    textColor: '#ffffff',
+    subColor: 'rgba(255,230,200,0.85)',
+    textShadow: '0 2px 12px rgba(80,20,0,0.6)',
+    scene: 'dawn',
+    sunPos: { x: '50%', y: '88%', color: '#FFCC02', glow: 'rgba(255,160,60,0.9)', size: 50 },
+    moonPos: null,
+  };
 
-  const isClear = sky === 'clear';
+  if (hour >= 7 && hour < 12) return {
+    skyBg: isCloudy
+      ? 'linear-gradient(180deg, #546e7a 0%, #78909c 25%, #90a4ae 50%, #cfd8dc 80%, #eceff1 100%)'
+      : 'linear-gradient(180deg, #0a4a8f 0%, #1565c0 20%, #2196f3 40%, #42a5f5 60%, #81d4fa 80%, #e1f5fe 95%, #fff8e1 100%)',
+    midLayer: isCloudy
+      ? 'linear-gradient(180deg, transparent 50%, rgba(255,255,255,0.2) 100%)'
+      : 'linear-gradient(180deg, transparent 60%, rgba(255,220,100,0.2) 85%, rgba(255,240,180,0.3) 100%)',
+    glowLayer: isCloudy
+      ? 'radial-gradient(ellipse at 60% 95%, rgba(255,255,255,0.35) 0%, transparent 50%)'
+      : 'radial-gradient(ellipse at 76% 88%, rgba(255,230,80,0.65) 0%, rgba(255,200,50,0.3) 25%, transparent 55%)',
+    textColor: isCloudy ? '#1c2e3d' : '#0d2137',
+    subColor: isCloudy ? 'rgba(28,46,61,0.7)' : 'rgba(13,33,55,0.7)',
+    textShadow: isCloudy ? '0 2px 8px rgba(255,255,255,0.5)' : '0 2px 10px rgba(255,255,255,0.6)',
+    scene: isCloudy ? 'cloudy' : 'morning',
+    sunPos: isCloudy ? null : { x: '76%', y: '85%', color: '#FFF9C4', glow: 'rgba(255,230,80,0.8)', size: 52 },
+    moonPos: null,
+  };
 
-  if (hour >= 22 || hour < 6) {
-    return {
-      bg: isCloudy
-        ? 'linear-gradient(135deg, #1e2888 0%, #37474f 55%, #263238 100%)'
-        : 'linear-gradient(135deg, #0f0c29 0%, #1a1a4e 50%, #24243e 100%)',
-      textColor: 'text-white',
-      subColor: 'text-white/65',
-      scene: 'night',
-    };
-  }
+  if (hour >= 12 && hour < 17) return {
+    skyBg: isCloudy
+      ? 'linear-gradient(180deg, #455a64 0%, #607d8b 30%, #78909c 60%, #b0bec5 90%, #cfd8dc 100%)'
+      : 'linear-gradient(180deg, #0277bd 0%, #0288d1 20%, #29b6f6 45%, #81d4fa 70%, #e1f5fe 92%, #f5fbff 100%)',
+    midLayer: isCloudy
+      ? 'linear-gradient(180deg, transparent 50%, rgba(255,255,255,0.1) 100%)'
+      : 'linear-gradient(180deg, transparent 70%, rgba(255,255,255,0.08) 100%)',
+    glowLayer: isCloudy
+      ? null
+      : 'radial-gradient(ellipse at 82% 6%, rgba(255,250,200,0.45) 0%, rgba(255,230,100,0.2) 20%, transparent 45%)',
+    textColor: isCloudy ? '#1c2e3d' : '#012a4a',
+    subColor: isCloudy ? 'rgba(28,46,61,0.7)' : 'rgba(1,42,74,0.65)',
+    textShadow: isCloudy ? '0 2px 8px rgba(255,255,255,0.4)' : '0 2px 10px rgba(255,255,255,0.5)',
+    scene: isCloudy ? 'cloudy' : 'afternoon',
+    sunPos: isCloudy ? null : { x: '82%', y: '10%', color: '#FFF9C4', glow: 'rgba(255,235,100,0.7)', size: 48 },
+    moonPos: null,
+  };
 
-  if (hour >= 6 && hour < 12) {
-    return {
-      bg: isCloudy
-        ? 'linear-gradient(135deg, #bac7d0 0%, #cfd8dc 55%, #eceff1 100%)'
-        : isClear
-          ? 'linear-gradient(135deg, #7ec8f0 0%, #f0d78c 50%, #fff4d6 100%)'
-          : 'linear-gradient(135deg, #89c4e1 0%, #ffd89b 100%)',
-      textColor: 'text-slate-800',
-      subColor: 'text-slate-600',
-      scene: isCloudy ? 'cloudy' : 'morning',
-    };
-  }
-
-  if (hour >= 12 && hour < 18) {
-    return {
-      bg: isCloudy
-        ? 'linear-gradient(135deg, #d8e0e5 0%, #b0bec5 100%)'
-        : 'linear-gradient(135deg, #fff8e7 0%, #b2dfdb 50%, #e8f5e9 100%)',
-      textColor: 'text-slate-800',
-      subColor: 'text-slate-600',
-      scene: isCloudy ? 'cloudy' : 'afternoon',
-    };
-  }
+  if (hour >= 17 && hour < 20) return {
+    skyBg: isCloudy
+      ? 'linear-gradient(180deg, #3d4a6b 0%, #4a5568 40%, #556070 100%)'
+      : 'linear-gradient(180deg, #0d1b3e 0%, #1a237e 12%, #7b3fa0 30%, #b5531a 50%, #e8761a 65%, #f5a623 75%, #fcd97a 85%, #fffde7 100%)',
+    midLayer: isCloudy
+      ? 'linear-gradient(180deg, transparent 50%, rgba(150,130,180,0.15) 100%)'
+      : 'linear-gradient(180deg, transparent 35%, rgba(240,120,20,0.25) 65%, rgba(255,200,50,0.4) 100%)',
+    glowLayer: isCloudy
+      ? null
+      : 'radial-gradient(ellipse at 55% 92%, rgba(255,160,30,0.75) 0%, rgba(255,100,20,0.4) 25%, rgba(180,50,100,0.2) 50%, transparent 70%)',
+    textColor: '#ffffff',
+    subColor: isCloudy ? 'rgba(220,220,255,0.75)' : 'rgba(255,220,160,0.9)',
+    textShadow: isCloudy ? '0 2px 10px rgba(0,0,0,0.6)' : '0 2px 14px rgba(100,30,0,0.7)',
+    scene: isCloudy ? 'cloudy' : 'golden-hour',
+    sunPos: isCloudy ? null : { x: '55%', y: '90%', color: '#FFCC02', glow: 'rgba(255,160,30,0.9)', size: 60 },
+    moonPos: null,
+  };
 
   return {
-    bg: isCloudy
-      ? 'linear-gradient(135deg, #9599b0 0%, #6d597a 55%, #4a5568 100%)'
-      : 'linear-gradient(135deg, #c9a0dc 0%, #f4a261 45%, #6d597a 100%)',
-    textColor: 'text-white',
-    subColor: 'text-white/75',
-    scene: 'evening',
+    skyBg: isCloudy
+      ? 'linear-gradient(180deg, #1e2840 0%, #2c3a55 50%, #3d4a6b 100%)'
+      : 'linear-gradient(180deg, #0a0a1a 0%, #0d1b3e 20%, #2d1b69 50%, #4a1942 100%)',
+    midLayer: isCloudy
+      ? 'linear-gradient(180deg, transparent 50%, rgba(100,120,180,0.15) 100%)'
+      : 'linear-gradient(180deg, transparent 40%, rgba(180,80,160,0.15) 100%)',
+    glowLayer: null,
+    textColor: '#ffffff',
+    subColor: isCloudy ? 'rgba(200,210,255,0.7)' : 'rgba(180,200,255,0.65)',
+    textShadow: '0 2px 12px rgba(0,0,0,0.8)',
+    scene: isCloudy ? 'night-cloudy' : 'evening',
+    sunPos: null,
+    moonPos: isCloudy ? null : { x: '70%', y: '20%' },
   };
 }
 
-function HeaderScene({ scene, reduceMotion }) {
-  const id = React.useId().replace(/:/g, '');
-  const blurBack = `heroCb${id}`;
-  const blurFront = `heroCf${id}`;
-
-  const driftSlow = reduceMotion
-    ? {}
-    : { x: [0, 5, -2, 0] };
-  const driftFast = reduceMotion
-    ? {}
-    : { x: [0, -6, 3, 0] };
-  const tSlow = { duration: 32, repeat: Infinity, ease: 'easeInOut' };
-  const tFast = { duration: 20, repeat: Infinity, ease: 'easeInOut' };
-
-  const defs = (
-    <defs>
-      <filter id={blurBack} x="-45%" y="-45%" width="190%" height="190%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="b" />
-        <feMerge>
-          <feMergeNode in="b" />
-        </feMerge>
-      </filter>
-      <filter id={blurFront} x="-35%" y="-35%" width="170%" height="170%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="1.05" result="f" />
-        <feMerge>
-          <feMergeNode in="f" />
-        </feMerge>
-      </filter>
-    </defs>
+// Sun component
+function HeroSun({ pos }) {
+  if (!pos) return null;
+  return (
+    <div style={{
+      position: 'absolute', left: pos.x, top: pos.y,
+      transform: 'translate(-50%, -50%)',
+      width: pos.size * 2.8, height: pos.size * 2.8,
+      pointerEvents: 'none', zIndex: 1,
+    }}>
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: '50%',
+        background: `radial-gradient(circle, ${pos.glow} 0%, ${pos.glow.replace(/[\d.]+\)$/, '0.25)')} 35%, transparent 70%)`,
+        animation: 'sunAtmos 4s ease-in-out infinite',
+      }} />
+      <div style={{
+        position: 'absolute', inset: '22%', borderRadius: '50%',
+        background: `radial-gradient(circle, #FFFDE7 0%, ${pos.color} 40%, ${pos.glow} 75%, transparent 100%)`,
+        animation: 'sunPulse 3s ease-in-out infinite',
+        boxShadow: `0 0 ${pos.size}px ${pos.glow}, 0 0 ${pos.size * 2}px ${pos.glow.replace(/[\d.]+\)$/, '0.35)')}`,
+      }} />
+    </div>
   );
-
-  if (scene === 'morning' || scene === 'afternoon')
-    return (
-      <svg width="80" height="60" viewBox="0 0 80 60" fill="none" className="opacity-[0.72]">
-        {defs}
-        <circle cx="60" cy="20" r="14" fill="#FCD34D" opacity="0.9" />
-        <motion.g filter={`url(#${blurBack})`} opacity={0.2} animate={driftSlow} transition={tSlow}>
-          <ellipse cx="12" cy="42" rx="20" ry="9" fill="white" />
-          <ellipse cx="52" cy="50" rx="18" ry="8" fill="white" />
-        </motion.g>
-        <motion.g filter={`url(#${blurFront})`} opacity={0.3} animate={driftFast} transition={tFast}>
-          <ellipse cx="18" cy="40" rx="16" ry="7" fill="white" />
-          <ellipse cx="58" cy="47" rx="14" ry="6" fill="white" />
-          <ellipse cx="68" cy="45" rx="11" ry="5" fill="white" />
-        </motion.g>
-      </svg>
-    );
-
-  if (scene === 'evening')
-    return (
-      <svg width="80" height="60" viewBox="0 0 80 60" fill="none" className="opacity-[0.78]">
-        {defs}
-        <ellipse cx="40" cy="55" rx="30" ry="8" fill="#F4A261" opacity="0.4" />
-        <circle cx="40" cy="42" r="16" fill="#F4A261" opacity="0.6" />
-        <motion.g filter={`url(#${blurBack})`} opacity={0.18} animate={driftSlow} transition={tSlow}>
-          <ellipse cx="8" cy="32" rx="16" ry="7" fill="white" />
-          <ellipse cx="62" cy="28" rx="14" ry="6" fill="white" />
-        </motion.g>
-        <motion.g filter={`url(#${blurFront})`} opacity={0.26} animate={driftFast} transition={tFast}>
-          <ellipse cx="12" cy="30" rx="13" ry="6" fill="white" />
-          <ellipse cx="66" cy="26" rx="11" ry="5" fill="white" />
-        </motion.g>
-      </svg>
-    );
-
-  if (scene === 'night')
-    return (
-      <svg width="80" height="60" viewBox="0 0 80 60" fill="none" className="opacity-90">
-        <path d="M55 10 Q65 20 55 35 Q40 28 45 15 Q50 8 55 10Z" fill="white" opacity="0.85" />
-        <circle cx="20" cy="12" r="1.5" fill="white" opacity="0.8" />
-        <circle cx="35" cy="5" r="1" fill="white" opacity="0.7" />
-        <circle cx="10" cy="25" r="1" fill="white" opacity="0.6" />
-        <circle cx="70" cy="8" r="1.5" fill="white" opacity="0.75" />
-        <circle cx="60" cy="45" r="1" fill="white" opacity="0.5" />
-        <circle cx="25" cy="42" r="1" fill="white" opacity="0.4" />
-      </svg>
-    );
-
-  if (scene === 'rainy')
-    return (
-      <svg width="80" height="60" viewBox="0 0 80 60" fill="none" className="opacity-[0.68]">
-        {defs}
-        <motion.g filter={`url(#${blurBack})`} opacity={0.22} animate={driftSlow} transition={tSlow}>
-          <ellipse cx="38" cy="20" rx="30" ry="13" fill="white" />
-          <ellipse cx="52" cy="16" rx="22" ry="11" fill="white" />
-        </motion.g>
-        <motion.g filter={`url(#${blurFront})`} opacity={0.32} animate={driftFast} transition={tFast}>
-          <ellipse cx="42" cy="19" rx="24" ry="11" fill="white" />
-          <ellipse cx="54" cy="15" rx="18" ry="9" fill="white" />
-        </motion.g>
-        <g>
-          <line x1="20" y1="35" x2="16" y2="48" stroke="white" strokeWidth="1.5" opacity="0.45" strokeLinecap="round" />
-          <line x1="32" y1="33" x2="28" y2="46" stroke="white" strokeWidth="1.5" opacity="0.45" strokeLinecap="round" />
-          <line x1="44" y1="35" x2="40" y2="48" stroke="white" strokeWidth="1.5" opacity="0.45" strokeLinecap="round" />
-          <line x1="56" y1="33" x2="52" y2="46" stroke="white" strokeWidth="1.5" opacity="0.45" strokeLinecap="round" />
-        </g>
-      </svg>
-    );
-
-  if (scene === 'cloudy')
-    return (
-      <svg width="80" height="60" viewBox="0 0 80 60" fill="none" className="opacity-[0.62]">
-        {defs}
-        <motion.g filter={`url(#${blurBack})`} opacity={0.2} animate={driftSlow} transition={tSlow}>
-          <ellipse cx="32" cy="28" rx="26" ry="12" fill="white" />
-          <ellipse cx="18" cy="42" rx="18" ry="8" fill="white" />
-          <ellipse cx="62" cy="44" rx="16" ry="7" fill="white" />
-        </motion.g>
-        <motion.g filter={`url(#${blurFront})`} opacity={0.3} animate={driftFast} transition={tFast}>
-          <ellipse cx="36" cy="26" rx="22" ry="10" fill="white" />
-          <ellipse cx="52" cy="22" rx="17" ry="9" fill="white" />
-          <ellipse cx="22" cy="40" rx="15" ry="7" fill="white" />
-          <ellipse cx="60" cy="42" rx="13" ry="6" fill="white" />
-        </motion.g>
-      </svg>
-    );
-
-  return null;
 }
+
+// Moon component
+function HeroMoon({ pos }) {
+  if (!pos) return null;
+  return (
+    <div style={{
+      position: 'absolute', left: pos.x, top: pos.y,
+      transform: 'translate(-50%, -50%)',
+      width: 72, height: 72,
+      pointerEvents: 'none', zIndex: 1,
+    }}>
+      <div style={{
+        position: 'absolute', inset: -18, borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(200,215,255,0.18) 0%, transparent 70%)',
+        animation: 'moonGlow 5s ease-in-out infinite',
+      }} />
+      <div style={{
+        position: 'absolute', inset: 14, borderRadius: '50%',
+        background: 'radial-gradient(circle at 35% 35%, #f0f4ff 0%, #d8e0f0 40%, #b8c4e0 70%, #8090b8 100%)',
+        boxShadow: 'inset -7px -3px 14px rgba(0,0,0,0.45), 0 0 18px rgba(180,200,255,0.3)',
+      }} />
+      <div style={{
+        position: 'absolute', inset: 14, borderRadius: '50%',
+        background: 'radial-gradient(circle at 68% 38%, rgba(0,5,20,0.5) 0%, transparent 52%)',
+      }} />
+    </div>
+  );
+}
+
+// Stars
+function HeroStars() {
+  const stars = [
+    {x:'8%',y:'10%',s:2.2,o:0.9,d:0},{x:'18%',y:'6%',s:1.4,o:0.7,d:0.8},
+    {x:'32%',y:'14%',s:1.8,o:0.85,d:1.5},{x:'45%',y:'7%',s:1.4,o:0.75,d:0.4},
+    {x:'55%',y:'16%',s:2.2,o:0.9,d:2},{x:'67%',y:'5%',s:1.4,o:0.8,d:0.6},
+    {x:'78%',y:'12%',s:1.8,o:0.7,d:1.2},{x:'88%',y:'8%',s:1.4,o:0.85,d:1.8},
+    {x:'12%',y:'24%',s:1.4,o:0.6,d:0.3},{x:'25%',y:'30%',s:1.8,o:0.75,d:1.1},
+    {x:'38%',y:'22%',s:1.4,o:0.8,d:2.2},{x:'52%',y:'28%',s:2.2,o:0.9,d:0.7},
+    {x:'63%',y:'20%',s:1.4,o:0.65,d:1.4},{x:'85%',y:'24%',s:1.4,o:0.7,d:1.7},
+    {x:'42%',y:'38%',s:1.8,o:0.85,d:0.5},{x:'92%',y:'34%',s:1.4,o:0.75,d:2.5},
+  ];
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}>
+      {stars.map((s, i) => (
+        <div key={i} style={{
+          position: 'absolute', left: s.x, top: s.y,
+          width: s.s, height: s.s, borderRadius: '50%',
+          background: 'white', opacity: s.o,
+          boxShadow: `0 0 ${s.s * 2}px rgba(180,200,255,0.9)`,
+          animation: `starTwinkle ${2 + s.d * 0.4}s ease-in-out infinite`,
+          animationDelay: `${s.d}s`,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// Clouds
+function HeroClouds({ heavy, dark }) {
+  const clouds = heavy ? [
+    { top: '-5%', left: '-8%', w: 260, h: 80, o: 0.92, blur: 8, delay: 0 },
+    { top: '-8%', left: '28%', w: 220, h: 68, o: 0.88, blur: 7, delay: 10 },
+    { top: '5%', left: '58%', w: 180, h: 58, o: 0.82, blur: 6, delay: 5 },
+    { top: '20%', left: '-5%', w: 160, h: 50, o: 0.72, blur: 5, delay: 15 },
+    { top: '22%', left: '42%', w: 150, h: 46, o: 0.68, blur: 5, delay: 8 },
+    { top: '35%', left: '68%', w: 130, h: 40, o: 0.62, blur: 4, delay: 20 },
+  ] : [
+    { top: '5%', left: '-3%', w: 180, h: 50, o: 0.82, blur: 6, delay: 0 },
+    { top: '3%', left: '28%', w: 145, h: 40, o: 0.68, blur: 5, delay: 12 },
+    { top: '18%', left: '58%', w: 120, h: 35, o: 0.58, blur: 4, delay: 7 },
+    { top: '28%', left: '72%', w: 85, h: 26, o: 0.42, blur: 3, delay: 5 },
+  ];
+
+  const base = dark ? '#1e2836' : '#e8eef2';
+  const highlight = dark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.92)';
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 1 }}>
+      {clouds.map((c, i) => (
+        <div key={i} style={{
+          position: 'absolute', top: c.top, left: c.left,
+          width: c.w, height: c.h,
+          animation: `cloudDrift ${20 + c.delay}s ease-in-out infinite alternate`,
+          animationDelay: `${c.delay * -1}s`,
+        }}>
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(ellipse at 30% 40%, ${highlight} 0%, ${base} 65%)`,
+            borderRadius: '50% 60% 40% 55% / 45% 50% 55% 40%',
+            opacity: c.o, filter: `blur(${c.blur}px)`,
+          }} />
+          <div style={{
+            position: 'absolute', top: '8%', left: '18%',
+            width: '52%', height: '72%',
+            background: `radial-gradient(circle, ${highlight} 0%, ${base} 72%)`,
+            borderRadius: '50%', opacity: c.o * 0.7,
+            filter: `blur(${c.blur - 1}px)`,
+          }} />
+          <div style={{
+            position: 'absolute', top: '4%', left: '44%',
+            width: '36%', height: '62%',
+            background: `radial-gradient(circle, ${highlight} 0%, ${base} 72%)`,
+            borderRadius: '50%', opacity: c.o * 0.62,
+            filter: `blur(${c.blur - 1}px)`,
+          }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Rain
+function HeroRain({ heavy }) {
+  const count = heavy ? 32 : 20;
+  const drops = Array.from({ length: count }, (_, i) => ({
+    x: `${(i * (heavy ? 3.2 : 5.1)) % 100}%`,
+    delay: (i * 0.13) % 1.5,
+    dur: heavy ? 0.55 + (i % 3) * 0.1 : 0.85 + (i % 4) * 0.15,
+    op: heavy ? 0.45 + (i % 3) * 0.1 : 0.3 + (i % 4) * 0.08,
+    len: heavy ? 13 : 9,
+  }));
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 2 }}>
+      {drops.map((d, i) => (
+        <div key={i} style={{
+          position: 'absolute', left: d.x, top: '-20px',
+          width: 1.2, height: d.len,
+          background: `linear-gradient(180deg, transparent, rgba(174,214,241,${d.op}))`,
+          borderRadius: 2,
+          animation: `rainFall ${d.dur}s linear infinite`,
+          animationDelay: `${d.delay}s`,
+          transform: 'rotate(8deg)',
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// Snow
+function HeroSnow() {
+  const flakes = Array.from({ length: 22 }, (_, i) => ({
+    x: `${(i * 4.6) % 100}%`,
+    size: 3 + (i % 4),
+    delay: (i * 0.32) % 4,
+    dur: 3 + (i % 5) * 0.9,
+    op: 0.6 + (i % 3) * 0.13,
+    drift: `${(i % 2 === 0 ? 1 : -1) * (5 + (i % 4) * 3)}px`,
+  }));
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 2 }}>
+      {flakes.map((f, i) => (
+        <div key={i} style={{
+          position: 'absolute', left: f.x, top: '-10px',
+          width: f.size, height: f.size, borderRadius: '50%',
+          background: 'white', opacity: f.op,
+          filter: 'blur(0.5px)',
+          boxShadow: `0 0 ${f.size}px rgba(255,255,255,0.8)`,
+          animation: `snowDrift ${f.dur}s ease-in-out infinite`,
+          animationDelay: `${f.delay}s`,
+          '--drift': f.drift,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+// Lightning
+function HeroLightning() {
+  const [flash, setFlash] = React.useState(false);
+  React.useEffect(() => {
+    const strike = () => {
+      setFlash(true);
+      setTimeout(() => setFlash(false), 110);
+      setTimeout(() => { setFlash(true); setTimeout(() => setFlash(false), 75); }, 190);
+    };
+    const id = setInterval(strike, 3500 + Math.random() * 3500);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none',
+      background: 'rgba(200,220,255,0.55)',
+      opacity: flash ? 1 : 0,
+      transition: flash ? 'none' : 'opacity 0.35s',
+    }} />
+  );
+}
+
+// Fog
+function HeroFog() {
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 2 }}>
+      {[0,1,2,3].map(i => (
+        <div key={i} style={{
+          position: 'absolute', left: '-20%', right: '-20%',
+          top: `${12 + i * 22}%`, height: '38%',
+          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.38), rgba(255,255,255,0.48), rgba(255,255,255,0.33), transparent)',
+          filter: 'blur(14px)',
+          animation: `fogDrift ${8 + i * 3}s ease-in-out infinite alternate`,
+          animationDelay: `${i * -2}s`,
+          opacity: 0.7 - i * 0.08,
+        }} />
+      ))}
+    </div>
+  );
+}
+
 
 const cardSurface = 'shadow-sm hover:shadow-md transition-shadow duration-300 ease-out';
 
@@ -474,8 +432,66 @@ const BRAND = {
   gradient: 'linear-gradient(90deg, #7f30cb, #01dcba)',
 };
 
-const actionLinkClass =
-  'font-medium text-[#2f9db6] transition-colors hover:text-[#247a8f] active:text-[#1e6979]';
+const quickActionTileStyle = {
+  background: 'linear-gradient(135deg, rgba(1, 220, 186, 0.12), rgba(14, 165, 233, 0.10))',
+  boxShadow: '0 6px 16px rgba(0,0,0,0.05)',
+};
+
+const secondaryCardNavButtonClass =
+  'flex items-center gap-1 rounded-lg border-0 bg-[#e8edf8] py-[5px] px-[12px] font-bold text-[#1e3a8a] shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a8a]/25';
+
+const GRADIENT_HEADER_STAR_TWINKLE_CSS = `
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+`;
+
+const GRADIENT_HEADER_STARS = [
+  { left: '5%', top: '25%', size: 1.8, delay: '0s', dur: '2.2s' },
+  { left: '12%', top: '65%', size: 1.4, delay: '0.6s', dur: '3s' },
+  { left: '22%', top: '30%', size: 2.2, delay: '1.1s', dur: '2.5s' },
+  { left: '33%', top: '70%', size: 1.4, delay: '0.3s', dur: '2.8s' },
+  { left: '45%', top: '20%', size: 1.8, delay: '1.5s', dur: '2s' },
+  { left: '56%', top: '68%', size: 1.4, delay: '0.8s', dur: '3.2s' },
+  { left: '66%', top: '28%', size: 2, delay: '0.4s', dur: '2.4s' },
+  { left: '76%', top: '72%', size: 1.4, delay: '1.3s', dur: '2.7s' },
+  { left: '86%', top: '35%', size: 2.2, delay: '0.2s', dur: '2.1s' },
+  { left: '94%', top: '68%', size: 1.4, delay: '1.8s', dur: '3.1s' },
+];
+
+function GradientHeaderStarField() {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        borderRadius: 'inherit',
+        zIndex: 0,
+      }}
+    >
+      {GRADIENT_HEADER_STARS.map((s, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: s.left,
+            top: s.top,
+            width: `${s.size}px`,
+            height: `${s.size}px`,
+            borderRadius: '50%',
+            background: 'white',
+            animation: `starTwinkle ${s.dur} ease-in-out infinite`,
+            animationDelay: s.delay,
+            boxShadow: `0 0 ${s.size * 2}px rgba(255,255,255,0.8)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -707,18 +723,8 @@ export default function HomePage() {
 
   const hour = new Date().getHours();
   const isDarkMode = themeMounted && resolvedTheme === 'dark';
-  const theme = getHeaderTheme(hour, weather?.weathercode ?? -1, isDarkMode);
-  const weatherScene = weather
-    ? getWeatherScene(
-        normalizeWeatherCondition(weather?.main, weather?.weathercode) ?? '',
-        isNightHour(hour)
-      )
-    : null;
-
-  const heroLightForeground =
-    isDarkMode ||
-    theme.textColor.includes('white') ||
-    theme.textColor.includes('F5F7FA');
+  const sky = getSkyKind(weather?.weathercode ?? -1);
+  const theme = getHeroTheme(hour, sky);
 
   const priorityColors = {
     high: 'bg-red-100 text-red-700',
@@ -738,109 +744,96 @@ export default function HomePage() {
       <motion.div
         variants={heroVariants}
         whileHover={reduceMotion ? undefined : hoverCard}
-        className={`rounded-2xl p-5 relative overflow-hidden shadow-md ${cardSurface}`}
-        style={{ background: weatherScene ? weatherScene.gradient : theme.bg }}
+        className={`shadow-md rounded-2xl ${cardSurface}`}
       >
-        {!weatherScene && (
-          <>
-            <div className="absolute inset-0 opacity-10 bg-white/5" />
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  'linear-gradient(135deg, rgba(127,48,203,0.045) 0%, transparent 42%, rgba(47,157,182,0.065) 100%)',
-              }}
-            />
-            <div
-              className="absolute inset-0 pointer-events-none z-[1] mix-blend-soft-light opacity-[0.35] dark:opacity-[0.22]"
-              style={{
-                background:
-                  'radial-gradient(ellipse 85% 65% at 18% 22%, rgba(255,255,255,0.5) 0%, transparent 55%), linear-gradient(180deg, rgba(255,255,255,0.14) 0%, transparent 42%, rgba(0,0,0,0.04) 100%)',
-              }}
-              aria-hidden
-            />
-            <div
-              className="absolute inset-0 pointer-events-none z-[2]"
-              style={{
-                background: isDarkMode
-                  ? 'linear-gradient(to bottom, transparent 0%, transparent 45%, rgba(0,0,0,0.28) 82%, rgba(0,0,0,0.42) 100%)'
-                  : 'linear-gradient(to bottom, transparent 0%, transparent 52%, rgba(15,23,32,0.12) 88%, rgba(15,23,32,0.2) 100%)',
-              }}
-              aria-hidden
-            />
-            <motion.div
-              className="absolute bottom-0 right-0 z-[3] opacity-[0.52] pointer-events-none"
-              aria-hidden
-              initial={reduceMotion ? false : { opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 0.52, scale: 1 }}
-              transition={{ delay: 0.22, duration: 0.65, ease: easeOut }}
-            >
-              <HeaderScene scene={theme.scene} reduceMotion={reduceMotion} />
-            </motion.div>
-          </>
-        )}
-        {weatherScene && (
-          <div
-            className="absolute inset-0 z-0 overflow-hidden pointer-events-none"
-            aria-hidden
-          >
-            <HeroWeatherAnimLayer
-              animation={weatherScene.animation}
-              reduceMotion={reduceMotion}
-            />
-            <div
-              className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/[0.14] pointer-events-none"
-              aria-hidden
-            />
-          </div>
-        )}
-        <div className="flex items-start justify-between relative z-[1]">
-          <div
-            className={`flex-1 min-w-0 ${
-              heroLightForeground
-                ? '[filter:drop-shadow(0_1px_8px_rgba(0,0,0,0.28))]'
-                : '[filter:drop-shadow(0_1px_6px_rgba(255,255,255,0.55))]'
-            }`}
-          >
-            <p className={`text-sm ${theme.subColor}`}>{getGreeting()},</p>
-            <h1 className={`font-heading text-2xl font-bold ${theme.textColor}`}>{firstName}!</h1>
-            <p className={`text-xs mt-1 ${theme.subColor}`}>
-              {activeCheckIns.length === members.length && members.length > 0
-                ? 'Everyone is where they should be.'
-                : `${activeCheckIns.length} of ${members.length} members checked in`}
-            </p>
-          </div>
-          {weather && (
-            <motion.a
-              href={weatherSearchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              whileTap={tapSmall}
-              className="rounded-xl px-3 py-2 text-right ml-3 flex-shrink-0 cursor-pointer no-underline transition-colors"
-              style={{
-                background: 'rgba(255,255,255,0.16)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255,255,255,0.28)',
-                boxShadow: '0 4px 28px rgba(0,0,0,0.14), inset 0 1px 0 rgba(255,255,255,0.22)',
-              }}
-            >
-              <div className="relative z-[1] contrast-[1.07]">
-                <div className={`text-xs mb-0.5 font-medium ${theme.subColor}`}>
+        <HeroBannerStyles />
+        <div className="rounded-2xl relative overflow-hidden" style={{ height: 148, background: theme.skyBg }}>
+          {/* Atmospheric layers */}
+          {theme.midLayer && (
+            <div style={{ position: 'absolute', inset: 0, background: theme.midLayer, pointerEvents: 'none' }} />
+          )}
+          {theme.glowLayer && (
+            <div style={{ position: 'absolute', inset: 0, background: theme.glowLayer, pointerEvents: 'none' }} />
+          )}
+
+          {/* Celestial bodies */}
+          <HeroSun pos={theme.sunPos} />
+          <HeroMoon pos={theme.moonPos} />
+
+          {/* Stars — night only */}
+          {(theme.scene === 'night' || theme.scene === 'evening') && <HeroStars />}
+
+          {/* Clouds */}
+          {['cloudy','night-cloudy','morning-cloudy','afternoon-cloudy'].includes(theme.scene) && (
+            <HeroClouds heavy={true} dark={['night-cloudy'].includes(theme.scene)} />
+          )}
+          {['morning','afternoon','golden-hour','dusk'].includes(theme.scene) && (
+            <HeroClouds heavy={false} dark={false} />
+          )}
+          {theme.scene === 'storm' && <HeroClouds heavy={true} dark={true} />}
+
+          {/* Weather effects */}
+          {theme.scene === 'rainy' && <HeroRain heavy={false} />}
+          {theme.scene === 'storm' && <HeroRain heavy={true} />}
+          {theme.scene === 'storm' && <HeroLightning />}
+          {theme.scene === 'snow' && <HeroSnow />}
+
+          {/* Bottom fade for depth */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '35%',
+            background: 'linear-gradient(0deg, rgba(0,0,0,0.12) 0%, transparent 100%)',
+            pointerEvents: 'none', zIndex: 1,
+          }} />
+
+          {/* Content */}
+          <div className="absolute inset-0 flex items-start justify-between p-5" style={{ zIndex: 10 }}>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold" style={{ color: theme.subColor, textShadow: theme.textShadow, marginBottom: 2 }}>
+                {getGreeting()},
+              </p>
+              <h1 className="font-heading text-2xl font-bold" style={{ color: theme.textColor, textShadow: theme.textShadow, lineHeight: 1.15, marginBottom: 4 }}>
+                {firstName}!
+              </h1>
+              <p className="text-xs" style={{ color: theme.subColor, textShadow: theme.textShadow }}>
+                {activeCheckIns.length === members.length && members.length > 0
+                  ? 'Everyone is where they should be.'
+                  : `${activeCheckIns.length} of ${members.length} members checked in`}
+              </p>
+            </div>
+            {weather && (
+              <motion.a
+                href={weatherSearchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                whileTap={tapSmall}
+                style={{
+                  background: 'rgba(255,255,255,0.14)',
+                  backdropFilter: 'blur(24px)',
+                  WebkitBackdropFilter: 'blur(24px)',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  borderRadius: 14, padding: '9px 13px', textAlign: 'right',
+                  minWidth: 85, flexShrink: 0, marginLeft: 12,
+                  textDecoration: 'none', display: 'block',
+                }}
+              >
+                <div className="text-xs font-semibold" style={{ color: theme.subColor, textShadow: theme.textShadow, marginBottom: 3 }}>
                   {getWeatherIcon(weather.weathercode)} Forecast
                 </div>
-                <div className={`text-lg font-bold tracking-tight ${theme.textColor}`}>
+                <div className="font-bold text-lg" style={{ color: theme.textColor, textShadow: theme.textShadow, lineHeight: 1 }}>
                   {Math.round(weather.temperature)}°F
                 </div>
-                <div className={`text-[10px] font-medium ${theme.subColor}`}>
+                <div className="text-[10px]" style={{ color: theme.subColor, textShadow: theme.textShadow, marginTop: 3 }}>
                   {getWeatherDesc(weather.weathercode)}
                 </div>
                 {cityName ? (
-                  <div className={`text-[10px] font-medium ${theme.subColor}`}>{cityName}</div>
+                  <div className="text-[10px]" style={{ color: theme.subColor, textShadow: theme.textShadow, marginTop: 1 }}>
+                    {cityName}
+                  </div>
                 ) : null}
-              </div>
-            </motion.a>
-          )}
+              </motion.a>
+            )}
+          </div>
         </div>
       </motion.div>
 
@@ -849,19 +842,39 @@ export default function HomePage() {
         whileHover={reduceMotion ? undefined : hoverCard}
         className={`surface-1 p-4 ${cardSurface}`}
       >
-        <div className="surface-3 p-4 mb-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">Family check-ins</p>
-            <motion.button
-              type="button"
-              onClick={() => navigate('/checkin')}
-              whileTap={tapSmall}
-              className={`text-xs flex items-center gap-0.5 ${actionLinkClass}`}
-            >
-              View Map <ChevronRight className="w-3 h-3" />
-            </motion.button>
+        <div className="rounded-xl overflow-hidden border border-border">
+          <div
+            className="relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+              boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+              padding: '12px 16px',
+            }}
+          >
+            <GradientHeaderStarField />
+            <style>{GRADIENT_HEADER_STAR_TWINKLE_CSS}</style>
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                pointerEvents: 'none',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+              }}
+            />
+            <div className="relative z-[1] flex items-center justify-between">
+              <p className="font-heading text-sm font-bold" style={{ color: '#ffffff' }}>
+                {family?.name ? `${family.name} Family Check-ins` : 'Family Check-ins'}
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/checkin')}
+                className={`text-xs w-fit ${secondaryCardNavButtonClass}`}
+              >
+                View Map <ChevronRight className="w-3 h-3 shrink-0" aria-hidden />
+              </button>
+            </div>
           </div>
-        </div>
+          <div className="p-4 bg-card">
         {members.length === 0 ? (
           <p className="text-xs text-muted-foreground">No members yet.</p>
         ) : (
@@ -894,6 +907,8 @@ export default function HomePage() {
             })}
           </div>
         )}
+          </div>
+        </div>
       </motion.div>
 
       <motion.div variants={gridParentVariants} className="grid grid-cols-2 gap-3">
@@ -902,19 +917,35 @@ export default function HomePage() {
           whileHover={reduceMotion ? undefined : hoverCard}
           className={`surface-1 p-3 ${cardSurface}`}
         >
-          <div className="surface-3 p-4 mb-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-[#247a8f]">Today&apos;s events</p>
-              <motion.span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[rgba(47,157,182,0.14)] text-[#247a8f]"
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.08, duration: 0.28, ease: easeOut }}
-              >
-                {todayEvents.length}
-              </motion.span>
+          <div className="rounded-xl overflow-hidden border border-border">
+            <div
+              className="relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+                boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+                padding: '12px 16px',
+              }}
+            >
+              <GradientHeaderStarField />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+                }}
+              />
+              <div className="relative z-[1] flex items-center justify-between">
+                <p className="font-heading text-xs font-bold" style={{ color: '#ffffff' }}>Today&apos;s events</p>
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                  style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
+                >
+                  {todayEvents.length}
+                </span>
+              </div>
             </div>
-          </div>
+            <div className="p-3 bg-card">
           {todayEvents.length === 0 ? (
             <p className="text-[10px] text-muted-foreground">No events today</p>
           ) : (
@@ -939,10 +970,12 @@ export default function HomePage() {
             type="button"
             onClick={() => navigate('/calendar')}
             whileTap={tapSmall}
-            className={`text-[10px] mt-2 flex items-center gap-0.5 ${actionLinkClass}`}
+            className={`text-[10px] mt-2 w-fit ${secondaryCardNavButtonClass}`}
           >
-            View Calendar <ChevronRight className="w-2.5 h-2.5" />
+            View Calendar <ChevronRight className="w-2.5 h-2.5 shrink-0" aria-hidden />
           </motion.button>
+            </div>
+          </div>
         </motion.div>
 
         <motion.div
@@ -950,19 +983,35 @@ export default function HomePage() {
           whileHover={reduceMotion ? undefined : hoverCard}
           className={`surface-1 p-3 ${cardSurface}`}
         >
-          <div className="surface-3 p-4 mb-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-[#247a8f]">Tasks due</p>
-              <motion.span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[rgba(47,157,182,0.14)] text-[#247a8f]"
-                initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.08, duration: 0.28, ease: easeOut }}
-              >
-                {dueTasks.length}
-              </motion.span>
+          <div className="rounded-xl overflow-hidden border border-border">
+            <div
+              className="relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+                boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+                padding: '12px 16px',
+              }}
+            >
+              <GradientHeaderStarField />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  pointerEvents: 'none',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+                }}
+              />
+              <div className="relative z-[1] flex items-center justify-between">
+                <p className="font-heading text-xs font-bold" style={{ color: '#ffffff' }}>Tasks due</p>
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                  style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
+                >
+                  {dueTasks.length}
+                </span>
+              </div>
             </div>
-          </div>
+            <div className="p-3 bg-card">
           {dueTasks.length === 0 ? (
             <p className="text-[10px] text-muted-foreground">All caught up!</p>
           ) : (
@@ -983,10 +1032,12 @@ export default function HomePage() {
             type="button"
             onClick={() => navigate('/todo')}
             whileTap={tapSmall}
-            className={`text-[10px] mt-2 flex items-center gap-0.5 ${actionLinkClass}`}
+            className={`text-[10px] mt-2 w-fit ${secondaryCardNavButtonClass}`}
           >
-            Go to To-Do <ChevronRight className="w-2.5 h-2.5" />
+            Go to To-Do <ChevronRight className="w-2.5 h-2.5 shrink-0" aria-hidden />
           </motion.button>
+            </div>
+          </div>
         </motion.div>
       </motion.div>
 
@@ -995,12 +1046,29 @@ export default function HomePage() {
         whileHover={reduceMotion ? undefined : hoverCard}
         className={`surface-1 p-4 ${cardSurface}`}
       >
-        <div className="surface-3 p-4 mb-2">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold">Chore progress</p>
+        <div
+          className="relative overflow-hidden mb-2 rounded-xl border border-border"
+          style={{
+            background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+            boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+            padding: '12px 16px',
+          }}
+        >
+          <GradientHeaderStarField />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+            }}
+          />
+          <div className="relative z-[1] flex items-center justify-between">
+            <p className="font-heading text-sm font-bold" style={{ color: '#ffffff' }}>Chore progress</p>
             {maxStreak > 0 && (
               <motion.span
-                className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[rgba(127,48,203,0.14)] text-[#7f30cb]"
+                className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
                 initial={reduceMotion ? false : { opacity: 0, scale: 0.94 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.06, duration: 0.3, ease: easeOut }}
@@ -1068,22 +1136,38 @@ export default function HomePage() {
           type="button"
           onClick={() => navigate('/chores')}
           whileTap={tapSmall}
-          className={`text-xs mt-2 flex items-center gap-0.5 ${actionLinkClass}`}
+          className={`text-xs mt-2 w-fit ${secondaryCardNavButtonClass}`}
         >
-          View Chores <ChevronRight className="w-3 h-3" />
+          View Chores <ChevronRight className="w-3 h-3 shrink-0" aria-hidden />
         </motion.button>
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <div className="surface-3 p-4 mb-2">
-          <p className="text-sm font-semibold flex items-center gap-1.5">
+        <div
+          className="relative overflow-hidden mb-2 rounded-xl border border-border"
+          style={{
+            background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+            boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+            padding: '12px 16px',
+          }}
+        >
+          <GradientHeaderStarField />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+            }}
+          />
+          <p className="relative z-[1] text-sm font-semibold flex items-center gap-1.5" style={{ color: '#ffffff' }}>
             <motion.span
               className="inline-flex"
               initial={reduceMotion ? false : { opacity: 0, rotate: -6 }}
               animate={{ opacity: 1, rotate: 0 }}
               transition={{ duration: 0.32, ease: easeOut }}
             >
-              <Zap className="w-4 h-4 text-[#2f9db6]" />
+              <Zap className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.9)' }} />
             </motion.span>
             Quick actions
           </p>
@@ -1093,29 +1177,21 @@ export default function HomePage() {
             {
               label: 'Add Event',
               icon: Calendar,
-              tileBg: 'rgba(47, 157, 182, 0.06)',
-              iconClass: 'text-[#247a8f] bg-[rgba(47,157,182,0.12)]',
               action: () => navigate('/calendar'),
             },
             {
               label: 'Add Task',
               icon: CheckSquare,
-              tileBg: 'rgba(47, 157, 182, 0.09)',
-              iconClass: 'text-[#2f9db6] bg-[rgba(47,157,182,0.14)]',
               action: () => navigate('/todo'),
             },
             {
               label: 'Check In',
               icon: MapPin,
-              tileBg: 'linear-gradient(145deg, rgba(127,48,203,0.07), rgba(47,157,182,0.1))',
-              iconClass: 'text-[#247a8f] bg-[rgba(47,157,182,0.15)]',
               action: () => navigate('/checkin'),
             },
             {
               label: 'Send Alert',
               icon: Megaphone,
-              tileBg: 'rgba(245, 158, 11, 0.08)',
-              iconClass: 'text-[#c2410c] bg-[rgba(245,158,11,0.14)]',
               action: () => navigate('/admin'),
               show: isAdmin,
             },
@@ -1129,13 +1205,21 @@ export default function HomePage() {
                 whileTap={tapSmall}
                 whileHover={reduceMotion ? undefined : { scale: 1.03 }}
                 transition={{ duration: 0.18, ease: easeOut }}
-                style={{ background: a.tileBg }}
-                className={`border border-border rounded-xl p-3 flex flex-col items-center gap-1.5 hover:brightness-[0.98] transition-[filter,box-shadow] ${cardSurface}`}
+                style={quickActionTileStyle}
+                className="flex flex-col items-center p-3 gap-1.5 h-auto w-full rounded-2xl border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9488]/25"
               >
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${a.iconClass}`}>
-                  <a.icon className="w-4 h-4" />
+                <div
+                  className="flex items-center justify-center shrink-0"
+                  style={{
+                    background: 'white',
+                    borderRadius: '50%',
+                    padding: '8px',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <a.icon className="w-4 h-4 shrink-0 text-[#0d9488]" aria-hidden />
                 </div>
-                <p className="text-[9px] font-semibold text-center text-muted-foreground">{a.label}</p>
+                <p className="text-[9px] font-bold text-center text-[#0f172a]">{a.label}</p>
               </motion.button>
             ))}
         </div>
@@ -1146,16 +1230,34 @@ export default function HomePage() {
         whileHover={reduceMotion ? undefined : hoverCard}
         className={`bg-gradient-to-br from-card to-[#2f9db6]/[0.04] border border-border rounded-2xl p-4 mb-4 ${cardSurface}`}
       >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-heading font-semibold text-sm">Recent Activity</h3>
-          <motion.button
-            type="button"
-            onClick={() => navigate('/feed')}
-            whileTap={tapSmall}
-            className={`text-xs ${actionLinkClass}`}
-          >
-            View all
-          </motion.button>
+        <div
+          className="relative overflow-hidden mb-3 rounded-xl border border-border"
+          style={{
+            background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+            boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+            padding: '12px 16px',
+          }}
+        >
+          <GradientHeaderStarField />
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+            }}
+          />
+          <div className="relative z-[1] flex items-center justify-between">
+            <h3 className="font-heading font-semibold text-sm" style={{ color: '#ffffff' }}>Recent Activity</h3>
+            <motion.button
+              type="button"
+              onClick={() => navigate('/feed')}
+              whileTap={tapSmall}
+              className={`text-xs w-fit ${secondaryCardNavButtonClass}`}
+            >
+              View all
+            </motion.button>
+          </div>
         </div>
         {feedItems.length === 0 ? (
           <p className="text-xs text-muted-foreground">No activity yet.</p>

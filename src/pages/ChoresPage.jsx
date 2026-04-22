@@ -13,9 +13,72 @@ import SkeletonCard from '@/components/shared/SkeletonCard';
 import { CheckCircle2, Plus, Pencil, Trash2, Flame } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isToday, startOfWeek, isAfter, isBefore, startOfMonth, formatDistanceToNow } from 'date-fns';
-import { playSound } from '@/lib/sounds';
+import { playChoreCompleteSound } from '@/lib/sounds';
 
 const UNASSIGNED = '__unassigned__';
+
+const choresSectionHeaderBarStyle = {
+  background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+  boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+  padding: '12px 16px',
+};
+
+const choresSectionHeaderOverlayStyle = {
+  background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+};
+
+const GRADIENT_HEADER_STAR_TWINKLE_CSS = `
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+`;
+
+const GRADIENT_HEADER_STARS = [
+  { left: '5%', top: '25%', size: 1.8, delay: '0s', dur: '2.2s' },
+  { left: '12%', top: '65%', size: 1.4, delay: '0.6s', dur: '3s' },
+  { left: '22%', top: '30%', size: 2.2, delay: '1.1s', dur: '2.5s' },
+  { left: '33%', top: '70%', size: 1.4, delay: '0.3s', dur: '2.8s' },
+  { left: '45%', top: '20%', size: 1.8, delay: '1.5s', dur: '2s' },
+  { left: '56%', top: '68%', size: 1.4, delay: '0.8s', dur: '3.2s' },
+  { left: '66%', top: '28%', size: 2, delay: '0.4s', dur: '2.4s' },
+  { left: '76%', top: '72%', size: 1.4, delay: '1.3s', dur: '2.7s' },
+  { left: '86%', top: '35%', size: 2.2, delay: '0.2s', dur: '2.1s' },
+  { left: '94%', top: '68%', size: 1.4, delay: '1.8s', dur: '3.1s' },
+];
+
+function GradientHeaderStarField() {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        borderRadius: 'inherit',
+        zIndex: 0,
+      }}
+    >
+      {GRADIENT_HEADER_STARS.map((s, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: s.left,
+            top: s.top,
+            width: `${s.size}px`,
+            height: `${s.size}px`,
+            borderRadius: '50%',
+            background: 'white',
+            animation: `starTwinkle ${s.dur} ease-in-out infinite`,
+            animationDelay: s.delay,
+            boxShadow: `0 0 ${s.size * 2}px rgba(255,255,255,0.8)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 function choreNeedsReset(chore) {
   if (!chore.last_reset_at) return true;
@@ -190,7 +253,7 @@ export default function ChoresPage() {
       });
     },
     onSuccess: (_data, chore) => {
-      playSound('/TaskCompleteChime.mp3');
+      playChoreCompleteSound();
       queryClient.invalidateQueries({ queryKey: ['chores'] });
       toast.success(
         `Great job! +${chore.point_value ?? 1} pts ${String.fromCodePoint(0x1f389)}`
@@ -269,9 +332,19 @@ export default function ChoresPage() {
 
   return (
     <div className="space-y-6">
-      <div className="surface-3 p-4 mb-2">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-xl font-bold">Chores</h2>
+      <div
+        className="surface-3 mb-2 relative overflow-hidden"
+        style={choresSectionHeaderBarStyle}
+      >
+        <GradientHeaderStarField />
+        <style>{GRADIENT_HEADER_STAR_TWINKLE_CSS}</style>
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={choresSectionHeaderOverlayStyle}
+          aria-hidden
+        />
+        <div className="relative z-[1] flex items-center justify-between">
+          <h2 className="font-heading text-xl font-bold text-white">Chores</h2>
           {isAdmin && (
             <button
               type="button"
@@ -289,15 +362,18 @@ export default function ChoresPage() {
               }}
               className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none ${
                 showAddForm || editingChore
-                  ? 'border border-primary text-primary bg-background hover:bg-primary/10'
-                  : 'bg-primary text-primary-foreground'
+                  ? 'border border-white/90 text-white bg-transparent hover:bg-white/10'
+                  : 'bg-[rgba(255,255,255,0.2)] text-white hover:bg-[rgba(255,255,255,0.28)]'
               }`}
             >
               {showAddForm || editingChore ? (
                 'Close'
               ) : (
                 <>
-                  <Plus className="w-3 h-3 shrink-0" aria-hidden />
+                  <Plus
+                    className="w-3 h-3 shrink-0 text-[rgba(255,255,255,0.9)]"
+                    aria-hidden
+                  />
                   Add Chore
                 </>
               )}
@@ -416,12 +492,23 @@ export default function ChoresPage() {
       )}
 
       <section className="surface-3 p-4">
-        <h3 className="text-base font-bold text-[#7f30cb] mb-2 flex items-center gap-2">
-          <span className="w-7 h-7 rounded-full bg-[rgba(127,48,203,0.12)] flex items-center justify-center">
-            <Flame className="w-4 h-4 text-[#7f30cb]" />
-          </span>
-          Top Helper This Week
-        </h3>
+        <div
+          className="relative mb-2 overflow-hidden rounded-xl"
+          style={choresSectionHeaderBarStyle}
+        >
+          <GradientHeaderStarField />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={choresSectionHeaderOverlayStyle}
+            aria-hidden
+          />
+          <h3 className="relative z-[1] text-base font-bold text-white flex items-center gap-2">
+            <span className="w-7 h-7 rounded-full bg-[rgba(255,255,255,0.2)] flex items-center justify-center">
+              <Flame className="w-4 h-4 shrink-0 text-[rgba(255,255,255,0.9)]" />
+            </span>
+            Top Helper This Week
+          </h3>
+        </div>
         <p className="text-xs text-muted-foreground mb-3">
           Week starting {format(weekStart, 'MMM d, yyyy')}
         </p>
@@ -457,12 +544,25 @@ export default function ChoresPage() {
       </section>
 
       <section className="surface-1 p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-base font-bold text-[#247a8f] flex items-center gap-2">
-            Daily Progress
-            <span className="text-base">🌟</span>
-          </h3>
-          <span className="text-xs font-semibold text-[#2f9db6]">{dailyPct}%</span>
+        <div
+          className="relative mb-2 overflow-hidden rounded-xl"
+          style={choresSectionHeaderBarStyle}
+        >
+          <GradientHeaderStarField />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={choresSectionHeaderOverlayStyle}
+            aria-hidden
+          />
+          <div className="relative z-[1] flex items-center justify-between">
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              Daily Progress
+              <span className="text-base">🌟</span>
+            </h3>
+            <span className="text-xs font-semibold text-white bg-[rgba(255,255,255,0.2)] px-2 py-0.5 rounded-full tabular-nums">
+              {dailyPct}%
+            </span>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
           {completedTodayCount} of {totalChores} chores done today
@@ -479,7 +579,18 @@ export default function ChoresPage() {
       </section>
 
       <section>
-        <h3 className="text-base font-bold text-[#247a8f] mb-3">To do</h3>
+        <div
+          className="relative mb-3 overflow-hidden rounded-xl"
+          style={choresSectionHeaderBarStyle}
+        >
+          <GradientHeaderStarField />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={choresSectionHeaderOverlayStyle}
+            aria-hidden
+          />
+          <h3 className="relative z-[1] text-base font-bold text-white">To do</h3>
+        </div>
         {activeChores.length === 0 ? (
           <EmptyState
             title="All caught up"
@@ -583,15 +694,22 @@ export default function ChoresPage() {
         <button
           type="button"
           onClick={() => setDoneExpanded((s) => !s)}
-          className="flex items-center justify-between w-full mt-2 mb-2 group"
+          className="relative flex items-center justify-between w-full mt-2 mb-2 group overflow-hidden rounded-xl text-left"
+          style={choresSectionHeaderBarStyle}
         >
-          <h3 className="text-base font-bold text-[#247a8f] flex items-center gap-2">
-            <span className="w-7 h-7 rounded-full bg-[rgba(47,157,182,0.12)] flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4 text-[#2f9db6]" />
+          <GradientHeaderStarField />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={choresSectionHeaderOverlayStyle}
+            aria-hidden
+          />
+          <h3 className="relative z-[1] text-base font-bold text-white flex items-center gap-2">
+            <span className="w-7 h-7 rounded-full bg-[rgba(255,255,255,0.2)] flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-[rgba(255,255,255,0.9)]" />
             </span>
             Completed
           </h3>
-          <span className="text-xs font-semibold text-[#247a8f] bg-[rgba(47,157,182,0.12)] px-3 py-1 rounded-full">
+          <span className="relative z-[1] text-xs font-semibold text-white bg-[rgba(255,255,255,0.2)] px-3 py-1 rounded-full">
             {doneExpanded ? 'Hide ▲' : `View all (${completedChores.length}) ▼`}
           </span>
         </button>

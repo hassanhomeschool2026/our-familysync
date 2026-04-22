@@ -2,6 +2,35 @@ import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, addMonths, subMonths, addWeeks, subWeeks, addDays, subDays } from 'date-fns';
 
+const headerBarStyle = {
+  background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+  borderRadius: '14px',
+  padding: '12px 16px',
+  boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+  marginBottom: '16px',
+};
+
+const chevronButtonStyle = {
+  color: 'rgba(255, 255, 255, 0.85)',
+  background: 'rgba(255, 255, 255, 0.15)',
+  borderRadius: '8px',
+  padding: '6px',
+  border: 'none',
+};
+
+const addEventButtonStyle = {
+  background: '#e8edf8',
+  color: '#1e3a8a',
+  borderRadius: '8px',
+  fontWeight: 700,
+  fontSize: '12px',
+  padding: '6px 12px',
+  border: 'none',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '4px',
+};
+
 export default function CalendarHeader({ view, setView, currentDate, setCurrentDate, onAddEvent }) {
   const navigate = (dir) => {
     const fn = dir === 'next'
@@ -16,68 +45,125 @@ export default function CalendarHeader({ view, setView, currentDate, setCurrentD
     ? `Week of ${format(currentDate, 'MMM d')}`
     : format(currentDate, 'EEEE, MMM d');
 
+  const starStyles = `
+  @keyframes calStarTwinkle {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+`;
+
+  const stars = [
+    { left: '8%', top: '20%', size: 2, delay: '0s', dur: '2.2s' },
+    { left: '15%', top: '70%', size: 1.5, delay: '0.4s', dur: '3s' },
+    { left: '25%', top: '35%', size: 2.5, delay: '1.1s', dur: '2.5s' },
+    { left: '35%', top: '75%', size: 1.5, delay: '0.7s', dur: '2.8s' },
+    { left: '48%', top: '25%', size: 2, delay: '1.5s', dur: '2s' },
+    { left: '58%', top: '65%', size: 1.5, delay: '0.2s', dur: '3.2s' },
+    { left: '68%', top: '30%', size: 2, delay: '0.9s', dur: '2.4s' },
+    { left: '78%', top: '72%', size: 1.5, delay: '1.3s', dur: '2.7s' },
+    { left: '88%', top: '40%', size: 2.5, delay: '0.5s', dur: '2.1s' },
+    { left: '93%', top: '75%', size: 1.5, delay: '1.8s', dur: '3.1s' },
+  ];
+
   return (
-    <div className="surface-3 p-4 mb-2 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-heading text-[22px] font-bold text-foreground leading-tight">{label}</h2>
-        <button
-          type="button"
-          onClick={onAddEvent}
-          aria-label="Add event"
-          className="shrink-0 rounded-[20px] text-white border-0 cursor-pointer transition-opacity hover:opacity-95 active:opacity-90"
+    <>
+      <div className="relative overflow-hidden" style={headerBarStyle}>
+        <style>{starStyles}</style>
+        <div
           style={{
-            background: 'linear-gradient(135deg, #7f30cb, #2f9db6)',
-            padding: '8px 16px',
-            fontSize: '13px',
-            fontWeight: 600,
-            boxShadow: '0 4px 12px rgba(127,48,203,0.3)',
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            overflow: 'hidden',
+            borderRadius: 'inherit',
+            zIndex: 0,
           }}
         >
-          + Event
-        </button>
-      </div>
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          {['day', 'week', 'month'].map((v) => (
-            <button
-              key={v}
-              type="button"
-              onClick={() => setView(v)}
-              className={`text-sm font-medium capitalize transition-all rounded-[20px] ${
-                view === v ? 'text-white' : 'text-muted-foreground'
-              }`}
-              style={
-                view === v
-                  ? {
-                      background: 'linear-gradient(135deg, #7f30cb, #2f9db6)',
-                      padding: '6px 14px',
-                    }
-                  : {
-                      border: '1px solid rgba(127,48,203,0.2)',
-                      padding: '6px 14px',
-                    }
-              }
-            >
-              {v}
-            </button>
+          {stars.map((s, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                left: s.left,
+                top: s.top,
+                width: `${s.size}px`,
+                height: `${s.size}px`,
+                borderRadius: '50%',
+                background: 'white',
+                animation: `calStarTwinkle ${s.dur} ease-in-out infinite`,
+                animationDelay: s.delay,
+                boxShadow: `0 0 ${s.size * 2}px rgba(255,255,255,0.8)`,
+              }}
+            />
           ))}
         </div>
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={() => navigate('prev')} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrentDate(new Date())}
-            className="px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 rounded-md"
-          >
-            Today
-          </button>
-          <button type="button" onClick={() => navigate('next')} className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10">
-            <ChevronRight className="w-4 h-4" />
-          </button>
+        <div
+          className="relative z-[1] grid grid-cols-3 items-center gap-2"
+          style={{ position: 'relative', zIndex: 1 }}
+        >
+          <div className="flex justify-start">
+            <button
+              type="button"
+              onClick={() => navigate('prev')}
+              aria-label="Previous"
+              className="cursor-pointer transition-opacity hover:opacity-90"
+              style={chevronButtonStyle}
+            >
+              <ChevronLeft className="w-4 h-4" strokeWidth={2} />
+            </button>
+          </div>
+          <h2 className="font-heading min-w-0 text-center text-base font-extrabold leading-tight text-white">
+            {label}
+          </h2>
+          <div className="flex justify-end items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => navigate('next')}
+              aria-label="Next"
+              className="cursor-pointer transition-opacity hover:opacity-90"
+              style={chevronButtonStyle}
+            >
+              <ChevronRight className="w-4 h-4" strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              onClick={onAddEvent}
+              aria-label="Add event"
+              className="cursor-pointer transition-opacity hover:opacity-90"
+              style={addEventButtonStyle}
+            >
+              + Event
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {['day', 'week', 'month'].map((v) => (
+          <button
+            key={v}
+            type="button"
+            onClick={() => setView(v)}
+            className={`text-sm font-medium capitalize transition-all ${
+              view === v ? 'text-white' : 'text-muted-foreground rounded-[20px]'
+            }`}
+            style={
+              view === v
+                ? {
+                    background: '#1e3a8a',
+                    color: '#ffffff',
+                    borderRadius: '8px',
+                    padding: '6px 14px',
+                  }
+                : {
+                    border: '1px solid rgba(127,48,203,0.2)',
+                    padding: '6px 14px',
+                  }
+            }
+          >
+            {v}
+          </button>
+        ))}
+      </div>
+    </>
   );
 }

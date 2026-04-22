@@ -18,6 +18,69 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
+const sectionHeaderBarStyle = {
+  background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+  boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+  padding: '12px 16px',
+};
+
+const sectionHeaderOverlayStyle = {
+  background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+};
+
+const GRADIENT_HEADER_STAR_TWINKLE_CSS = `
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+`;
+
+const GRADIENT_HEADER_STARS = [
+  { left: '5%', top: '25%', size: 1.8, delay: '0s', dur: '2.2s' },
+  { left: '12%', top: '65%', size: 1.4, delay: '0.6s', dur: '3s' },
+  { left: '22%', top: '30%', size: 2.2, delay: '1.1s', dur: '2.5s' },
+  { left: '33%', top: '70%', size: 1.4, delay: '0.3s', dur: '2.8s' },
+  { left: '45%', top: '20%', size: 1.8, delay: '1.5s', dur: '2s' },
+  { left: '56%', top: '68%', size: 1.4, delay: '0.8s', dur: '3.2s' },
+  { left: '66%', top: '28%', size: 2, delay: '0.4s', dur: '2.4s' },
+  { left: '76%', top: '72%', size: 1.4, delay: '1.3s', dur: '2.7s' },
+  { left: '86%', top: '35%', size: 2.2, delay: '0.2s', dur: '2.1s' },
+  { left: '94%', top: '68%', size: 1.4, delay: '1.8s', dur: '3.1s' },
+];
+
+function GradientHeaderStarField() {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        borderRadius: 'inherit',
+        zIndex: 0,
+      }}
+    >
+      {GRADIENT_HEADER_STARS.map((s, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: s.left,
+            top: s.top,
+            width: `${s.size}px`,
+            height: `${s.size}px`,
+            borderRadius: '50%',
+            background: 'white',
+            animation: `starTwinkle ${s.dur} ease-in-out infinite`,
+            animationDelay: s.delay,
+            boxShadow: `0 0 ${s.size * 2}px rgba(255,255,255,0.8)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const { family, setFamily, members, setMembers, currentUser, isAdmin, reload } = useFamily();
   const navigate = useNavigate();
@@ -109,13 +172,38 @@ export default function AdminPage() {
   return (
     <div>
       <button onClick={() => navigate('/profile')} className="flex items-center text-muted-foreground mb-4">
-        <ArrowLeft className="w-4 h-4 mr-1" /> Back to Profile
+        <ArrowLeft className="w-4 h-4 mr-1" /> Back to Settings
       </button>
-      <h2 className="font-heading text-xl font-bold mb-4">Admin Panel</h2>
+      <div
+        className="relative mb-4 overflow-hidden rounded-xl"
+        style={sectionHeaderBarStyle}
+      >
+        <GradientHeaderStarField />
+        <style>{GRADIENT_HEADER_STAR_TWINKLE_CSS}</style>
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={sectionHeaderOverlayStyle}
+          aria-hidden
+        />
+        <h2 className="relative z-[1] font-heading text-xl font-bold text-white">Admin Panel</h2>
+      </div>
 
       {/* Invite Code */}
       <div className="bg-gradient-to-br from-card to-[#2f9db6]/[0.06] border border-border rounded-xl p-4 mb-4">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Family Invite Code</p>
+        <div
+          className="relative mb-2 overflow-hidden rounded-xl"
+          style={sectionHeaderBarStyle}
+        >
+          <GradientHeaderStarField />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={sectionHeaderOverlayStyle}
+            aria-hidden
+          />
+          <p className="relative z-[1] text-xs font-semibold uppercase tracking-wide text-white">
+            Family Invite Code
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <div className="flex-1 bg-secondary rounded-lg px-4 py-3 font-mono text-xl text-center tracking-[0.4em] font-bold">
             {family?.invite_code}
@@ -139,7 +227,20 @@ export default function AdminPage() {
 
       {/* Send Family Alert */}
       <div className="bg-gradient-to-br from-card to-[#7f30cb]/[0.05] border border-border rounded-xl p-4 mb-4">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Send Family Alert</p>
+        <div
+          className="relative mb-2 overflow-hidden rounded-xl"
+          style={sectionHeaderBarStyle}
+        >
+          <GradientHeaderStarField />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={sectionHeaderOverlayStyle}
+            aria-hidden
+          />
+          <p className="relative z-[1] text-xs font-semibold uppercase tracking-wide text-white">
+            Send Family Alert
+          </p>
+        </div>
         <Textarea
           value={alertMessage}
           onChange={(e) => setAlertMessage(e.target.value)}
@@ -159,9 +260,23 @@ export default function AdminPage() {
 
       {/* Members List */}
       <div className="bg-gradient-to-br from-card to-[#2f9db6]/[0.04] border border-border rounded-xl overflow-hidden">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide p-4 pb-2">
-          Household Members ({members.length})
-        </p>
+        <div
+          className="relative overflow-hidden"
+          style={sectionHeaderBarStyle}
+        >
+          <GradientHeaderStarField />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={sectionHeaderOverlayStyle}
+            aria-hidden
+          />
+          <p className="relative z-[1] text-xs font-semibold uppercase tracking-wide text-white flex items-center gap-2 flex-wrap">
+            <span>Household Members</span>
+            <span className="text-[10px] font-semibold text-white bg-[rgba(255,255,255,0.2)] px-2 py-0.5 rounded-full tabular-nums">
+              {members.length}
+            </span>
+          </p>
+        </div>
         <div className="divide-y divide-border">
           {members.map((member) => (
             <div key={member.id} className="flex items-center gap-3 p-4">

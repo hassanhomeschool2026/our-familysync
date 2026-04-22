@@ -48,7 +48,7 @@ export default function MonthView({ currentDate, events, onDayClick, selectedDay
                 }}
               >
                 <span className={`text-xs font-medium ${
-                  today ? 'bg-[#2f9db6] text-white rounded-full w-5 h-5 flex items-center justify-center' :
+                  today ? 'bg-[#1e3a8a] text-white rounded-full w-5 h-5 flex items-center justify-center ring-1 ring-inset ring-[#1e3a8a]' :
                   inMonth ? 'text-foreground' : 'text-muted-foreground/50'
                 }`}>
                   {format(day, 'd')}

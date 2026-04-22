@@ -6,7 +6,7 @@ import { GoogleMap, useJsApiLoader, Circle, Marker, Autocomplete } from '@react-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin, Plus, Trash2, Radio } from 'lucide-react';
+import { MapPin, Plus, Trash2, Radio, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
@@ -26,6 +26,9 @@ export default function GeofencePage() {
       return false;
     }
   });
+  const [editingZone, setEditingZone] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editRadius, setEditRadius] = useState('');
   const autocompleteRef = useRef(null);
 
   useEffect(() => {
@@ -109,6 +112,22 @@ export default function GeofencePage() {
     },
   });
 
+  const updateGeofence = useMutation({
+    mutationFn: async ({ id, name, radius_meters }) => {
+      const { error } = await supabase
+        .from('geofences')
+        .update({ name: name.trim(), radius_meters: parseInt(radius_meters) || 200 })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['geofences', family?.id] });
+      setEditingZone(null);
+      toast.success('Zone updated!');
+    },
+    onError: () => toast.error('Could not update zone.'),
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -138,7 +157,7 @@ export default function GeofencePage() {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Geofencing alerts your family when you arrive or leave a saved zone while the app is open. Enable Zone Alerts on the Check-In tab to monitor while using other features.
+        Get notified when family members arrive or leave saved zones.
       </p>
 
       {showForm && isAdmin && (
@@ -235,20 +254,80 @@ export default function GeofencePage() {
 
       <div className="space-y-2">
         {geofences.map((zone) => (
-          <div key={zone.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border">
-            <MapPin className="w-4 h-4 text-primary shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{zone.name}</p>
-              <p className="text-xs text-muted-foreground">{zone.radius_meters}m radius</p>
-            </div>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => deleteGeofence.mutate(zone.id)}
-                className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+          <div key={zone.id} className="rounded-xl bg-card border border-border overflow-hidden">
+            {editingZone?.id === zone.id ? (
+              <div className="p-3 space-y-2">
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Zone name"
+                  className="h-8 text-sm"
+                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    value={editRadius}
+                    onChange={(e) => setEditRadius(e.target.value)}
+                    placeholder="Radius (meters)"
+                    className="h-8 text-sm flex-1"
+                  />
+                  <span className="text-xs text-muted-foreground">m radius</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    className="flex-1 h-8 text-xs rounded-lg"
+                    onClick={() =>
+                      updateGeofence.mutate({
+                        id: zone.id,
+                        name: editName,
+                        radius_meters: editRadius,
+                      })
+                    }
+                    disabled={!editName.trim() || updateGeofence.isPending}
+                  >
+                    {updateGeofence.isPending ? 'Saving...' : 'Save'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs rounded-lg px-3"
+                    onClick={() => setEditingZone(null)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 p-3">
+                <MapPin className="w-4 h-4 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{zone.name}</p>
+                  <p className="text-xs text-muted-foreground">{zone.radius_meters}m radius</p>
+                </div>
+                {isAdmin && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingZone(zone);
+                        setEditName(zone.name);
+                        setEditRadius(String(zone.radius_meters));
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteGeofence.mutate(zone.id)}
+                      className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ))}

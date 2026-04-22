@@ -2,16 +2,16 @@
 export const DEFAULT_MEMBER_ACCENT = '#2f9db6';
 
 export const MEMBER_COLORS = [
-  { label: 'Teal', value: '#14b8a6', bg: 'bg-teal-500', text: 'text-teal-500', border: 'border-teal-500', light: 'bg-teal-100' },
-  { label: 'Blue', value: '#3b82f6', bg: 'bg-blue-500', text: 'text-blue-500', border: 'border-blue-500', light: 'bg-blue-100' },
-  { label: 'Purple', value: '#8b5cf6', bg: 'bg-purple-500', text: 'text-purple-500', border: 'border-purple-500', light: 'bg-purple-100' },
-  { label: 'Pink', value: '#ec4899', bg: 'bg-pink-500', text: 'text-pink-500', border: 'border-pink-500', light: 'bg-pink-100' },
-  { label: 'Orange', value: '#f97316', bg: 'bg-orange-500', text: 'text-orange-500', border: 'border-orange-500', light: 'bg-orange-100' },
-  { label: 'Red', value: '#ef4444', bg: 'bg-red-500', text: 'text-red-500', border: 'border-red-500', light: 'bg-red-100' },
-  { label: 'Green', value: '#22c55e', bg: 'bg-green-500', text: 'text-green-500', border: 'border-green-500', light: 'bg-green-100' },
-  { label: 'Indigo', value: '#6366f1', bg: 'bg-indigo-500', text: 'text-indigo-500', border: 'border-indigo-500', light: 'bg-indigo-100' },
-  { label: 'Yellow', value: '#eab308', bg: 'bg-yellow-500', text: 'text-yellow-500', border: 'border-yellow-500', light: 'bg-yellow-100' },
-  { label: 'Cyan', value: '#06b6d4', bg: 'bg-cyan-500', text: 'text-cyan-500', border: 'border-cyan-500', light: 'bg-cyan-100' },
+  { label: 'Teal',    value: '#0d9488', bg: 'bg-teal-600',    text: 'text-teal-600',    border: 'border-teal-600',    light: 'bg-teal-100' },
+  { label: 'Blue',    value: '#2563eb', bg: 'bg-blue-600',    text: 'text-blue-600',    border: 'border-blue-600',    light: 'bg-blue-100' },
+  { label: 'Purple',  value: '#7c3aed', bg: 'bg-violet-600',  text: 'text-violet-600',  border: 'border-violet-600',  light: 'bg-violet-100' },
+  { label: 'Pink',    value: '#db2777', bg: 'bg-pink-600',    text: 'text-pink-600',    border: 'border-pink-600',    light: 'bg-pink-100' },
+  { label: 'Orange',  value: '#ea580c', bg: 'bg-orange-600',  text: 'text-orange-600',  border: 'border-orange-600',  light: 'bg-orange-100' },
+  { label: 'Red',     value: '#dc2626', bg: 'bg-red-600',     text: 'text-red-600',     border: 'border-red-600',     light: 'bg-red-100' },
+  { label: 'Green',   value: '#16a34a', bg: 'bg-green-600',   text: 'text-green-600',   border: 'border-green-600',   light: 'bg-green-100' },
+  { label: 'Amber',   value: '#d97706', bg: 'bg-amber-600',   text: 'text-amber-600',   border: 'border-amber-600',   light: 'bg-amber-100' },
+  { label: 'Sky',     value: '#0284c7', bg: 'bg-sky-600',     text: 'text-sky-600',     border: 'border-sky-600',     light: 'bg-sky-100' },
+  { label: 'Rose',    value: '#e11d48', bg: 'bg-rose-600',    text: 'text-rose-600',    border: 'border-rose-600',    light: 'bg-rose-100' },
 ];
 
 export const AVATARS = ['😊','😎','🤗','👨','👩','👦','👧','👶','🧑','👴','👵','🐱','🐶','🦊','🐻','🌸','🌟','🏠','❤️','🎉'];

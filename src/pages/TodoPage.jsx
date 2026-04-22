@@ -18,13 +18,66 @@ import MemberAvatar from '@/components/shared/MemberAvatar';
 import confetti from 'canvas-confetti';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { playSound } from '@/lib/sounds';
+import { playTaskCompleteSound } from '@/lib/sounds';
 
 const priorityStyles = {
   high: 'bg-[rgba(239,68,68,0.12)] text-red-700',
   medium: 'bg-[rgba(245,158,11,0.16)] text-amber-900',
   low: 'bg-[rgba(47,157,182,0.12)] text-[#247a8f]',
 };
+
+const GRADIENT_HEADER_STAR_TWINKLE_CSS = `
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+`;
+
+const GRADIENT_HEADER_STARS = [
+  { left: '5%', top: '25%', size: 1.8, delay: '0s', dur: '2.2s' },
+  { left: '12%', top: '65%', size: 1.4, delay: '0.6s', dur: '3s' },
+  { left: '22%', top: '30%', size: 2.2, delay: '1.1s', dur: '2.5s' },
+  { left: '33%', top: '70%', size: 1.4, delay: '0.3s', dur: '2.8s' },
+  { left: '45%', top: '20%', size: 1.8, delay: '1.5s', dur: '2s' },
+  { left: '56%', top: '68%', size: 1.4, delay: '0.8s', dur: '3.2s' },
+  { left: '66%', top: '28%', size: 2, delay: '0.4s', dur: '2.4s' },
+  { left: '76%', top: '72%', size: 1.4, delay: '1.3s', dur: '2.7s' },
+  { left: '86%', top: '35%', size: 2.2, delay: '0.2s', dur: '2.1s' },
+  { left: '94%', top: '68%', size: 1.4, delay: '1.8s', dur: '3.1s' },
+];
+
+function GradientHeaderStarField() {
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+        borderRadius: 'inherit',
+        zIndex: 0,
+      }}
+    >
+      {GRADIENT_HEADER_STARS.map((s, i) => (
+        <div
+          key={i}
+          style={{
+            position: 'absolute',
+            left: s.left,
+            top: s.top,
+            width: `${s.size}px`,
+            height: `${s.size}px`,
+            borderRadius: '50%',
+            background: 'white',
+            animation: `starTwinkle ${s.dur} ease-in-out infinite`,
+            animationDelay: s.delay,
+            boxShadow: `0 0 ${s.size * 2}px rgba(255,255,255,0.8)`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 function TaskItemRow({ task, onToggle, onDelete, onEdit }) {
   const { members, isAdmin, currentUser, getMemberColor } = useFamily();
@@ -336,7 +389,7 @@ export default function TodoPage() {
       }
     },
     onSuccess: (_data, task) => {
-      if (!task.completed) playSound('/TaskCompleteChime.mp3');
+      if (!task.completed) playTaskCompleteSound();
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
@@ -412,9 +465,27 @@ export default function TodoPage() {
 
   return (
     <div>
-      <div className="surface-3 p-4 mb-2">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-xl font-bold">To-Do List</h2>
+      <div
+        className="relative overflow-hidden rounded-xl border border-border mb-2"
+        style={{
+          background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+          boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+        }}
+      >
+        <GradientHeaderStarField />
+        <style>{GRADIENT_HEADER_STAR_TWINKLE_CSS}</style>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+          }}
+        />
+        <div className="relative z-[1] flex items-center justify-between p-4">
+          <h2 className="font-heading text-xl font-bold" style={{ color: '#ffffff' }}>
+            To-Do List
+          </h2>
           <button
             type="button"
             onClick={() => {
@@ -423,9 +494,10 @@ export default function TodoPage() {
               setShowAdd(true);
             }}
             disabled={!canAddTask}
-            className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none"
+            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none"
+            style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
           >
-            <Plus className="w-3 h-3 shrink-0" aria-hidden />
+            <Plus className="w-3 h-3 shrink-0" style={{ color: 'rgba(255,255,255,0.9)' }} aria-hidden />
             Add Task
           </button>
         </div>
@@ -442,31 +514,52 @@ export default function TodoPage() {
         </div>
       )}
 
-      <div className="flex gap-1 mb-4 bg-secondary rounded-lg p-0.5 overflow-x-auto">
-        {filters.map((f) => (
+      <div
+        className="relative overflow-hidden rounded-xl border border-border mb-4"
+        style={{
+          background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+          boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+        }}
+      >
+        <GradientHeaderStarField />
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+          }}
+        />
+        <div className="relative z-[1] flex gap-1 p-0.5 overflow-x-auto">
+          {filters.map((f) => (
+            <button
+              key={f}
+              type="button"
+              onClick={() => {
+                setFilter(f);
+                setShopTab('todo');
+              }}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize whitespace-nowrap ${
+                shopTab !== 'shop' && filter === f ? 'bg-card text-foreground shadow-sm' : 'text-white/85'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
           <button
-            key={f}
             type="button"
-            onClick={() => {
-              setFilter(f);
-              setShopTab('todo');
-            }}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize whitespace-nowrap ${
-              shopTab !== 'shop' && filter === f ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
+            onClick={() => setShopTab('shop')}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${
+              shopTab === 'shop' ? 'bg-card text-purple-600 shadow-sm' : 'text-white/85'
             }`}
           >
-            {f}
+            <ShoppingCart
+              className="w-3 h-3"
+              style={shopTab === 'shop' ? undefined : { color: 'rgba(255,255,255,0.9)' }}
+            />{' '}
+            Shop
           </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => setShopTab('shop')}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${
-            shopTab === 'shop' ? 'bg-card text-purple-600 shadow-sm' : 'text-muted-foreground'
-          }`}
-        >
-          <ShoppingCart className="w-3 h-3" /> Shop
-        </button>
+        </div>
       </div>
 
       {shopTab !== 'shop' && (
@@ -477,7 +570,29 @@ export default function TodoPage() {
         <div className="space-y-4 surface-1 p-4">
           {myTasks.length > 0 && (
             <div>
-              <p className="text-xs font-bold text-foreground tracking-wide mb-2">My tasks</p>
+              <div
+                className="relative overflow-hidden rounded-xl border border-border mb-2"
+                style={{
+                  background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+                  boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+                }}
+              >
+                <GradientHeaderStarField />
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    pointerEvents: 'none',
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+                  }}
+                />
+                <p
+                  className="relative z-[1] text-xs font-bold tracking-wide px-4 py-2"
+                  style={{ color: '#ffffff' }}
+                >
+                  My tasks
+                </p>
+              </div>
               <div className="space-y-2">
                 <AnimatePresence>
                   {myTasks.map((t) => (
@@ -494,7 +609,29 @@ export default function TodoPage() {
           )}
           {familyTasks.length > 0 && (
             <div>
-              <p className="text-xs font-bold text-foreground tracking-wide mb-2">Family tasks</p>
+              <div
+                className="relative overflow-hidden rounded-xl border border-border mb-2"
+                style={{
+                  background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+                  boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+                }}
+              >
+                <GradientHeaderStarField />
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    pointerEvents: 'none',
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+                  }}
+                />
+                <p
+                  className="relative z-[1] text-xs font-bold tracking-wide px-4 py-2"
+                  style={{ color: '#ffffff' }}
+                >
+                  Family tasks
+                </p>
+              </div>
               <div className="space-y-2">
                 <AnimatePresence>
                   {familyTasks.map((t) => (
@@ -518,13 +655,28 @@ export default function TodoPage() {
               <button
                 type="button"
                 onClick={() => setShowCompleted((s) => !s)}
-                className="flex items-center justify-between w-full mb-2 group"
+                className="relative overflow-hidden rounded-xl border border-border w-full mb-2 group text-left"
+                style={{
+                  background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+                  boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+                }}
               >
-                <p className="text-xs font-bold text-foreground tracking-wide">
-                  Completed ({completedTasks.length})
-                </p>
-                <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors">
-                  {showCompleted ? 'Hide ▲' : 'Show ▼'}
+                <GradientHeaderStarField />
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    pointerEvents: 'none',
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+                  }}
+                />
+                <span className="relative z-[1] flex items-center justify-between px-4 py-2 w-full">
+                  <span className="text-xs font-bold tracking-wide" style={{ color: '#ffffff' }}>
+                    Completed ({completedTasks.length})
+                  </span>
+                  <span className="text-[10px] transition-opacity group-hover:opacity-90" style={{ color: 'rgba(255,255,255,0.9)' }}>
+                    {showCompleted ? 'Hide ▲' : 'Show ▼'}
+                  </span>
                 </span>
               </button>
               {showCompleted && (
@@ -587,21 +739,44 @@ export default function TodoPage() {
 
       {shopTab !== 'shop' && (
         <div className="mt-4 pt-4 border-t border-border surface-1 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4 text-foreground" />
-              <p className="text-sm font-bold text-foreground">Shopping List</p>
-              <span className="text-[10px] bg-secondary text-foreground px-1.5 py-0.5 rounded-full font-bold">
-                {shopItems.filter((i) => !i.purchased).length}
-              </span>
+          <div
+            className="relative overflow-hidden rounded-xl border border-border mb-3"
+            style={{
+              background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+              boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+            }}
+          >
+            <GradientHeaderStarField />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                pointerEvents: 'none',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+              }}
+            />
+            <div className="relative z-[1] flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.9)' }} />
+                <p className="text-sm font-bold" style={{ color: '#ffffff' }}>
+                  Shopping List
+                </p>
+                <span
+                  className="text-[10px] px-1.5 py-0.5 rounded-full font-bold"
+                  style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
+                >
+                  {shopItems.filter((i) => !i.purchased).length}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddShop(true)}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full"
+                style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
+              >
+                <Plus className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.9)' }} /> Add item
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowAddShop(true)}
-              className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full"
-            >
-              <Plus className="w-3 h-3" /> Add item
-            </button>
           </div>
 
           {shopItems.length === 0 ? (
@@ -703,18 +878,38 @@ export default function TodoPage() {
 
       {shopTab === 'shop' && (
         <div className="surface-1 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4 text-foreground" />
-              <p className="text-sm font-bold text-foreground">Shopping List</p>
+          <div
+            className="relative overflow-hidden rounded-xl border border-border mb-3"
+            style={{
+              background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
+              boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+            }}
+          >
+            <GradientHeaderStarField />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                pointerEvents: 'none',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
+              }}
+            />
+            <div className="relative z-[1] flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2">
+                <ShoppingCart className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.9)' }} />
+                <p className="text-sm font-bold" style={{ color: '#ffffff' }}>
+                  Shopping List
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddShop(true)}
+                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full"
+                style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
+              >
+                <Plus className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.9)' }} /> Add item
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowAddShop(true)}
-              className="flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full"
-            >
-              <Plus className="w-3 h-3" /> Add item
-            </button>
           </div>
           {shopItems.length === 0 ? (
             <div className="text-center py-12 text-sm text-muted-foreground">
