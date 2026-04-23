@@ -2,6 +2,13 @@
   command = "npm run build"
   publish = "dist"
 
+# Local Stripe checkout: plain `vite` does not run Functions. Use `npm run dev:netlify`
+# and open the proxy URL (default http://localhost:8888) so `/.netlify/functions/*` resolves.
+[dev]
+  command = "npm run dev"
+  targetPort = 5173
+  port = 8888
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"

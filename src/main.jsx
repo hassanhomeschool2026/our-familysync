@@ -10,14 +10,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </ThemeProvider>
 )
 
-if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+// Service worker breaks Vite / Netlify dev (HMR and module scripts must not be intercepted).
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator && import.meta.env.PROD) {
   navigator.serviceWorker
     .register('/sw.js', { scope: '/' })
-    .then((reg) => {
-      if (import.meta.env.DEV) {
-        /* eslint-disable no-console */
-        console.log('Service worker registered', reg.scope);
-      }
-    })
     .catch((err) => console.warn('Service worker registration failed:', err));
 }

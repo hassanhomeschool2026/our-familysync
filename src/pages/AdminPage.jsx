@@ -194,12 +194,12 @@ export default function AdminPage() {
       user_name: currentUser.display_name || currentUser.full_name,
       user_avatar: currentUser.avatar,
       type: 'family_alert',
-      message: `📢 Family Alert: ${text}`,
+      message: `Family Update: ${text}`,
     });
     if (feedError) {
       console.error(feedError);
       setSendingAlert(false);
-      toast.error('Could not post family alert to feed.');
+      toast.error('Could not post family update to feed.');
       return;
     }
     try {
@@ -207,7 +207,7 @@ export default function AdminPage() {
         method: 'POST',
         body: JSON.stringify({
           family_id: family.id,
-          title: '🚨 Family Alert',
+          title: 'Family Update',
           body: text,
         }),
       });
@@ -220,7 +220,7 @@ export default function AdminPage() {
     }
     setSendingAlert(false);
     setAlertMessage('');
-    toast.success('Alert sent to all members!');
+    toast.success('Update sent to all members!');
   };
 
   return (
@@ -314,7 +314,7 @@ export default function AdminPage() {
         </Button>
       </div>
 
-      {/* Send Family Alert */}
+      {/* Send Family Update */}
       <div className="bg-gradient-to-br from-card to-[#7f30cb]/[0.05] border border-border rounded-xl p-4 mb-4">
         <div
           className="relative mb-2 overflow-hidden rounded-xl"
@@ -327,7 +327,7 @@ export default function AdminPage() {
             aria-hidden
           />
           <p className="relative z-[1] text-xs font-semibold uppercase tracking-wide text-white">
-            Send Family Alert
+            Send Family Update
           </p>
         </div>
         <Textarea
@@ -343,7 +343,7 @@ export default function AdminPage() {
           size="sm"
         >
           <Megaphone className="w-4 h-4 mr-1" />
-          {sendingAlert ? 'Sending...' : 'Send Alert'}
+          {sendingAlert ? 'Sending...' : 'Send Update'}
         </Button>
       </div>
 

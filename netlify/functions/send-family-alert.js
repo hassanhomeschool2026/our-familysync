@@ -135,7 +135,7 @@ exports.handler = async function (event, context) {
     (subs || []).map((s) => s.user_id)
   );
   const payload = JSON.stringify({
-    title: title || '🚨 Family Alert',
+    title: title || 'Family Update',
     body: textBody,
     tag: 'family-alert',
     url: urlField != null && urlField !== '' ? urlField : '/feed',

@@ -9,7 +9,7 @@ export default function AppLayout() {
     <div className="min-h-screen pb-20">
       <UpdateBanner />
       <header className="sticky top-0 z-40 border-b border-purple-200/40 dark:border-white/[0.08] bg-white/80 backdrop-blur-md dark:bg-background/95 dark:backdrop-blur-md">
-        <div className="flex items-center justify-between px-4 h-14 max-w-lg mx-auto">
+        <div className="flex items-center justify-between px-4 h-14 max-w-4xl mx-auto">
           <div className="flex items-center gap-1">
             <img
               src="/FSLogoIconOnly-512.png"
@@ -25,7 +25,8 @@ export default function AppLayout() {
           <NotificationBell />
         </div>
       </header>
-      <main className="max-w-lg mx-auto px-4 py-4">
+      {/* max-w-4xl so wider screens (e.g. /upgrade comparison) aren’t squeezed into phone-width */}
+      <main className="w-full max-w-4xl mx-auto px-4 py-4">
         <Outlet />
       </main>
       <BottomTabBar />

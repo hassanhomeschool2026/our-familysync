@@ -13,11 +13,12 @@ exports.handler = async (event) => {
 
     console.log('Parsed body string:', bodyStr);
 
-    const { priceId, userId, email } = JSON.parse(bodyStr);
+    const { priceId, userId, email, promoCode } = JSON.parse(bodyStr);
 
     console.log('Price ID:', priceId);
     console.log('Email:', email);
     console.log('User ID:', userId);
+    console.log('Promo code:', promoCode ? '[provided]' : '[none]');
 
     if (!priceId) {
       return {
@@ -29,7 +30,7 @@ exports.handler = async (event) => {
     const Stripe = require('stripe');
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       payment_method_types: ['card'],
       mode: 'subscription',
       customer_email: email,
@@ -37,7 +38,15 @@ exports.handler = async (event) => {
       metadata: { userId },
       success_url: `${event.headers.origin}/upgrade?success=true`,
       cancel_url: `${event.headers.origin}/upgrade?cancelled=true`,
-    });
+    };
+
+    const trimmedPromo =
+      typeof promoCode === 'string' && promoCode.trim() !== '' ? promoCode.trim() : '';
+    if (trimmedPromo) {
+      sessionParams.discounts = [{ coupon: trimmedPromo }];
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     console.log('Session created:', session.id);
 

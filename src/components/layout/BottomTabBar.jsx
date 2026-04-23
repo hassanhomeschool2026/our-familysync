@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Home, Calendar, ListChecks, MapPin, User, CheckSquare } from 'lucide-react';
 
-const MotionLink = motion(Link);
+const MotionLink = motion.create(Link);
 
 const tabs = [
   { path: '/', icon: Home, label: 'Home' },
@@ -20,7 +20,7 @@ export default function BottomTabBar() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border dark:border-white/[0.08] z-50 safe-area-bottom shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.35)]">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
+      <div className="flex items-center justify-around h-16 max-w-4xl mx-auto">
         {tabs.map((tab) => {
           const isActive = tab.path === '/'
             ? location.pathname === '/'

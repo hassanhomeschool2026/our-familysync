@@ -1311,7 +1311,8 @@ export default function HomePage() {
         <button
           type="button"
           onClick={() => setShowAlertSheet(true)}
-          className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-red-500 text-white shadow-lg flex items-center justify-center"
+          className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center"
+          style={{ background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #7f30cb 100%)' }}
         >
           <Megaphone className="w-6 h-6" />
         </button>
@@ -1328,10 +1329,10 @@ export default function HomePage() {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
-                  <Megaphone className="w-4 h-4 text-red-500" />
+                <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center">
+                  <Megaphone className="w-4 h-4 text-purple-500" />
                 </div>
-                <p className="font-heading font-bold text-base">Family Alert</p>
+                <p className="font-heading font-bold text-base">Family Update</p>
               </div>
               <button type="button" onClick={() => setShowAlertSheet(false)}>
                 <X className="w-5 h-5 text-muted-foreground" />
@@ -1339,12 +1340,13 @@ export default function HomePage() {
             </div>
             <textarea
               className="w-full border border-border rounded-xl p-3 text-sm resize-none h-24 bg-background"
-              placeholder="Type your alert message..."
+              placeholder="Type a message to send to your family..."
               value={alertMessage}
               onChange={(e) => setAlertMessage(e.target.value)}
             />
             <Button
-              className="w-full rounded-full bg-red-500 hover:bg-red-600 text-white font-semibold"
+              className="w-full rounded-full text-white font-semibold border-0 hover:opacity-95"
+              style={{ background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #7f30cb 100%)' }}
               disabled={!alertMessage.trim() || sendingAlert}
               onClick={async () => {
                 setSendingAlert(true);
@@ -1355,13 +1357,13 @@ export default function HomePage() {
                     user_name: currentUser.display_name || currentUser.full_name,
                     user_avatar: currentUser.avatar,
                     type: 'family_alert',
-                    message: `🚨 Family Alert: ${alertMessage.trim()}`,
+                    message: `Family Update: ${alertMessage.trim()}`,
                   });
                   const pushRes = await fetch(alertUrl, {
                     method: 'POST',
                     body: JSON.stringify({
                       family_id: family.id,
-                      title: '🚨 Family Alert',
+                      title: 'Family Update',
                       body: alertMessage.trim(),
                     }),
                   });
@@ -1369,17 +1371,17 @@ export default function HomePage() {
                     const errText = await pushRes.text().catch(() => '');
                     throw new Error(errText || `push ${pushRes.status}`);
                   }
-                  toast.success('Alert sent!');
+                  toast.success('Update sent!');
                   setAlertMessage('');
                   setShowAlertSheet(false);
                 } catch {
-                  toast.error('Failed to send alert.');
+                  toast.error('Failed to send update.');
                 } finally {
                   setSendingAlert(false);
                 }
               }}
             >
-              {sendingAlert ? 'Sending...' : 'Send Alert to Family'}
+              {sendingAlert ? 'Sending...' : 'Send Update'}
             </Button>
           </div>
         </div>
