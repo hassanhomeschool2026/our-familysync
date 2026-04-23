@@ -144,26 +144,41 @@ exports.handler = async function (event, context) {
     url: '/checkin',
   });
 
-  const results = await Promise.allSettled(
-    (subs || []).map(async (sub) => {
-      if (!sub?.endpoint || !sub?.p256dh || !sub?.auth) {
-        return { sent: false };
-      }
-      const prefs = prefsByUserId.get(sub.user_id) || {};
-      if (prefs.checkin_notifications === false) {
-        return { sent: false };
-      }
+  let sent = 0;
+  const subsList = subs || [];
+
+  for (const sub of subsList) {
+    if (!sub?.endpoint || !sub?.p256dh || !sub?.auth) {
+      console.log('[checkin-alert] skip invalid subscription (missing endpoint/keys)');
+      continue;
+    }
+    const prefs = prefsByUserId.get(sub.user_id) || {};
+    if (prefs.checkin_notifications === false) {
+      console.log('[checkin-alert] skip opted out checkin_notifications user_id:', sub.user_id);
+      continue;
+    }
+    try {
       await webpush.sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
         payload
       );
-      return { sent: true };
-    })
-  );
-  const sent = results.filter((r) => r.status === 'fulfilled' && r.value?.sent).length;
+      sent++;
+      console.log('[checkin-alert] sent to:', sub.endpoint.slice(0, 50));
+    } catch (err) {
+      console.error(
+        '[checkin-alert] FAILED for:',
+        sub.endpoint.slice(0, 50),
+        'status:',
+        err.statusCode,
+        'message:',
+        err.message
+      );
+    }
+  }
+
   return {
     statusCode: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sent, attempted: results.length }),
+    body: JSON.stringify({ sent, attempted: subsList.length }),
   };
 };
