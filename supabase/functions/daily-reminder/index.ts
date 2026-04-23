@@ -29,12 +29,12 @@ serve(async () => {
     .eq('due_date', today)
     .eq('completed', false);
 
-  // Get all subscriptions
   const { data: subs } = await supabase
     .from('push_subscriptions')
-    .select('subscription, family_id');
+    .select('endpoint, p256dh, auth, family_id');
 
   for (const sub of subs || []) {
+    if (!sub.endpoint || !sub.p256dh || !sub.auth) continue;
     const familyEvents = (events || []).filter(e => e.family_id === sub.family_id);
     const familyTasks = (tasks || []).filter(t => t.family_id === sub.family_id);
 
@@ -44,7 +44,11 @@ serve(async () => {
     if (familyEvents.length) lines.push(`📅 Today: ${familyEvents.map(e => e.title).join(', ')}`);
     if (familyTasks.length) lines.push(`✅ Due: ${familyTasks.map(t => t.title).join(', ')}`);
 
-    await webpush.sendNotification(sub.subscription, JSON.stringify({
+    const pushSub = {
+      endpoint: sub.endpoint,
+      keys: { p256dh: sub.p256dh, auth: sub.auth },
+    };
+    await webpush.sendNotification(pushSub, JSON.stringify({
       title: 'Good morning! 🌅',
       body: lines.join(' · '),
       tag: 'daily-digest',

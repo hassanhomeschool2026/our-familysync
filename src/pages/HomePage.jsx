@@ -1350,16 +1350,18 @@ export default function HomePage() {
                     type: 'family_alert',
                     message: `🚨 Family Alert: ${alertMessage.trim()}`,
                   });
-                  const { data: { session } } = await supabase.auth.getSession();
-                  await supabase.functions.invoke('send-family-alert', {
-                    body: {
+                  const pushRes = await fetch('/.netlify/functions/send-family-alert', {
+                    method: 'POST',
+                    body: JSON.stringify({
                       family_id: family.id,
                       title: '🚨 Family Alert',
                       body: alertMessage.trim(),
-                      url: '/feed',
-                    },
-                    headers: { Authorization: `Bearer ${session?.access_token}` },
+                    }),
                   });
+                  if (!pushRes.ok) {
+                    const errText = await pushRes.text().catch(() => '');
+                    throw new Error(errText || `push ${pushRes.status}`);
+                  }
                   toast.success('Alert sent!');
                   setAlertMessage('');
                   setShowAlertSheet(false);
