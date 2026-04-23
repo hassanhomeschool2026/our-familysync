@@ -8,6 +8,7 @@ import WeekView from '@/components/calendar/WeekView';
 import DayView from '@/components/calendar/DayView';
 import AddEventSheet from '@/components/calendar/AddEventSheet';
 import SkeletonCard from '@/components/shared/SkeletonCard';
+import { Button } from '@/components/ui/button';
 import { format, isSameDay } from 'date-fns';
 
 export default function CalendarPage() {
@@ -122,8 +123,16 @@ export default function CalendarPage() {
         setView={setView}
         currentDate={currentDate}
         setCurrentDate={setCurrentDate}
-        onAddEvent={handleAddEvent}
-      />
+      >
+        <div className="flex justify-end mb-2">
+          <Button
+            onClick={handleAddEvent}
+            className="rounded-full bg-[#01dcba] text-white font-semibold shadow-sm px-4 py-2 text-sm"
+          >
+            + Event
+          </Button>
+        </div>
+      </CalendarHeader>
 
       {view === 'month' && (
         <>
@@ -146,9 +155,6 @@ export default function CalendarPage() {
               />
               <div className="relative z-[1] flex flex-col gap-0 px-4 py-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-bold text-foreground mb-3">
-                    {format(selectedDay, 'EEEE, MMMM d')}
-                  </p>
                   {selectedDayEventCount > 0 && (
                     <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
                       {selectedDayEventCount} event{selectedDayEventCount !== 1 ? 's' : ''}

@@ -18,20 +18,7 @@ const chevronButtonStyle = {
   border: 'none',
 };
 
-const addEventButtonStyle = {
-  background: '#e8edf8',
-  color: '#1e3a8a',
-  borderRadius: '8px',
-  fontWeight: 700,
-  fontSize: '12px',
-  padding: '6px 12px',
-  border: 'none',
-  display: 'flex',
-  alignItems: 'center',
-  gap: '4px',
-};
-
-export default function CalendarHeader({ view, setView, currentDate, setCurrentDate, onAddEvent }) {
+export default function CalendarHeader({ view, setView, currentDate, setCurrentDate, children }) {
   const navigate = (dir) => {
     const fn = dir === 'next'
       ? (view === 'month' ? addMonths : view === 'week' ? addWeeks : addDays)
@@ -98,10 +85,10 @@ export default function CalendarHeader({ view, setView, currentDate, setCurrentD
           ))}
         </div>
         <div
-          className="relative z-[1] grid grid-cols-3 items-center gap-2"
+          className="relative z-[1] grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2"
           style={{ position: 'relative', zIndex: 1 }}
         >
-          <div className="flex justify-start">
+          <div className="flex justify-end pr-0.5">
             <button
               type="button"
               onClick={() => navigate('prev')}
@@ -115,7 +102,7 @@ export default function CalendarHeader({ view, setView, currentDate, setCurrentD
           <h2 className="font-heading min-w-0 text-center text-base font-extrabold leading-tight text-white">
             {label}
           </h2>
-          <div className="flex justify-end items-center gap-1.5">
+          <div className="flex justify-start pl-0.5">
             <button
               type="button"
               onClick={() => navigate('next')}
@@ -125,40 +112,21 @@ export default function CalendarHeader({ view, setView, currentDate, setCurrentD
             >
               <ChevronRight className="w-4 h-4" strokeWidth={2} />
             </button>
-            <button
-              type="button"
-              onClick={onAddEvent}
-              aria-label="Add event"
-              className="cursor-pointer transition-opacity hover:opacity-90"
-              style={addEventButtonStyle}
-            >
-              + Event
-            </button>
           </div>
         </div>
       </div>
+      {children}
       <div className="flex flex-wrap items-center gap-2">
         {['day', 'week', 'month'].map((v) => (
           <button
             key={v}
             type="button"
             onClick={() => setView(v)}
-            className={`text-sm font-medium capitalize transition-all ${
-              view === v ? 'text-white' : 'text-muted-foreground rounded-[20px]'
-            }`}
-            style={
+            className={`text-sm font-medium capitalize transition-colors rounded-full px-4 py-2 ${
               view === v
-                ? {
-                    background: '#1e3a8a',
-                    color: '#ffffff',
-                    borderRadius: '8px',
-                    padding: '6px 14px',
-                  }
-                : {
-                    border: '1px solid rgba(127,48,203,0.2)',
-                    padding: '6px 14px',
-                  }
-            }
+                ? 'bg-[#1e3a8a] text-white'
+                : 'bg-secondary text-muted-foreground'
+            }`}
           >
             {v}
           </button>

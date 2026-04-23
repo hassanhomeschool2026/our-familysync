@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { DEFAULT_MEMBER_ACCENT } from '@/lib/memberColors';
+import { subscribeToPush } from '@/lib/pushNotifications';
 
 const FamilyContext = createContext();
 
@@ -53,6 +54,17 @@ export const FamilyProvider = ({ children }) => {
       setLoading(false);
     }
   }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!isAuthenticated || !user?.id) return;
+    if (!currentUser?.id || !family?.id) return;
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      return;
+    }
+    console.log('Attempting push subscription for', user.id, family.id);
+    subscribeToPush(currentUser.id, family.id, supabase);
+  }, [loading, isAuthenticated, user?.id, currentUser?.id, family?.id]);
 
   const isAdmin = currentUser?.role === 'admin';
   const isPremium = currentUser?.plan === 'premium';

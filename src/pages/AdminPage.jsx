@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { generateInviteCode } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import {
@@ -17,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 const sectionHeaderBarStyle = {
   background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
@@ -83,7 +83,10 @@ function GradientHeaderStarField() {
 
 export default function AdminPage() {
   const { family, setFamily, members, setMembers, currentUser, isAdmin, reload } = useFamily();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [familyName, setFamilyName] = useState('');
+  const [savingFamilyName, setSavingFamilyName] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [sendingAlert, setSendingAlert] = useState(false);
   const [removingMember, setRemovingMember] = useState(null);
@@ -91,6 +94,10 @@ export default function AdminPage() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [leaveRequests, setLeaveRequests] = useState([]);
   const [deleteRequests, setDeleteRequests] = useState([]);
+
+  useEffect(() => {
+    if (family?.name != null) setFamilyName(family.name);
+  }, [family?.id, family?.name]);
 
   useEffect(() => {
     if (!family?.id) return;
@@ -114,6 +121,26 @@ export default function AdminPage() {
     navigate('/profile');
     return null;
   }
+
+  const saveFamilyName = async () => {
+    if (!family?.id) return;
+    const value = familyName.trim();
+    if (!value) {
+      toast.error('Family name cannot be empty.');
+      return;
+    }
+    setSavingFamilyName(true);
+    const { error } = await supabase.from('families').update({ name: value }).eq('id', family.id);
+    setSavingFamilyName(false);
+    if (error) {
+      toast.error(error.message || 'Could not update family name.');
+      return;
+    }
+    toast.success('Family name updated!');
+    setFamily((prev) => (prev ? { ...prev, name: value } : prev));
+    await reload();
+    queryClient.invalidateQueries();
+  };
 
   const copyCode = () => {
     navigator.clipboard.writeText(family?.invite_code || '');
@@ -144,26 +171,40 @@ export default function AdminPage() {
 
   const sendFamilyAlert = async () => {
     if (!alertMessage.trim()) return;
+    const text = alertMessage.trim();
     setSendingAlert(true);
     const notifications = members
       .filter(m => m.id !== currentUser.id)
       .map(m => ({
         user_id: m.id,
         type: 'family_alert',
-        message: alertMessage.trim(),
+        message: text,
         read: false,
       }));
     if (notifications.length > 0) {
       await supabase.from('notifications').insert(notifications);
     }
-    await supabase.from('feed_items').insert({
+    const { error: feedError } = await supabase.from('feed_items').insert({
       family_id: family.id,
       user_id: currentUser.id,
       user_name: currentUser.display_name || currentUser.full_name,
       user_avatar: currentUser.avatar,
       type: 'family_alert',
-      message: `📢 Family Alert: ${alertMessage.trim()}`,
+      message: `📢 Family Alert: ${text}`,
     });
+    if (feedError) {
+      console.error(feedError);
+      setSendingAlert(false);
+      toast.error('Could not post family alert to feed.');
+      return;
+    }
+    try {
+      await supabase.functions.invoke('send-family-alert', {
+        body: { family_id: family.id, title: '🚨 Family Alert', body: text, url: '/feed' },
+      });
+    } catch (e) {
+      console.error('send-family-alert:', e);
+    }
     setSendingAlert(false);
     setAlertMessage('');
     toast.success('Alert sent to all members!');
@@ -186,6 +227,41 @@ export default function AdminPage() {
           aria-hidden
         />
         <h2 className="relative z-[1] font-heading text-xl font-bold text-white">Admin Panel</h2>
+      </div>
+
+      {/* Family Name */}
+      <div className="bg-gradient-to-br from-card to-[#2f9db6]/[0.06] border border-border rounded-xl p-4 mb-4">
+        <div
+          className="relative mb-2 overflow-hidden rounded-xl"
+          style={sectionHeaderBarStyle}
+        >
+          <GradientHeaderStarField />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={sectionHeaderOverlayStyle}
+            aria-hidden
+          />
+          <p className="relative z-[1] text-xs font-semibold uppercase tracking-wide text-white">
+            Family Name
+          </p>
+        </div>
+        <Input
+          id="admin-family-name"
+          className="mt-2"
+          value={familyName}
+          onChange={(e) => setFamilyName(e.target.value)}
+          placeholder="Your family name"
+          aria-label="Family name"
+        />
+        <Button
+          type="button"
+          size="sm"
+          className="mt-3 rounded-xl"
+          onClick={saveFamilyName}
+          disabled={savingFamilyName || !familyName.trim() || familyName.trim() === (family?.name ?? '').trim()}
+        >
+          {savingFamilyName ? 'Saving...' : 'Save'}
+        </Button>
       </div>
 
       {/* Invite Code */}

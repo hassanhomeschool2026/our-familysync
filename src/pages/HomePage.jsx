@@ -6,7 +6,9 @@ import { supabase } from '@/lib/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
 import MemberAvatar from '@/components/shared/MemberAvatar';
-import { MapPin, Calendar, CheckSquare, Megaphone, Zap, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MapPin, Calendar, CheckSquare, Megaphone, Zap, ChevronRight, X } from 'lucide-react';
+import { toast } from 'sonner';
 import { format, isToday } from 'date-fns';
 
 const HeroBannerStyles = () => (
@@ -498,6 +500,9 @@ export default function HomePage() {
   const { resolvedTheme } = useTheme();
   const [themeMounted, setThemeMounted] = useState(false);
   const { currentUser, family, members, isAdmin, getMemberColor } = useFamily();
+  const [showAlertSheet, setShowAlertSheet] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [sendingAlert, setSendingAlert] = useState(false);
   const [weather, setWeather] = useState(null);
   const [cityName, setCityName] = useState('');
   const reduceMotion = useReducedMotion();
@@ -1294,6 +1299,80 @@ export default function HomePage() {
           </div>
         )}
       </motion.div>
+
+      {isAdmin && (
+        <button
+          type="button"
+          onClick={() => setShowAlertSheet(true)}
+          className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-red-500 text-white shadow-lg flex items-center justify-center"
+        >
+          <Megaphone className="w-6 h-6" />
+        </button>
+      )}
+
+      {isAdmin && showAlertSheet && (
+        <div
+          className="fixed inset-0 z-50 flex items-end"
+          onClick={() => setShowAlertSheet(false)}
+        >
+          <div
+            className="w-full bg-card rounded-t-2xl p-5 pb-24 space-y-4 border-t border-border max-w-lg mx-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                  <Megaphone className="w-4 h-4 text-red-500" />
+                </div>
+                <p className="font-heading font-bold text-base">Family Alert</p>
+              </div>
+              <button type="button" onClick={() => setShowAlertSheet(false)}>
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+            <textarea
+              className="w-full border border-border rounded-xl p-3 text-sm resize-none h-24 bg-background"
+              placeholder="Type your alert message..."
+              value={alertMessage}
+              onChange={(e) => setAlertMessage(e.target.value)}
+            />
+            <Button
+              className="w-full rounded-full bg-red-500 hover:bg-red-600 text-white font-semibold"
+              disabled={!alertMessage.trim() || sendingAlert}
+              onClick={async () => {
+                setSendingAlert(true);
+                try {
+                  await supabase.from('feed_items').insert({
+                    family_id: family.id,
+                    user_id: currentUser.id,
+                    user_name: currentUser.display_name || currentUser.full_name,
+                    user_avatar: currentUser.avatar,
+                    type: 'family_alert',
+                    message: `🚨 Family Alert: ${alertMessage.trim()}`,
+                  });
+                  await supabase.functions.invoke('send-family-alert', {
+                    body: {
+                      family_id: family.id,
+                      title: '🚨 Family Alert',
+                      body: alertMessage.trim(),
+                      url: '/feed',
+                    },
+                  });
+                  toast.success('Alert sent!');
+                  setAlertMessage('');
+                  setShowAlertSheet(false);
+                } catch {
+                  toast.error('Failed to send alert.');
+                } finally {
+                  setSendingAlert(false);
+                }
+              }}
+            >
+              {sendingAlert ? 'Sending...' : 'Send Alert to Family'}
+            </Button>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

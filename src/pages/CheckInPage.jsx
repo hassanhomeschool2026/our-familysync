@@ -559,263 +559,249 @@ export default function CheckInPage() {
   useEffect(() => {
     if (!showForm) return;
     const id = window.setTimeout(() => {
-      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
     }, 150);
     return () => clearTimeout(id);
   }, [showForm]);
 
   const infoWindowMember = infoCheckIn ? getMemberForUser(infoCheckIn.user_id) : null;
 
+  const checkInHeaderTwinkleStars = useMemo(
+    () =>
+      [...Array(18)].map((_, i) => ({
+        i,
+        w: Math.random() * 2.5 + 1,
+        top: Math.random() * 100,
+        left: Math.random() * 100,
+        delay: Math.random() * 3,
+        dur: Math.random() * 2 + 1.5,
+        opacity: Math.random() * 0.6 + 0.3,
+      })),
+    []
+  );
+
   if (isLoading) return <SkeletonCard count={3} />;
 
   return (
     <div className="space-y-5 pb-6">
       <div
-        style={{
-          background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
-          borderRadius: 20,
-          padding: '20px 20px 16px',
-          marginBottom: 20,
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 6px 20px rgba(30, 58, 138, 0.2)',
-        }}
+        className="rounded-2xl p-4 mb-4 relative overflow-hidden"
+        style={{ background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 50%, #1e3a8a 100%)' }}
       >
+        <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+          {checkInHeaderTwinkleStars.map((s) => (
+            <div
+              key={s.i}
+              className="absolute rounded-full bg-white animate-pulse"
+              style={{
+                width: `${s.w}px`,
+                height: `${s.w}px`,
+                top: `${s.top}%`,
+                left: `${s.left}%`,
+                animationDelay: `${s.delay}s`,
+                animationDuration: `${s.dur}s`,
+                opacity: s.opacity,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="relative z-10 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+              <MapPin className="h-[18px] w-[18px] text-white" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-heading text-xl font-bold text-white">Check-In</h2>
+              <p className="text-white/70 text-xs">Share your location with family</p>
+            </div>
+          </div>
+
+          {!myCheckIn ? (
+            <button
+              type="button"
+              onClick={getLocation}
+              disabled={gettingLocation}
+              className="flex items-center gap-2 bg-white text-primary text-sm font-semibold px-4 py-2.5 rounded-full transition-colors border border-white/30 shrink-0 whitespace-nowrap disabled:opacity-60"
+            >
+              <Navigation className="w-4 h-4 text-primary shrink-0" />
+              {gettingLocation
+                ? 'Finding...'
+                : locationPermission === 'denied'
+                  ? 'Blocked'
+                  : 'Share Location'}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => clearCheckIn.mutate()}
+              disabled={clearCheckIn.isPending}
+              className="flex items-center gap-1.5 bg-white text-primary text-xs font-semibold px-3 py-2 rounded-full transition-colors border border-white/30 shrink-0 disabled:opacity-60"
+            >
+              <X className="w-3.5 h-3.5 text-primary" />
+              {clearCheckIn.isPending ? 'Clearing...' : 'Clear Pin'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showForm && (
         <div
-          className="check-in-ping-layer"
+          ref={formSectionRef}
+          className="scroll-mt-24"
+          role="region"
+          aria-label="Confirm check-in"
           style={{
-            position: 'absolute',
-            inset: 0,
-            overflow: 'hidden',
-            borderRadius: 20,
-            pointerEvents: 'none',
-            zIndex: 0,
+            background: 'linear-gradient(180deg, #ecfdf5 0%, #f8fafc 50%, #ffffff 100%)',
+            borderRadius: 16,
+            padding: 18,
+            border: '2px solid #0d9488',
+            boxShadow:
+              '0 10px 40px rgba(13, 148, 136, 0.18), 0 2px 8px rgba(30, 58, 138, 0.08)',
           }}
         >
-          <style>{`
-    .check-in-ping-layer, .check-in-ping-layer * {
-      pointer-events: none !important;
-    }
-    @keyframes pingRipple {
-      0% { transform: scale(0.8); opacity: 0.6; }
-      100% { transform: scale(2.8); opacity: 0; }
-    }
-    @keyframes pingRipple2 {
-      0% { transform: scale(0.8); opacity: 0.4; }
-      100% { transform: scale(2.2); opacity: 0; }
-    }
-    @keyframes pingRipple3 {
-      0% { transform: scale(0.8); opacity: 0.3; }
-      100% { transform: scale(1.8); opacity: 0; }
-    }
-    @keyframes pingDot {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.15); opacity: 0.85; }
-    }
-  `}</style>
-
-          <div
+          <p
             style={{
-              position: 'absolute',
-              right: 40,
-              top: '50%',
-              transform: 'translateY(-50%)',
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                border: '2px solid rgba(255,255,255,0.5)',
-                animation: 'pingRipple 2.4s ease-out infinite',
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                border: '2px solid rgba(255,255,255,0.35)',
-                animation: 'pingRipple2 2.4s ease-out infinite',
-                animationDelay: '0.6s',
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                border: '2px solid rgba(255,255,255,0.2)',
-                animation: 'pingRipple3 2.4s ease-out infinite',
-                animationDelay: '1.2s',
-              }}
-            />
-            <div
-              style={{
-                width: 12,
-                height: 12,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.9)',
-                boxShadow: '0 0 12px rgba(255,255,255,0.6)',
-                animation: 'pingDot 2s ease-in-out infinite',
-                position: 'relative',
-                zIndex: 1,
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              position: 'absolute',
-              right: 100,
-              top: 14,
-              opacity: 0.5,
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                border: '1.5px solid rgba(255,255,255,0.5)',
-                animation: 'pingRipple 3s ease-out infinite',
-                animationDelay: '1s',
-              }}
-            />
-            <div
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.8)',
-                position: 'relative',
-                zIndex: 1,
-                animation: 'pingDot 3s ease-in-out infinite',
-                animationDelay: '1s',
-              }}
-            />
-          </div>
-
-          <div
-            style={{
-              position: 'absolute',
-              right: 24,
-              bottom: 14,
-              opacity: 0.35,
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                width: 20,
-                height: 20,
-                borderRadius: '50%',
-                top: '50%',
-                left: '50%',
-                transform: 'translate(-50%, -50%)',
-                border: '1.5px solid rgba(255,255,255,0.5)',
-                animation: 'pingRipple 2.8s ease-out infinite',
-                animationDelay: '0.4s',
-              }}
-            />
-            <div
-              style={{
-                width: 5,
-                height: 5,
-                borderRadius: '50%',
-                background: 'rgba(255,255,255,0.8)',
-                position: 'relative',
-                zIndex: 1,
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Main content */}
-        <div style={{ position: 'relative', zIndex: 1, maxWidth: '65%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            <div
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: '50%',
-                background: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                flexShrink: 0,
-              }}
-            >
-              <MapPin style={{ width: 22, height: 22, color: '#0d9488' }} />
-            </div>
-            <div>
-              <h2
-                style={{
-                  color: 'white',
-                  fontSize: 20,
-                  fontWeight: 900,
-                  margin: 0,
-                  fontFamily: 'var(--font-heading)',
-                  lineHeight: 1.1,
-                }}
-              >
-                Check-In
-              </h2>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={myCheckIn ? () => clearCheckIn.mutate() : getLocation}
-            disabled={gettingLocation || clearCheckIn.isPending}
-            style={{
-              background: 'white',
-              color: '#0d9488',
-              border: 'none',
-              borderRadius: 12,
-              padding: '11px 28px',
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-              marginTop: 4,
-              width: '100%',
-              justifyContent: 'center',
+              color: '#0f766e',
+              margin: '0 0 6px',
+              fontFamily: 'var(--font-heading)',
             }}
           >
-            <Navigation style={{ width: 16, height: 16 }} />
-            {myCheckIn
-              ? clearCheckIn.isPending
-                ? 'Clearing...'
-                : 'Clear My Pin'
-              : gettingLocation
-                ? 'Getting location...'
-                : locationPermission === 'denied'
-                  ? 'Location Blocked'
-                  : 'Share Location'}
-          </button>
+            Confirm your check-in
+          </p>
+          <p style={{ fontSize: 12, color: '#475569', margin: '0 0 14px', lineHeight: 1.45 }}>
+            Your location was found. Check the place name below, then tap{' '}
+            <strong style={{ color: '#0f172a' }}>Check In</strong> so your family can see you on the map.
+          </p>
+          <Input
+            placeholder="Location name (e.g. Home, Work)"
+            value={locationName}
+            onChange={(e) => setLocationName(e.target.value)}
+            style={{ marginBottom: 8 }}
+          />
+          <Input
+            placeholder="What are you up to? (optional)"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            style={{ marginBottom: 12 }}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button
+              onClick={handleCheckIn}
+              disabled={!locationName.trim() || createCheckIn.isPending}
+              style={{ flex: 1 }}
+            >
+              <MapPin style={{ width: 16, height: 16, marginRight: 4 }} />
+              {createCheckIn.isPending ? 'Checking in...' : 'Check In'}
+            </Button>
+            <Button variant="outline" onClick={cancelForm}>
+              Cancel
+            </Button>
+          </div>
         </div>
+      )}
+
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 16,
+          padding: 12,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
+          marginTop: 4,
+        }}
+      >
+        <p
+          style={{
+            fontSize: 13,
+            fontWeight: 700,
+            color: '#1a2030',
+            marginBottom: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <MapPin style={{ width: 14, height: 14, color: '#0d9488' }} />
+          Your Location
+        </p>
+        {isLoaded ? (
+          <GoogleMap
+            mapContainerStyle={{ width: '100%', height: '280px', borderRadius: '12px' }}
+            mapContainerClassName="relative"
+            center={mapCenter}
+            zoom={mapZoom}
+            options={{ fullscreenControl: false, mapTypeControl: false, styles: CLEAN_MAP_STYLE }}
+          >
+            <Autocomplete
+              className="absolute top-3 left-0 right-0 z-10 px-3 w-full box-border"
+              onLoad={(ac) => {
+                autocompleteRef.current = ac;
+              }}
+              onPlaceChanged={onPlaceChanged}
+              fields={['geometry', 'name', 'formatted_address']}
+            >
+              <Input
+                placeholder="Search for a place..."
+                className="bg-background shadow-md border-border h-10 w-full"
+              />
+            </Autocomplete>
+            {activeCheckIns.map((checkin) => {
+              if (checkin.latitude == null || checkin.longitude == null) return null;
+              const member = getMemberForUser(checkin.user_id);
+              const color = getMemberColor(checkin.user_id);
+              return (
+                <Marker
+                  key={checkin.id}
+                  position={{ lat: Number(checkin.latitude), lng: Number(checkin.longitude) }}
+                  title={checkin.user_name}
+                  icon={markerIcon(color)}
+                  onClick={() => setInfoCheckIn(checkin)}
+                />
+              );
+            })}
+            {infoCheckIn &&
+              infoCheckIn.latitude != null &&
+              infoCheckIn.longitude != null && (
+                <InfoWindow
+                  position={{
+                    lat: Number(infoCheckIn.latitude),
+                    lng: Number(infoCheckIn.longitude),
+                  }}
+                  onCloseClick={() => setInfoCheckIn(null)}
+                >
+                  <div className="max-w-[220px] text-foreground p-1">
+                    <p className="font-semibold text-sm">
+                      {infoWindowMember?.display_name ||
+                        infoWindowMember?.full_name ||
+                        infoCheckIn.user_name ||
+                        'Member'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {trimAddress(infoCheckIn.location, 200)}
+                    </p>
+                    {checkInHasDistinctAddress(infoCheckIn) ? (
+                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                        {trimAddress(infoCheckIn.address, 240)}
+                      </p>
+                    ) : null}
+                    {infoCheckIn.note ? <p className="text-xs mt-1">{infoCheckIn.note}</p> : null}
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {formatCheckInDetailTime(infoCheckIn.created_at)}
+                    </p>
+                  </div>
+                </InfoWindow>
+              )}
+          </GoogleMap>
+        ) : (
+          <div
+            style={{ width: '100%', height: '280px' }}
+            className="bg-secondary rounded-xl flex items-center justify-center"
+          >
+            <p className="text-muted-foreground text-sm">Loading map...</p>
+          </div>
+        )}
       </div>
 
       <div
@@ -925,164 +911,6 @@ export default function CheckInPage() {
           >
             {liveTracking ? 'On' : 'Off'}
           </button>
-        </div>
-      )}
-
-      <div
-        style={{
-          background: 'white',
-          borderRadius: 16,
-          padding: 12,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
-          marginTop: 4,
-        }}
-      >
-        <p
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: '#1a2030',
-            marginBottom: 10,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <MapPin style={{ width: 14, height: 14, color: '#0d9488' }} />
-          Your Location
-        </p>
-        {isLoaded ? (
-          <GoogleMap
-            mapContainerStyle={{ width: '100%', height: '280px', borderRadius: '12px' }}
-            mapContainerClassName="relative"
-            center={mapCenter}
-            zoom={mapZoom}
-            options={{ fullscreenControl: false, mapTypeControl: false, styles: CLEAN_MAP_STYLE }}
-          >
-            <Autocomplete
-              className="absolute top-3 left-0 right-0 z-10 px-3 w-full box-border"
-              onLoad={(ac) => {
-                autocompleteRef.current = ac;
-              }}
-              onPlaceChanged={onPlaceChanged}
-              fields={['geometry', 'name', 'formatted_address']}
-            >
-              <Input
-                placeholder="Search for a place..."
-                className="bg-background shadow-md border-border h-10 w-full"
-              />
-            </Autocomplete>
-            {activeCheckIns.map((checkin) => {
-              if (checkin.latitude == null || checkin.longitude == null) return null;
-              const member = getMemberForUser(checkin.user_id);
-              const color = getMemberColor(checkin.user_id);
-              return (
-                <Marker
-                  key={checkin.id}
-                  position={{ lat: Number(checkin.latitude), lng: Number(checkin.longitude) }}
-                  title={checkin.user_name}
-                  icon={markerIcon(color)}
-                  onClick={() => setInfoCheckIn(checkin)}
-                />
-              );
-            })}
-            {infoCheckIn &&
-              infoCheckIn.latitude != null &&
-              infoCheckIn.longitude != null && (
-                <InfoWindow
-                  position={{
-                    lat: Number(infoCheckIn.latitude),
-                    lng: Number(infoCheckIn.longitude),
-                  }}
-                  onCloseClick={() => setInfoCheckIn(null)}
-                >
-                  <div className="max-w-[220px] text-foreground p-1">
-                    <p className="font-semibold text-sm">
-                      {infoWindowMember?.display_name ||
-                        infoWindowMember?.full_name ||
-                        infoCheckIn.user_name ||
-                        'Member'}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {trimAddress(infoCheckIn.location, 200)}
-                    </p>
-                    {checkInHasDistinctAddress(infoCheckIn) ? (
-                      <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
-                        {trimAddress(infoCheckIn.address, 240)}
-                      </p>
-                    ) : null}
-                    {infoCheckIn.note ? <p className="text-xs mt-1">{infoCheckIn.note}</p> : null}
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatCheckInDetailTime(infoCheckIn.created_at)}
-                    </p>
-                  </div>
-                </InfoWindow>
-              )}
-          </GoogleMap>
-        ) : (
-          <div
-            style={{ width: '100%', height: '280px' }}
-            className="bg-secondary rounded-xl flex items-center justify-center"
-          >
-            <p className="text-muted-foreground text-sm">Loading map...</p>
-          </div>
-        )}
-      </div>
-
-      {showForm && (
-        <div
-          ref={formSectionRef}
-          role="region"
-          aria-label="Confirm check-in"
-          style={{
-            background: 'linear-gradient(180deg, #ecfdf5 0%, #ffffff 55%)',
-            borderRadius: 16,
-            padding: 18,
-            border: '2px solid #0d9488',
-            boxShadow:
-              '0 10px 40px rgba(13, 148, 136, 0.22), 0 2px 8px rgba(30, 58, 138, 0.12)',
-          }}
-        >
-          <p
-            style={{
-              fontSize: 16,
-              fontWeight: 800,
-              color: '#0f766e',
-              margin: '0 0 6px',
-              fontFamily: 'var(--font-heading)',
-            }}
-          >
-            Confirm your check-in
-          </p>
-          <p style={{ fontSize: 12, color: '#475569', margin: '0 0 14px', lineHeight: 1.45 }}>
-            Your location was found. Check the place name below, then tap{' '}
-            <strong style={{ color: '#0f172a' }}>Check In</strong> so your family can see you on the map.
-          </p>
-          <Input
-            placeholder="Location name (e.g. Home, Work)"
-            value={locationName}
-            onChange={(e) => setLocationName(e.target.value)}
-            style={{ marginBottom: 8 }}
-          />
-          <Input
-            placeholder="What are you up to? (optional)"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            style={{ marginBottom: 12 }}
-          />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Button
-              onClick={handleCheckIn}
-              disabled={!locationName.trim() || createCheckIn.isPending}
-              style={{ flex: 1 }}
-            >
-              <MapPin style={{ width: 16, height: 16, marginRight: 4 }} />
-              {createCheckIn.isPending ? 'Checking in...' : 'Check In'}
-            </Button>
-            <Button variant="outline" onClick={cancelForm}>
-              Cancel
-            </Button>
-          </div>
         </div>
       )}
 

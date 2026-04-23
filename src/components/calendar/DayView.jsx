@@ -67,6 +67,9 @@ export default function DayView({ currentDate, events, onDeleteEvent, onEditEven
                     </span>
                   )}
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(ev.date + 'T00:00:00'), 'EEEE, MMMM d, yyyy')}
+                </p>
                 {ev.notes && <p className="text-xs text-muted-foreground mt-1">{ev.notes}</p>}
                 {ev.assigned_to?.length > 0 && (
                   <div className="flex items-center gap-1 mt-2">

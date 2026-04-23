@@ -6,12 +6,14 @@ import { GoogleMap, useJsApiLoader, Circle, Marker, Autocomplete } from '@react-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin, Plus, Trash2, Radio, Pencil } from 'lucide-react';
+import { MapPin, Plus, Trash2, Radio, Pencil, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
 
-export default function GeofencePage() {
+export default function GeofencePage({ embedded = false }) {
+  const navigate = useNavigate();
   const { family, currentUser, isAdmin } = useFamily();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -130,6 +132,16 @@ export default function GeofencePage() {
 
   return (
     <div className="space-y-4">
+      {!embedded && (
+        <button
+          type="button"
+          onClick={() => navigate('/checkin')}
+          className="inline-flex items-center justify-center rounded-full p-2 -ml-1 text-foreground hover:bg-muted/80 transition-colors"
+          aria-label="Back to Check-In"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+      )}
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-xl font-bold">Geofences</h2>
         <div className="flex gap-2">
