@@ -32,8 +32,8 @@ async function fetchNotificationPrefsMap(supabaseUrl, headers, userIds) {
 }
 
 /**
- * Push check-in notice to family (excluding the user who checked in).
- * Body: { family_id, excludeUserId | user_id, user_name, location }
+ * Push check-in notice to all family members with push subscriptions (including the checker).
+ * Body: { family_id, excludeUserId | user_id (optional, for logs only), user_name, location }
  * Env: same as send-family-alert (SUPABASE_*, VAPID_*).
  */
 exports.handler = async function (event, context) {
@@ -68,13 +68,13 @@ exports.handler = async function (event, context) {
   const excludeUserId = body.excludeUserId ?? body.user_id;
   const locationLabel = location != null && String(location).trim() !== '' ? String(location).trim() : 'a location';
 
-  console.log('[checkin-alert]', { family_id, excludeUserId, user_name, location: locationLabel });
+  console.log('[checkin-alert]', { family_id, checkedInBy: excludeUserId, user_name, location: locationLabel });
 
-  if (!family_id || !excludeUserId) {
+  if (!family_id) {
     return {
       statusCode: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'family_id and excludeUserId (or user_id) are required' }),
+      body: JSON.stringify({ error: 'family_id is required' }),
     };
   }
 
@@ -106,7 +106,7 @@ exports.handler = async function (event, context) {
   );
 
   const name = user_name != null && String(user_name).trim() !== '' ? String(user_name).trim() : 'Someone';
-  const filter = `family_id=eq.${encodeURIComponent(family_id)}&user_id=neq.${encodeURIComponent(excludeUserId)}`;
+  const filter = `family_id=eq.${encodeURIComponent(family_id)}`;
   const res = await fetch(
     `${supabaseUrl}/rest/v1/push_subscriptions?${filter}&select=endpoint,p256dh,auth,user_id`,
     {
