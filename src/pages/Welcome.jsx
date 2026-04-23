@@ -8,8 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Home, Users, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MEMBER_COLORS, AVATARS, generateInviteCode } from '@/lib/memberColors';
-import { toast } from 'sonner';
-
 export default function Welcome() {
   const navigate = useNavigate();
   const { currentUser, reload } = useFamily();

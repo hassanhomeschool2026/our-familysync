@@ -28,6 +28,10 @@ const sectionHeaderOverlayStyle = {
   background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
 };
 
+const alertUrl = import.meta.env.DEV
+  ? 'http://localhost:8888/.netlify/functions/send-family-alert'
+  : '/.netlify/functions/send-family-alert';
+
 const GRADIENT_HEADER_STAR_TWINKLE_CSS = `
 @keyframes starTwinkle {
   0%, 100% { opacity: 0.2; transform: scale(0.8); }
@@ -199,7 +203,7 @@ export default function AdminPage() {
       return;
     }
     try {
-      const pushRes = await fetch('/.netlify/functions/send-family-alert', {
+      const pushRes = await fetch(alertUrl, {
         method: 'POST',
         body: JSON.stringify({
           family_id: family.id,

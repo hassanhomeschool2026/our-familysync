@@ -2,7 +2,6 @@ import React from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
-import { Button } from '@/components/ui/button';
 import { Bell, Calendar, CheckCircle2, MapPin, Megaphone, Check } from 'lucide-react';
 import EmptyState from '@/components/shared/EmptyState';
 import SkeletonCard from '@/components/shared/SkeletonCard';
@@ -141,14 +140,13 @@ export default function NotificationsPage() {
         <div className="relative z-[1] flex items-center justify-between gap-2">
           <h2 className="font-heading text-xl font-bold text-white">Notifications</h2>
           {unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
               onClick={() => markAllRead.mutate()}
-              className="text-xs text-white hover:bg-white/10 hover:text-white shrink-0"
+              className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 shrink-0"
             >
-              <Check className="w-3 h-3 mr-1 text-[rgba(255,255,255,0.9)]" /> Mark all read
-            </Button>
+              <Check className="w-3 h-3 shrink-0 text-primary" aria-hidden /> Mark all read
+            </button>
           )}
         </div>
       </div>

@@ -1,7 +1,12 @@
 [build]
   command = "npm run build"
   publish = "dist"
-  functions = "netlify/functions"
 
 [functions]
+  directory = "netlify/functions"
   node_bundler = "esbuild"
+
+# 13:00 UTC daily (8am US Central during CDT). @netlify/plugin-cron is not published on npm;
+# Netlify scheduled functions use this block instead.
+[functions."daily-reminder"]
+  schedule = "0 13 * * *"

@@ -14,9 +14,10 @@ export const FamilyProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const pushSubKeyRef = useRef(null);
 
-  const reload = async () => {
+  const reload = async (opts = {}) => {
+    const silent = opts.silent === true;
     if (!user) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -45,7 +46,7 @@ export const FamilyProvider = ({ children }) => {
       setMembers([]);
     }
 
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
   useEffect(() => {

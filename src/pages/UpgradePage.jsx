@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Crown, Check, Users, ListChecks, Bell, Clock, Megaphone } from 'lucide-react';
+import { ArrowLeft, Crown, Users, ListChecks, Bell, Clock, Megaphone } from 'lucide-react';
 import { useFamily } from '@/lib/familyContext';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';

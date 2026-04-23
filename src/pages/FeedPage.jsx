@@ -9,11 +9,6 @@ import SkeletonCard from '@/components/shared/SkeletonCard';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Calendar, CheckCircle2, MapPin, UserPlus, Megaphone } from 'lucide-react';
 
-const sectionHeaderBarStyle = {
-  background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
-  boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
-};
-
 const sectionHeaderOverlayStyle = {
   background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
 };
@@ -131,8 +126,11 @@ export default function FeedPage() {
   return (
     <div>
       <div
-        className="relative mb-4 overflow-hidden rounded-xl"
-        style={sectionHeaderBarStyle}
+        className="rounded-2xl p-4 mb-4 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 50%, #1e3a8a 100%)',
+          boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
+        }}
       >
         <GradientHeaderStarField />
         <style>{GRADIENT_HEADER_STAR_TWINKLE_CSS}</style>
@@ -141,9 +139,9 @@ export default function FeedPage() {
           style={sectionHeaderOverlayStyle}
           aria-hidden
         />
-        <h2 className="relative z-[1] font-heading text-xl font-bold text-white">
-          Family Feed
-        </h2>
+        <div className="relative z-10 flex items-center justify-between">
+          <h2 className="font-heading text-xl font-bold text-white">Family Feed</h2>
+        </div>
       </div>
 
       {filtered.length === 0 ? (

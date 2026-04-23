@@ -360,20 +360,17 @@ export default function ChoresPage() {
                   setShowAddForm(true);
                 }
               }}
-              className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none ${
+              className={`flex items-center gap-1.5 font-semibold text-sm px-3 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none ${
                 showAddForm || editingChore
                   ? 'border border-white/90 text-white bg-transparent hover:bg-white/10'
-                  : 'bg-[rgba(255,255,255,0.2)] text-white hover:bg-[rgba(255,255,255,0.28)]'
+                  : 'bg-white text-primary'
               }`}
             >
               {showAddForm || editingChore ? (
                 'Close'
               ) : (
                 <>
-                  <Plus
-                    className="w-3 h-3 shrink-0 text-[rgba(255,255,255,0.9)]"
-                    aria-hidden
-                  />
+                  <Plus className="w-3 h-3 shrink-0 text-primary" aria-hidden />
                   Add Chore
                 </>
               )}

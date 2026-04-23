@@ -8,7 +8,6 @@ import WeekView from '@/components/calendar/WeekView';
 import DayView from '@/components/calendar/DayView';
 import AddEventSheet from '@/components/calendar/AddEventSheet';
 import SkeletonCard from '@/components/shared/SkeletonCard';
-import { Button } from '@/components/ui/button';
 import { format, isSameDay } from 'date-fns';
 
 export default function CalendarPage() {
@@ -125,12 +124,13 @@ export default function CalendarPage() {
         setCurrentDate={setCurrentDate}
       >
         <div className="flex justify-end mb-2">
-          <Button
+          <button
+            type="button"
             onClick={handleAddEvent}
-            className="rounded-full bg-[#01dcba] text-white font-semibold shadow-sm px-4 py-2 text-sm"
+            className="bg-primary text-white font-semibold text-sm px-4 py-1.5 rounded-full shadow-sm"
           >
             + Event
-          </Button>
+          </button>
         </div>
       </CalendarHeader>
 
@@ -138,31 +138,14 @@ export default function CalendarPage() {
         <>
           <MonthView currentDate={currentDate} events={events} onDayClick={handleDayClick} selectedDay={selectedDay} />
           <div className="mt-4">
-            <div
-              className="relative overflow-hidden rounded-xl border border-border mb-4"
-              style={{
-                background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
-                boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
-              }}
-            >
+            {selectedDayEventCount > 0 && (
               <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  pointerEvents: 'none',
-                  background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
-                }}
-              />
-              <div className="relative z-[1] flex flex-col gap-0 px-4 py-3">
-                <div className="min-w-0">
-                  {selectedDayEventCount > 0 && (
-                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.9)' }}>
-                      {selectedDayEventCount} event{selectedDayEventCount !== 1 ? 's' : ''}
-                    </p>
-                  )}
-                </div>
+                className="rounded-xl px-4 py-3 mb-2 font-semibold text-sm text-purple-700"
+                style={{ background: '#f3f0ff', border: '1px solid #e9d5ff' }}
+              >
+                {selectedDayEventCount} event{selectedDayEventCount !== 1 ? 's' : ''}
               </div>
-            </div>
+            )}
             <DayView
               currentDate={selectedDay}
               events={events}

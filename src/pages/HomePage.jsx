@@ -11,6 +11,10 @@ import { MapPin, Calendar, CheckSquare, Megaphone, Zap, ChevronRight, X } from '
 import { toast } from 'sonner';
 import { format, isToday } from 'date-fns';
 
+const alertUrl = import.meta.env.DEV
+  ? 'http://localhost:8888/.netlify/functions/send-family-alert'
+  : '/.netlify/functions/send-family-alert';
+
 const HeroBannerStyles = () => (
   <style>{`
     @keyframes sunPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
@@ -1350,7 +1354,7 @@ export default function HomePage() {
                     type: 'family_alert',
                     message: `🚨 Family Alert: ${alertMessage.trim()}`,
                   });
-                  const pushRes = await fetch('/.netlify/functions/send-family-alert', {
+                  const pushRes = await fetch(alertUrl, {
                     method: 'POST',
                     body: JSON.stringify({
                       family_id: family.id,

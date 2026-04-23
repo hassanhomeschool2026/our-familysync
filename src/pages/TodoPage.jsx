@@ -494,10 +494,9 @@ export default function TodoPage() {
               setShowAdd(true);
             }}
             disabled={!canAddTask}
-            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none"
-            style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
+            className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
           >
-            <Plus className="w-3 h-3 shrink-0" style={{ color: 'rgba(255,255,255,0.9)' }} aria-hidden />
+            <Plus className="w-3 h-3 shrink-0 text-primary" aria-hidden />
             Add Task
           </button>
         </div>
@@ -514,52 +513,34 @@ export default function TodoPage() {
         </div>
       )}
 
-      <div
-        className="relative overflow-hidden rounded-xl border border-border mb-4"
-        style={{
-          background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #1e3a8a 100%)',
-          boxShadow: '0 6px 20px rgba(30, 58, 138, 0.15)',
-        }}
-      >
-        <GradientHeaderStarField />
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            pointerEvents: 'none',
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
-          }}
-        />
-        <div className="relative z-[1] flex gap-1 p-0.5 overflow-x-auto">
-          {filters.map((f) => (
-            <button
-              key={f}
-              type="button"
-              onClick={() => {
-                setFilter(f);
-                setShopTab('todo');
-              }}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all capitalize whitespace-nowrap ${
-                shopTab !== 'shop' && filter === f ? 'bg-card text-foreground shadow-sm' : 'text-white/85'
-              }`}
-            >
-              {f}
-            </button>
-          ))}
+      <div className="mb-4 flex gap-2 px-4 py-2 bg-[#f3f0ff] border-b border-border overflow-x-auto">
+        {filters.map((f) => (
           <button
+            key={f}
             type="button"
-            onClick={() => setShopTab('shop')}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap flex items-center gap-1 ${
-              shopTab === 'shop' ? 'bg-card text-purple-600 shadow-sm' : 'text-white/85'
+            onClick={() => {
+              setFilter(f);
+              setShopTab('todo');
+            }}
+            className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all capitalize whitespace-nowrap ${
+              shopTab !== 'shop' && filter === f
+                ? 'bg-[#7c3aed] text-white'
+                : 'text-[#7c3aed] bg-transparent'
             }`}
           >
-            <ShoppingCart
-              className="w-3 h-3"
-              style={shopTab === 'shop' ? undefined : { color: 'rgba(255,255,255,0.9)' }}
-            />{' '}
-            Shop
+            {f}
           </button>
-        </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setShopTab('shop')}
+          className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all whitespace-nowrap flex items-center gap-1 ${
+            shopTab === 'shop' ? 'bg-[#7c3aed] text-white' : 'text-[#7c3aed] bg-transparent'
+          }`}
+        >
+          <ShoppingCart className={`w-3 h-3 shrink-0 ${shopTab === 'shop' ? 'text-white' : 'text-[#7c3aed]'}`} aria-hidden />
+          Shop
+        </button>
       </div>
 
       {shopTab !== 'shop' && (
@@ -771,10 +752,9 @@ export default function TodoPage() {
               <button
                 type="button"
                 onClick={() => setShowAddShop(true)}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
+                className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5"
               >
-                <Plus className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.9)' }} /> Add item
+                <Plus className="w-3 h-3 shrink-0 text-primary" aria-hidden /> Add item
               </button>
             </div>
           </div>
@@ -904,10 +884,9 @@ export default function TodoPage() {
               <button
                 type="button"
                 onClick={() => setShowAddShop(true)}
-                className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.2)', color: '#ffffff' }}
+                className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5"
               >
-                <Plus className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.9)' }} /> Add item
+                <Plus className="w-3 h-3 shrink-0 text-primary" aria-hidden /> Add item
               </button>
             </div>
           </div>

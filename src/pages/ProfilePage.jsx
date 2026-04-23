@@ -144,7 +144,9 @@ export default function ProfilePage() {
       .from('profiles')
       .update({ notification_prefs: updated })
       .eq('id', currentUser.id);
-    await reload();
+    // Silent reload: full reload() sets loading=true and FamilyGate unmounts all routes,
+    // which remounts ProfilePage and resets showNotifPrefs to false.
+    await reload({ silent: true });
   };
 
   const handleEnablePushNotifications = async () => {
@@ -461,10 +463,9 @@ export default function ProfilePage() {
             </Button>
           )}
         </div>
-        <button
-          type="button"
+        <div
           onClick={() => setShowNotifPrefs(!showNotifPrefs)}
-          className="relative flex items-center justify-between w-full overflow-hidden text-left transition-opacity hover:opacity-95"
+          className="relative flex items-center justify-between w-full overflow-hidden text-left transition-opacity hover:opacity-95 cursor-pointer"
           style={sectionHeaderBarStyle}
         >
           <GradientHeaderStarField />
@@ -480,25 +481,41 @@ export default function ProfilePage() {
           <ChevronRight
             className={`relative z-[1] w-4 h-4 shrink-0 text-[rgba(255,255,255,0.9)] transition-transform ${showNotifPrefs ? 'rotate-90' : ''}`}
           />
-        </button>
+        </div>
 
         {showNotifPrefs && (
           <div className="p-4 space-y-4 bg-secondary/20">
             <div className="flex items-center justify-between">
               <Label className="text-sm">Day-before reminders</Label>
-              <Switch checked={prefs.day_before_reminder !== false} onCheckedChange={(v) => toggleNotifPref('day_before_reminder', v)} />
+              <Switch
+                checked={prefs.day_before_reminder !== false}
+                onCheckedChange={(v) => toggleNotifPref('day_before_reminder', v)}
+                onClick={(e) => e.stopPropagation()}
+              />
             </div>
             <div className="flex items-center justify-between">
               <Label className="text-sm">Task due reminders</Label>
-              <Switch checked={prefs.task_due_reminders !== false} onCheckedChange={(v) => toggleNotifPref('task_due_reminders', v)} />
+              <Switch
+                checked={prefs.task_due_reminders !== false}
+                onCheckedChange={(v) => toggleNotifPref('task_due_reminders', v)}
+                onClick={(e) => e.stopPropagation()}
+              />
             </div>
             <div className="flex items-center justify-between">
               <Label className="text-sm">Family alerts</Label>
-              <Switch checked={prefs.family_alerts !== false} onCheckedChange={(v) => toggleNotifPref('family_alerts', v)} />
+              <Switch
+                checked={prefs.family_alerts !== false}
+                onCheckedChange={(v) => toggleNotifPref('family_alerts', v)}
+                onClick={(e) => e.stopPropagation()}
+              />
             </div>
             <div className="flex items-center justify-between">
               <Label className="text-sm">Check-in notifications</Label>
-              <Switch checked={prefs.checkin_notifications !== false} onCheckedChange={(v) => toggleNotifPref('checkin_notifications', v)} />
+              <Switch
+                checked={prefs.checkin_notifications !== false}
+                onCheckedChange={(v) => toggleNotifPref('checkin_notifications', v)}
+                onClick={(e) => e.stopPropagation()}
+              />
             </div>
           </div>
         )}
