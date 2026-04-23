@@ -33,7 +33,7 @@ async function fetchNotificationPrefsMap(supabaseUrl, headers, userIds) {
 
 /**
  * Push check-in notice to family (excluding the user who checked in).
- * Body: { family_id, user_id, user_name, location }
+ * Body: { family_id, excludeUserId | user_id, user_name, location }
  * Env: same as send-family-alert (SUPABASE_*, VAPID_*).
  */
 exports.handler = async function (event, context) {
@@ -64,7 +64,8 @@ exports.handler = async function (event, context) {
     };
   }
 
-  const { family_id, user_id: excludeUserId, user_name, location } = body;
+  const { family_id, user_name, location } = body;
+  const excludeUserId = body.excludeUserId ?? body.user_id;
   const locationLabel = location != null && String(location).trim() !== '' ? String(location).trim() : 'a location';
 
   console.log('[checkin-alert]', { family_id, excludeUserId, user_name, location: locationLabel });
@@ -73,7 +74,7 @@ exports.handler = async function (event, context) {
     return {
       statusCode: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'family_id and user_id are required' }),
+      body: JSON.stringify({ error: 'family_id and excludeUserId (or user_id) are required' }),
     };
   }
 
@@ -153,17 +154,22 @@ exports.handler = async function (event, context) {
       if (prefs.checkin_notifications === false) {
         return { sent: false };
       }
+      const pushConfig = {
+        endpoint: sub.endpoint,
+        keys: { p256dh: sub.p256dh, auth: sub.auth },
+      };
       try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          payload
-        );
-        console.log('[checkin-alert] sent to:', sub.endpoint.slice(0, 50));
+        await webpush.sendNotification(pushConfig, payload);
+        console.log('[checkin-alert] sent to:', sub.endpoint);
         return { sent: true };
       } catch (err) {
-        console.error('[checkin-alert] FAILED for:', sub.endpoint, 'status:', err.statusCode, err.body);
-
-        // 410 = subscription expired/invalid — delete it from DB
+        console.error(
+          '[checkin-alert] FAILED for:',
+          sub.endpoint,
+          'status:',
+          err.statusCode,
+          err.body
+        );
         if (err.statusCode === 410) {
           console.log('[checkin-alert] Removing stale subscription:', sub.endpoint);
           await fetch(
@@ -181,6 +187,9 @@ exports.handler = async function (event, context) {
       }
     })
   );
+
+  console.log('[checkin-alert] attempted:', results.length);
+
   const sent = results.filter((r) => r.status === 'fulfilled' && r.value?.sent).length;
 
   return {

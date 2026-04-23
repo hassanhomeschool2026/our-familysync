@@ -17,10 +17,6 @@ import { playCheckInSound } from '@/lib/sounds';
 
 const DEFAULT_CENTER = { lat: 32.9482, lng: -96.7970 };
 
-const checkinAlertUrl = import.meta.env.DEV
-  ? 'http://localhost:8888/.netlify/functions/send-checkin-alert'
-  : '/.netlify/functions/send-checkin-alert';
-
 const CLEAN_MAP_STYLE = [
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },
   { featureType: 'poi.park', stylers: [{ visibility: 'simplified' }] },
@@ -442,14 +438,14 @@ export default function CheckInPage() {
         message: `${currentUser.display_name || currentUser.full_name || currentUser.email} checked in at ${data.location}`,
       });
       try {
-        const pushRes = await fetch(checkinAlertUrl, {
+        const pushRes = await fetch('/.netlify/functions/send-checkin-alert', {
           method: 'POST',
           body: JSON.stringify({
             family_id: family.id,
-            user_id: currentUser.id,
+            excludeUserId: currentUser.id,
             user_name:
               currentUser.display_name || currentUser.full_name || currentUser.email,
-            location: data.location,
+            location: locationName,
           }),
         });
         if (!pushRes.ok) {
