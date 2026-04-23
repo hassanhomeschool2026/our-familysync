@@ -141,7 +141,7 @@ exports.handler = async function (event, context) {
   const payload = JSON.stringify({
     title: `${name} checked in`,
     body: `at ${locationLabel}`,
-    tag: 'checkin',
+    tag: `checkin-${Date.now()}`,
     url: '/checkin',
   });
 
