@@ -32,6 +32,7 @@ exports.handler = async (event) => {
   }
 
   const { family_id, title, body: textBody, url: urlField } = body;
+  console.log('[Alert] Received:', { family_id, title, body: textBody });
   if (!family_id) {
     return { statusCode: 400, body: JSON.stringify({ error: 'family_id is required' }) };
   }
@@ -71,6 +72,7 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: 'Database error' }) };
   }
   const subs = await res.json();
+  console.log('[Alert] Subscriptions found:', subs?.length, JSON.stringify(subs));
   const payload = JSON.stringify({
     title: title || '🚨 Family Alert',
     body: textBody,
@@ -79,14 +81,24 @@ exports.handler = async (event) => {
   });
 
   const results = await Promise.allSettled(
-    (subs || []).map((s) => {
-      if (!s?.endpoint || !s?.p256dh || !s?.auth) return Promise.resolve();
-      return webpush.sendNotification(
-        { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        payload
-      );
+    (subs || []).map(async (sub) => {
+      if (!sub?.endpoint || !sub?.p256dh || !sub?.auth) {
+        return;
+      }
+      try {
+        console.log('[Alert] Sending to endpoint:', sub.endpoint?.slice(0, 50));
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
+        console.log('[Alert] Sent successfully');
+      } catch (err) {
+        console.error('[Alert] Send error:', err.message, err.statusCode);
+        throw err;
+      }
     })
   );
+  console.log('[Alert] Done. Results:', results.length);
   return {
     statusCode: 200,
     headers: { 'Content-Type': 'application/json' },
