@@ -1350,6 +1350,7 @@ export default function HomePage() {
                     type: 'family_alert',
                     message: `🚨 Family Alert: ${alertMessage.trim()}`,
                   });
+                  const { data: { session } } = await supabase.auth.getSession();
                   await supabase.functions.invoke('send-family-alert', {
                     body: {
                       family_id: family.id,
@@ -1357,6 +1358,7 @@ export default function HomePage() {
                       body: alertMessage.trim(),
                       url: '/feed',
                     },
+                    headers: { Authorization: `Bearer ${session?.access_token}` },
                   });
                   toast.success('Alert sent!');
                   setAlertMessage('');

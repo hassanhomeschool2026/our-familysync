@@ -199,8 +199,10 @@ export default function AdminPage() {
       return;
     }
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       await supabase.functions.invoke('send-family-alert', {
         body: { family_id: family.id, title: '🚨 Family Alert', body: text, url: '/feed' },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
       });
     } catch (e) {
       console.error('send-family-alert:', e);
