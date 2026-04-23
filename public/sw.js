@@ -19,17 +19,18 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  const url = new URL(event.request.url);
+
+  // Let Vite handle its own dev URLs — do not intercept
+  if (
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/node_modules/')
+  ) return;
+
   event.respondWith(
-    (async () => {
-      try {
-        return await fetch(event.request);
-      } catch {
-        const cached = await caches.match(event.request);
-        if (cached) return cached;
-        // respondWith() must receive a Response; undefined breaks the page (empty MIME type in dev tools).
-        return new Response('Network error', { status: 503, statusText: 'Network Error' });
-      }
-    })()
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
 
