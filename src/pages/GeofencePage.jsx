@@ -142,6 +142,12 @@ export default function GeofencePage({ embedded = false }) {
           <ArrowLeft className="w-5 h-5" />
         </button>
       )}
+      <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+        <p className="mb-0.5 text-xs font-semibold text-blue-800">About Zone Alerts</p>
+        <p className="text-xs text-blue-700 leading-relaxed">
+          Zone alerts are active while the app is open or running in your browser. On iOS, alerts continue with the screen locked as long as the app has not been fully closed. For best results, keep the app running in the background.
+        </p>
+      </div>
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-xl font-bold">Geofences</h2>
         <div className="flex gap-2">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { supabase } from '@/lib/supabaseClient';
+import { subscribeToPush } from '@/lib/pushNotifications';
 import { useFamily } from '@/lib/familyContext';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -11,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { MEMBER_COLORS } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import {
-  Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2, Camera, X, Sun, Moon, Monitor,
+  Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2, Camera, X, Sun, Moon, Monitor, Check,
 } from 'lucide-react';
 
 const sectionHeaderBarStyle = {
@@ -104,6 +105,13 @@ export default function ProfilePage() {
   const [soundEnabled, setSoundEnabled] = useState(
     () => localStorage.getItem('fs_sound_effects') !== 'false'
   );
+  const [notifPerm, setNotifPerm] = useState(
+    () =>
+      typeof window !== 'undefined' && typeof Notification !== 'undefined'
+        ? Notification.permission
+        : 'denied'
+  );
+  const [enablingNotif, setEnablingNotif] = useState(false);
 
   const prefs = currentUser?.notification_prefs || {};
 
@@ -137,6 +145,32 @@ export default function ProfilePage() {
       .update({ notification_prefs: updated })
       .eq('id', currentUser.id);
     await reload();
+  };
+
+  const handleEnablePushNotifications = async () => {
+    if (typeof Notification === 'undefined') {
+      toast.error('Notifications are not supported in this browser.');
+      return;
+    }
+    setEnablingNotif(true);
+    try {
+      const result = await Notification.requestPermission();
+      setNotifPerm(result);
+      if (result === 'granted') {
+        if (!currentUser?.id || !family?.id) {
+          toast.error('Family not loaded yet. Try again in a moment.');
+          return;
+        }
+        await subscribeToPush(currentUser.id, family.id, supabase);
+        toast.success('Notifications enabled!');
+      } else if (result === 'denied') {
+        toast.error('Please enable notifications in your phone settings.');
+      }
+    } catch {
+      toast.error('Could not enable notifications.');
+    } finally {
+      setEnablingNotif(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -400,6 +434,32 @@ export default function ProfilePage() {
               setSoundEnabled(checked);
             }}
           />
+        </div>
+        <div className="p-4 space-y-3">
+          <div className="space-y-0.5">
+            <Label className="text-sm">Push Notifications</Label>
+            <p className="text-xs text-muted-foreground">
+              Get alerted when family sends an alert, tasks are due, or events are today.
+            </p>
+          </div>
+          {notifPerm === 'granted' ? (
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-400"
+              role="status"
+            >
+              <Check className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
+              Notifications On
+            </div>
+          ) : (
+            <Button
+              type="button"
+              className="w-full rounded-xl sm:w-auto"
+              disabled={enablingNotif || !currentUser?.id || !family?.id}
+              onClick={handleEnablePushNotifications}
+            >
+              {enablingNotif ? 'Enabling...' : 'Enable Notifications'}
+            </Button>
+          )}
         </div>
         <button
           type="button"
