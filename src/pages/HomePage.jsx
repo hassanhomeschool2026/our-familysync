@@ -9,7 +9,8 @@ import MemberAvatar from '@/components/shared/MemberAvatar';
 import { Button } from '@/components/ui/button';
 import { MapPin, Calendar, CheckSquare, Megaphone, Zap, ChevronRight, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, isToday } from 'date-fns';
+import { format, isToday, startOfWeek, isAfter } from 'date-fns';
+import { choreNeedsReset } from '@/lib/choresRecurrence';
 
 const alertUrl = import.meta.env.DEV
   ? 'http://localhost:8888/.netlify/functions/send-family-alert'
@@ -707,16 +708,18 @@ export default function HomePage() {
   const dueTasks = tasks.filter((t) => !t.completed).slice(0, 3);
   const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000);
   const activeCheckIns = checkins.filter((c) => !c.cleared_at && new Date(c.created_at) > eightHoursAgo);
-  const completedChores = chores.filter((c) => c.completed);
+  const completedTodayCount = chores.filter(
+    (c) => c.completed && c.completed_at && isToday(new Date(c.completed_at))
+  ).length;
   const totalChores = chores.length;
-  const choreProgressPct = totalChores ? (completedChores.length / totalChores) * 100 : 0;
+  const choreProgressPct = totalChores ? (completedTodayCount / totalChores) * 100 : 0;
 
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
   const pointsByMember = {};
   for (const c of chores) {
-    if (!c.completed || !c.completed_at) continue;
-    if (new Date(c.completed_at) < weekStart) continue;
+    if (!c.completed || !c.completed_at || choreNeedsReset(c)) continue;
+    const completedAt = new Date(c.completed_at);
+    if (!(isAfter(completedAt, weekStart) || completedAt.getTime() === weekStart.getTime())) continue;
     const uid = c.completed_by;
     if (!uid) continue;
     pointsByMember[uid] = (pointsByMember[uid] || 0) + (c.point_value ?? 1);
@@ -1088,11 +1091,11 @@ export default function HomePage() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground mb-2">
-          {completedChores.length} of {totalChores} completed today
+          {completedTodayCount} of {totalChores} completed today
         </p>
         <div className="h-2 w-full bg-muted rounded-full overflow-hidden mb-3">
           <motion.div
-            key={`chore-fill-${completedChores.length}-${totalChores}`}
+            key={`chore-fill-${completedTodayCount}-${totalChores}`}
             className="h-full rounded-full"
             style={{ transformOrigin: 'center center', background: BRAND.gradient }}
             initial={

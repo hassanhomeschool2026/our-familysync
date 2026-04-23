@@ -174,7 +174,7 @@ export default function Welcome() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <AnimatePresence mode="wait">
         {step === 'welcome' && (
           <motion.div
@@ -184,26 +184,37 @@ export default function Welcome() {
             exit={{ opacity: 0, y: -20 }}
             className="w-full max-w-sm text-center"
           >
-            <div className="mb-8">
-              <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <Home className="w-10 h-10 text-primary" />
+            <div className="mb-6">
+              <div className="flex flex-col items-center justify-center gap-1 mb-4">
+                <img
+                  src="/FSLogoIconOnly-512.png"
+                  alt="Our FamilySync icon"
+                  className="h-16 w-16 object-contain"
+                />
+                <img
+                  src="/FSLogo_TitleOnly-512.png"
+                  alt="Our FamilySync"
+                  className="h-11 w-auto object-contain max-w-[220px]"
+                />
               </div>
-              <h1 className="font-heading text-3xl font-extrabold text-foreground mb-2">
-                Our <span className="text-primary">Family</span>Sync
-              </h1>
-              <p className="text-muted-foreground text-base">Your family. In sync.</p>
+              <p className="text-[#64748b] dark:text-slate-400 text-base">Your family. In sync.</p>
             </div>
             <div className="space-y-3">
-              <Button onClick={() => setStep('create')} className="w-full h-14 text-base font-semibold rounded-xl">
+              <Button variant="authSubmit" onClick={() => setStep('create')} className="w-full h-[50px]">
                 <Home className="w-5 h-5 mr-2" /> Create a Family
               </Button>
-              <Button onClick={() => setStep('join')} variant="outline" className="w-full h-14 text-base font-semibold rounded-xl">
+              <Button
+                onClick={() => setStep('join')}
+                variant="outline"
+                className="w-full h-[50px] text-base font-semibold rounded-[14px] border border-black/10 bg-white shadow-none hover:bg-black/[0.03] dark:bg-card dark:border-white/10 dark:hover:bg-white/5"
+              >
                 <Users className="w-5 h-5 mr-2" /> Join a Family
               </Button>
             </div>
             <button
+              type="button"
               onClick={async () => { await supabase.auth.signOut(); window.location.href = '/login'; }}
-              className="text-xs text-muted-foreground hover:text-foreground mt-4"
+              className="text-xs text-[#64748b] hover:text-[#0d9488] dark:text-slate-400 dark:hover:text-teal-400 mt-5 transition-colors"
             >
               Sign out
             </button>
@@ -218,19 +229,23 @@ export default function Welcome() {
             exit={{ opacity: 0, x: -50 }}
             className="w-full max-w-sm"
           >
-            <button onClick={() => { setStep('welcome'); setError(''); }} className="flex items-center text-muted-foreground mb-6">
+            <button
+              type="button"
+              onClick={() => { setStep('welcome'); setError(''); }}
+              className="flex items-center text-sm text-[#64748b] hover:text-[#0d9488] dark:text-slate-400 dark:hover:text-teal-400 mb-6 transition-colors"
+            >
               <ArrowLeft className="w-4 h-4 mr-1" /> Back
             </button>
             <h2 className="font-heading text-2xl font-bold mb-1">Create Your Family</h2>
-            <p className="text-muted-foreground mb-6">Give your household a name to get started.</p>
-            <div className="space-y-4">
+            <p className="text-[#64748b] dark:text-slate-400 mb-6">Give your household a name to get started.</p>
+            <div className="space-y-5">
               <div>
                 <Label>Family Name</Label>
-                <Input placeholder="e.g. The Johnsons" value={familyName} onChange={(e) => { setFamilyName(e.target.value); setError(''); }} className="h-12 mt-1" />
+                <Input placeholder="e.g. The Johnsons" value={familyName} onChange={(e) => { setFamilyName(e.target.value); setError(''); }} className="auth-screen-input h-12 mt-1" />
               </div>
               <div>
                 <Label>Your Display Name</Label>
-                <Input placeholder="Your name" value={displayName} onChange={(e) => { setDisplayName(e.target.value); setError(''); }} className="h-12 mt-1" />
+                <Input placeholder="Your name" value={displayName} onChange={(e) => { setDisplayName(e.target.value); setError(''); }} className="auth-screen-input h-12 mt-1" />
               </div>
               <div>
                 <Label className="mb-2 block">Pick an Avatar</Label>
@@ -249,7 +264,7 @@ export default function Welcome() {
                 </div>
               </div>
               {error && <p className="text-destructive text-sm">{error}</p>}
-              <Button onClick={handleCreateFamily} disabled={loading} className="w-full h-12 rounded-xl">
+              <Button variant="authSubmit" onClick={handleCreateFamily} disabled={loading} className="w-full">
                 {loading ? 'Creating...' : 'Create Family'} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>
@@ -264,19 +279,23 @@ export default function Welcome() {
             exit={{ opacity: 0, x: -50 }}
             className="w-full max-w-sm"
           >
-            <button onClick={() => { setStep('welcome'); setError(''); }} className="flex items-center text-muted-foreground mb-6">
+            <button
+              type="button"
+              onClick={() => { setStep('welcome'); setError(''); }}
+              className="flex items-center text-sm text-[#64748b] hover:text-[#0d9488] dark:text-slate-400 dark:hover:text-teal-400 mb-6 transition-colors"
+            >
               <ArrowLeft className="w-4 h-4 mr-1" /> Back
             </button>
             <h2 className="font-heading text-2xl font-bold mb-1">Join a Family</h2>
-            <p className="text-muted-foreground mb-6">Enter the invite code shared by your family admin.</p>
-            <div className="space-y-4">
+            <p className="text-[#64748b] dark:text-slate-400 mb-6">Enter the invite code shared by your family admin.</p>
+            <div className="space-y-5">
               <div>
                 <Label>Your Display Name</Label>
-                <Input placeholder="Your name" value={displayName} onChange={(e) => { setDisplayName(e.target.value); setError(''); }} className="h-12 mt-1" />
+                <Input placeholder="Your name" value={displayName} onChange={(e) => { setDisplayName(e.target.value); setError(''); }} className="auth-screen-input h-12 mt-1" />
               </div>
               <div>
                 <Label>Invite Code</Label>
-                <Input placeholder="e.g. HOME-1234" value={inviteCode} onChange={(e) => { setInviteCode(e.target.value); setError(''); }} className="h-12 mt-1" />
+                <Input placeholder="e.g. HOME-1234" value={inviteCode} onChange={(e) => { setInviteCode(e.target.value); setError(''); }} className="auth-screen-input h-12 mt-1" />
               </div>
               <div>
                 <Label className="mb-2 block">Pick an Avatar</Label>
@@ -295,7 +314,7 @@ export default function Welcome() {
                 </div>
               </div>
               {error && <p className="text-destructive text-sm">{error}</p>}
-              <Button onClick={handleJoinFamily} disabled={loading} className="w-full h-12 rounded-xl">
+              <Button variant="authSubmit" onClick={handleJoinFamily} disabled={loading} className="w-full">
                 {loading ? 'Joining...' : 'Join Family'} <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </div>

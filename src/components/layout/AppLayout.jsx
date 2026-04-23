@@ -6,9 +6,9 @@ import UpdateBanner from '@/components/shared/UpdateBanner';
 
 export default function AppLayout() {
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen pb-20">
       <UpdateBanner />
-      <header className="sticky top-0 z-40 border-b border-purple-200/40 dark:border-white/[0.08] bg-background">
+      <header className="sticky top-0 z-40 border-b border-purple-200/40 dark:border-white/[0.08] bg-white/80 backdrop-blur-md dark:bg-background/95 dark:backdrop-blur-md">
         <div className="flex items-center justify-between px-4 h-14 max-w-lg mx-auto">
           <div className="flex items-center gap-1">
             <img

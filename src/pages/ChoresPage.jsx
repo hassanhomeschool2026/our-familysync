@@ -10,10 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import EmptyState from '@/components/shared/EmptyState';
 import SkeletonCard from '@/components/shared/SkeletonCard';
-import { CheckCircle2, Plus, Pencil, Trash2, Flame } from 'lucide-react';
+import { CheckCircle2, Circle, Plus, Pencil, Trash2, Flame } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, isToday, startOfWeek, isAfter, isBefore, startOfMonth, formatDistanceToNow } from 'date-fns';
+import { format, isToday, startOfWeek, isAfter, formatDistanceToNow } from 'date-fns';
 import { playChoreCompleteSound } from '@/lib/sounds';
+import confetti from 'canvas-confetti';
+import { choreNeedsReset } from '@/lib/choresRecurrence';
 
 const UNASSIGNED = '__unassigned__';
 
@@ -80,26 +82,6 @@ function GradientHeaderStarField() {
   );
 }
 
-function choreNeedsReset(chore) {
-  if (!chore.last_reset_at) return true;
-  const last = new Date(chore.last_reset_at);
-  if (Number.isNaN(last.getTime())) return true;
-  const now = new Date();
-  const freq = chore.frequency || 'weekly';
-  if (freq === 'daily') {
-    return !isToday(last);
-  }
-  if (freq === 'weekly') {
-    const weekStart = startOfWeek(now, { weekStartsOn: 0 });
-    return isBefore(last, weekStart);
-  }
-  if (freq === 'monthly') {
-    const monthStart = startOfMonth(now);
-    return isBefore(last, monthStart);
-  }
-  return false;
-}
-
 function memberDisplayName(m) {
   if (!m) return 'Member';
   return m.display_name || m.full_name || m.email || 'Member';
@@ -118,20 +100,6 @@ function choreFrequencyToFormArray(frequency) {
   return [];
 }
 
-async function adjustMemberChorePoints(userId, delta) {
-  if (!userId || delta === 0) return;
-  const { data: profile, error: selErr } = await supabase
-    .from('profiles')
-    .select('chore_points')
-    .eq('id', userId)
-    .maybeSingle();
-  if (selErr) throw selErr;
-  const cur = profile?.chore_points != null ? Number(profile.chore_points) : 0;
-  const next = Math.max(0, cur + delta);
-  const { error: upErr } = await supabase.from('profiles').update({ chore_points: next }).eq('id', userId);
-  if (upErr) throw upErr;
-}
-
 export default function ChoresPage() {
   const { family, currentUser, members, isAdmin, isPremium, getMemberColor, reload } = useFamily();
   const queryClient = useQueryClient();
@@ -145,14 +113,15 @@ export default function ChoresPage() {
     point_value: '1',
   });
 
-  const { data: chores = [], isLoading } = useQuery({
+  const { data: chores = [], isLoading, isError, error } = useQuery({
     queryKey: ['chores', family?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('chores')
         .select('*')
         .eq('family_id', family?.id)
         .order('created_at', { ascending: true });
+      if (error) throw error;
       return data || [];
     },
     enabled: !!family?.id,
@@ -222,6 +191,7 @@ export default function ChoresPage() {
     },
     onSuccess: (_data, { editId }) => {
       queryClient.invalidateQueries({ queryKey: ['chores'] });
+      queryClient.invalidateQueries({ queryKey: ['chores-home'] });
       setShowAddForm(false);
       setEditingChore(null);
       setForm(emptyForm());
@@ -238,6 +208,7 @@ export default function ChoresPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chores'] });
+      queryClient.invalidateQueries({ queryKey: ['chores-home'] });
       toast.success('Removed');
     },
     onError: () => toast.error('Could not delete'),
@@ -245,12 +216,16 @@ export default function ChoresPage() {
 
   const completeChore = useMutation({
     mutationFn: async (chore) => {
+      const uid = currentUser?.id;
+      if (!uid) throw new Error('Not signed in');
+      const completedAt = new Date().toISOString();
+
       const { error: upErr } = await supabase
         .from('chores')
         .update({
           completed: true,
-          completed_by: currentUser.id,
-          completed_at: new Date().toISOString(),
+          completed_by: uid,
+          completed_at: completedAt,
           streak_count: (chore.streak_count || 0) + 1,
         })
         .eq('id', chore.id);
@@ -259,30 +234,49 @@ export default function ChoresPage() {
       const name = memberDisplayName(currentUser);
       await supabase.from('feed_items').insert({
         family_id: family.id,
-        user_id: currentUser.id,
+        user_id: uid,
         user_name: name,
         user_avatar: currentUser.avatar,
         type: 'task_completed',
         message: `${name} completed "${chore.title}"`,
       });
-
-      await adjustMemberChorePoints(currentUser.id, chore.point_value ?? 1);
     },
-    onSuccess: (_data, chore) => {
+    onSuccess: async (_data, chore) => {
       playChoreCompleteSound();
-      queryClient.invalidateQueries({ queryKey: ['chores'] });
-      reload({ silent: true });
-      toast.success(
-        `Great job! +${chore.point_value ?? 1} pts ${String.fromCodePoint(0x1f389)}`
-      );
+      confetti({
+        particleCount: 80,
+        spread: 60,
+        origin: { y: 0.7 },
+        colors: ['#01dcba', '#0ea5e9', '#8b5cf6'],
+      });
+      const uid = currentUser?.id;
+      if (uid) {
+        const add = Number(chore?.point_value ?? 1) || 1;
+        const { data: profile, error: selErr } = await supabase
+          .from('profiles')
+          .select('chore_points')
+          .eq('id', uid)
+          .maybeSingle();
+        if (!selErr) {
+          const cur = profile?.chore_points != null ? Number(profile.chore_points) : 0;
+          await supabase.from('profiles').update({ chore_points: cur + add }).eq('id', uid);
+        }
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['chores'] }),
+        queryClient.invalidateQueries({ queryKey: ['chores-home'] }),
+      ]);
+      await reload({ silent: true });
+      toast.success('Chore completed! 🎉');
     },
     onError: () => toast.error('Could not mark complete'),
   });
 
   const undoCompleteChore = useMutation({
     mutationFn: async (chore) => {
-      const pts = chore.point_value ?? 1;
       const memberId = chore.completed_by;
+      const rawPts = chore.point_value ?? 1;
+      const deduct = Number(rawPts) || 1;
 
       const { error: upErr } = await supabase
         .from('chores')
@@ -296,13 +290,25 @@ export default function ChoresPage() {
       if (upErr) throw upErr;
 
       if (memberId) {
-        await adjustMemberChorePoints(memberId, -pts);
+        const { data: profile, error: selErr } = await supabase
+          .from('profiles')
+          .select('chore_points')
+          .eq('id', memberId)
+          .maybeSingle();
+        if (!selErr) {
+          const cur = profile?.chore_points != null ? Number(profile.chore_points) : 0;
+          const next = Math.max(0, cur - deduct);
+          await supabase.from('profiles').update({ chore_points: next }).eq('id', memberId);
+        }
       }
     },
     onSuccess: async () => {
-      queryClient.invalidateQueries({ queryKey: ['chores'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['chores'] }),
+        queryClient.invalidateQueries({ queryKey: ['chores-home'] }),
+      ]);
       await reload({ silent: true });
-      toast.success('Chore marked incomplete. Points removed.');
+      toast.success('Chore undone. Points removed.');
     },
     onError: () => toast.error('Could not undo completion'),
   });
@@ -310,7 +316,7 @@ export default function ChoresPage() {
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
   const pointsByMember = {};
   for (const c of chores) {
-    if (!c.completed || !c.completed_at) continue;
+    if (!c.completed || !c.completed_at || choreNeedsReset(c)) continue;
     const completedAt = new Date(c.completed_at);
     if (!(isAfter(completedAt, weekStart) || completedAt.getTime() === weekStart.getTime())) continue;
     const uid = c.completed_by;
@@ -374,6 +380,13 @@ export default function ChoresPage() {
   const canOpenNewChore = isPremium || chores.length < 5;
 
   if (isLoading) return <SkeletonCard count={4} />;
+  if (isError) {
+    return (
+      <div className="surface-2 p-4 text-sm text-destructive">
+        Could not load chores{error?.message ? `: ${error.message}` : '.'}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -691,7 +704,11 @@ export default function ChoresPage() {
                         }}
                         aria-label="Mark complete"
                       >
-                        <CheckCircle2 className="w-5 h-5" aria-hidden />
+                        {chore.completed ? (
+                          <CheckCircle2 className="w-6 h-6 text-emerald-500" aria-hidden />
+                        ) : (
+                          <Circle className="w-6 h-6 text-muted-foreground" aria-hidden />
+                        )}
                       </button>
                     )}
                     {isAdmin && (

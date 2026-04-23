@@ -21,6 +21,8 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
+        authSubmit:
+          "min-h-[48px] h-[50px] px-4 rounded-[14px] text-base font-semibold text-white border-0 bg-gradient-to-br from-[#01dcba] to-[#3b82f6] shadow-[0_6px_18px_rgba(0,0,0,0.08)] hover:-translate-y-px hover:shadow-[0_8px_22px_rgba(0,0,0,0.1)] active:translate-y-0 transition-[transform,box-shadow] disabled:hover:translate-y-0",
       },
       size: {
         default: "h-9 px-4 py-2",

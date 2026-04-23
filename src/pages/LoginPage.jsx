@@ -185,11 +185,21 @@ export default function LoginPage() {
     }
   };
 
+  const locationInfo = (
+    <div className="rounded-xl px-3.5 py-3 flex items-start gap-2.5 bg-[rgba(59,130,246,0.08)] dark:bg-blue-500/10">
+      <MapPin className="w-5 h-5 text-[#3b82f6] shrink-0 mt-0.5" aria-hidden />
+      <p className="text-sm text-[#475569] dark:text-slate-300 leading-relaxed">
+        Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
+        after signing in.
+      </p>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-1 mb-2">
+        <div className="text-center mb-6">
+          <div className="flex flex-col items-center justify-center gap-1 mb-4">
             <img
               src="/FSLogoIconOnly-512.png"
               alt="Our FamilySync icon"
@@ -198,19 +208,23 @@ export default function LoginPage() {
             <img
               src="/FSLogo_TitleOnly-512.png"
               alt="Our FamilySync"
-              className="h-14 w-auto object-contain"
+              className="h-11 w-auto object-contain max-w-[220px]"
             />
           </div>
-          <p className="text-muted-foreground text-base">Your family. In sync.</p>
+          <p className="text-[#64748b] dark:text-slate-400 text-base">Your family. In sync.</p>
         </div>
 
-        <div className="flex rounded-xl bg-secondary p-1 mb-6">
+        <div className="flex rounded-full bg-black/5 dark:bg-white/10 p-1 mb-6">
           {['signin', 'signup', 'join'].map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => switchMode(m)}
-              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${mode === m ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}
+              className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-all ${
+                mode === m
+                  ? 'bg-white dark:bg-card text-foreground shadow-[0_2px_8px_rgba(0,0,0,0.08)] scale-[1.02]'
+                  : 'text-[#64748b] dark:text-slate-400'
+              }`}
             >
               {m === 'signin' ? 'Sign In' : m === 'signup' ? 'Sign Up' : 'Join Family'}
             </button>
@@ -218,139 +232,123 @@ export default function LoginPage() {
         </div>
 
         {mode === 'signin' && !forgotMode && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
               <Label>Email</Label>
-              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 mt-1" />
+              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
             <div>
               <Label>Password</Label>
-              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 mt-1" />
+              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
             {signInError && <p className="text-destructive text-sm text-center">{signInError}</p>}
-            <Button onClick={handleSignIn} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+            <Button variant="authSubmit" onClick={handleSignIn} disabled={loading} className="w-full">
               {loading ? 'Please wait...' : 'Sign In'}
             </Button>
-            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
-                after signing in.
-              </p>
-            </div>
-            <button type="button" onClick={() => setForgotMode(true)} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
+            {locationInfo}
+            <button
+              type="button"
+              onClick={() => setForgotMode(true)}
+              className="w-full text-center text-sm text-[#64748b] hover:text-[#0d9488] dark:text-slate-400 dark:hover:text-teal-400 transition-colors"
+            >
               Forgot password?
             </button>
           </div>
         )}
 
         {mode === 'signin' && forgotMode && (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground text-center">Enter your email and we&apos;ll send you a reset link.</p>
+          <div className="space-y-5">
+            <p className="text-sm text-[#64748b] dark:text-slate-400 text-center">Enter your email and we&apos;ll send you a reset link.</p>
             <div>
               <Label>Email</Label>
-              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 mt-1" />
+              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
-            <Button onClick={handleForgotPassword} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+            <Button variant="authSubmit" onClick={handleForgotPassword} disabled={loading} className="w-full">
               {loading ? 'Sending...' : 'Send Reset Link'}
             </Button>
-            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
-                after signing in.
-              </p>
-            </div>
-            <button type="button" onClick={() => setForgotMode(false)} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
+            {locationInfo}
+            <button
+              type="button"
+              onClick={() => setForgotMode(false)}
+              className="w-full text-center text-sm text-[#64748b] hover:text-[#0d9488] dark:text-slate-400 dark:hover:text-teal-400 transition-colors"
+            >
               ← Back to Sign In
             </button>
           </div>
         )}
 
         {mode === 'signup' && (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
               <Label>Email</Label>
-              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 mt-1" />
+              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
             <div>
               <Label>Password</Label>
-              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 mt-1" />
+              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
             <div>
               <Label>Confirm Password</Label>
-              <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-12 mt-1" />
+              <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
             {passwordError && <p className="text-destructive text-sm">{passwordError}</p>}
-            <Button onClick={handleSignUp} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+            <Button variant="authSubmit" onClick={handleSignUp} disabled={loading} className="w-full">
               {loading ? 'Please wait...' : 'Create Account'}
             </Button>
-            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
-                after signing in.
-              </p>
-            </div>
+            {locationInfo}
           </div>
         )}
 
         {mode === 'join' && inviteStep === 'code' && (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground text-center">Enter the invite code sent by your family admin.</p>
+          <div className="space-y-5">
+            <p className="text-sm text-[#64748b] dark:text-slate-400 text-center">Enter the invite code sent by your family admin.</p>
             <div>
               <Label>Invite Code</Label>
               <Input
                 placeholder=""
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                className="h-12 mt-1 tracking-widest font-mono text-center uppercase text-lg"
+                className="auth-screen-input h-12 mt-1 tracking-widest font-mono text-center uppercase text-lg"
                 maxLength={6}
               />
             </div>
-            <Button onClick={handleValidateCode} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+            <Button variant="authSubmit" onClick={handleValidateCode} disabled={loading} className="w-full">
               {loading ? 'Checking...' : 'Next →'}
             </Button>
-            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
-                after signing in.
-              </p>
-            </div>
+            {locationInfo}
           </div>
         )}
 
         {mode === 'join' && inviteStep === 'account' && (
-          <div className="space-y-4">
-            <div className="bg-primary/10 rounded-xl p-3 text-center">
-              <p className="text-sm font-medium text-primary">{'\u{2705}'} Code accepted!</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Joining: <span className="font-semibold">{validatedFamily?.name}</span></p>
+          <div className="space-y-5">
+            <div className="surface-1 p-3.5 text-center border border-black/[0.06] dark:border-white/10">
+              <p className="text-sm font-medium text-[#0d9488] dark:text-teal-400">{'\u{2705}'} Code accepted!</p>
+              <p className="text-xs text-[#475569] dark:text-slate-400 mt-1">
+                Joining: <span className="font-semibold text-foreground">{validatedFamily?.name}</span>
+              </p>
             </div>
             <div>
               <Label>Email</Label>
-              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-12 mt-1" />
+              <Input type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
             <div>
               <Label>Password</Label>
-              <Input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 mt-1" />
+              <Input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
             <div>
               <Label>Confirm Password</Label>
-              <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-12 mt-1" />
+              <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
             {passwordError && <p className="text-destructive text-sm">{passwordError}</p>}
-            <Button onClick={handleJoinSubmit} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+            <Button variant="authSubmit" onClick={handleJoinSubmit} disabled={loading} className="w-full">
               {loading ? 'Joining...' : 'Create Account & Join'}
             </Button>
-            <div className="mt-4 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
-                after signing in.
-              </p>
-            </div>
-            <button type="button" onClick={() => setInviteStep('code')} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
+            {locationInfo}
+            <button
+              type="button"
+              onClick={() => setInviteStep('code')}
+              className="w-full text-center text-sm text-[#64748b] hover:text-[#0d9488] dark:text-slate-400 dark:hover:text-teal-400 transition-colors"
+            >
               ← Back
             </button>
           </div>

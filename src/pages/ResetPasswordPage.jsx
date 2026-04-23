@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Home } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ResetPasswordPage() {
@@ -50,31 +49,37 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
-            <Home className="w-10 h-10 text-primary" />
+        <div className="text-center mb-6">
+          <div className="flex flex-col items-center justify-center gap-1 mb-4">
+            <img
+              src="/FSLogoIconOnly-512.png"
+              alt="Our FamilySync icon"
+              className="h-16 w-16 object-contain"
+            />
+            <img
+              src="/FSLogo_TitleOnly-512.png"
+              alt="Our FamilySync"
+              className="h-11 w-auto object-contain max-w-[220px]"
+            />
           </div>
-          <h1 className="font-heading text-3xl font-extrabold text-foreground mb-2">
-            Our <span className="text-primary">Family</span>Sync
-          </h1>
-          <p className="text-muted-foreground text-base">Reset your password</p>
+          <p className="text-[#64748b] dark:text-slate-400 text-base">Reset your password</p>
         </div>
         {done ? (
-          <p className="text-center text-sm text-muted-foreground">Password updated! Redirecting...</p>
+          <p className="text-center text-sm text-[#64748b] dark:text-slate-400">Password updated! Redirecting...</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
               <Label>New Password</Label>
-              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="h-12 mt-1" />
+              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
             <div>
               <Label>Confirm Password</Label>
-              <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="h-12 mt-1" />
+              <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
             </div>
             {passwordError && <p className="text-destructive text-sm">{passwordError}</p>}
-            <Button onClick={handleReset} disabled={loading} className="w-full h-12 rounded-xl text-base font-semibold">
+            <Button variant="authSubmit" onClick={handleReset} disabled={loading} className="w-full">
               {loading ? 'Updating...' : 'Update Password'}
             </Button>
           </div>

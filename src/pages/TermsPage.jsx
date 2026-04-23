@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 export default function TermsPage() {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen bg-background px-5 py-8 max-w-2xl mx-auto">
+    <div className="min-h-screen px-5 py-8 max-w-2xl mx-auto">
       <button
         type="button"
         onClick={() => navigate(-1)}
