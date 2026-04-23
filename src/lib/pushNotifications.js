@@ -33,14 +33,14 @@ async function restUpsertPushSubscription(supabase, { userId, familyId, endpoint
   }
 
   const res = await fetch(
-    `${supabaseUrl}/rest/v1/push_subscriptions?on_conflict=user_id,endpoint`,
+    `${supabaseUrl}/rest/v1/push_subscriptions?on_conflict=endpoint`,
     {
       method: 'POST',
       headers: {
         apikey: anonKey,
         Authorization: `Bearer ${session.access_token}`,
         'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates,return=minimal',
+        Prefer: 'resolution=merge-duplicates',
       },
       body: JSON.stringify({
         user_id: userId,
