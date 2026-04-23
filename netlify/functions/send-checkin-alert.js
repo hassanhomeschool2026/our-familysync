@@ -144,49 +144,48 @@ exports.handler = async function (event, context) {
     url: '/checkin',
   });
 
-  let sent = 0;
-  const subsList = subs || [];
-
-  for (const sub of subsList) {
-    if (!sub?.endpoint || !sub?.p256dh || !sub?.auth) {
-      console.log('[checkin-alert] skip invalid subscription (missing endpoint/keys)');
-      continue;
-    }
-    const prefs = prefsByUserId.get(sub.user_id) || {};
-    if (prefs.checkin_notifications === false) {
-      console.log('[checkin-alert] skip opted out checkin_notifications user_id:', sub.user_id);
-      continue;
-    }
-    try {
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        payload
-      );
-      sent++;
-      console.log('[checkin-alert] sent to:', sub.endpoint.slice(0, 50));
-    } catch (err) {
-      console.error('[checkin-alert] FAILED for:', sub.endpoint, 'status:', err.statusCode, err.body);
-
-      // 410 = subscription expired/invalid — delete it from DB
-      if (err.statusCode === 410) {
-        console.log('[checkin-alert] Removing stale subscription:', sub.endpoint);
-        await fetch(
-          `${supabaseUrl}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(sub.endpoint)}`,
-          {
-            method: 'DELETE',
-            headers: {
-              apikey: serviceKey,
-              Authorization: `Bearer ${serviceKey}`,
-            },
-          }
-        );
+  const results = await Promise.allSettled(
+    (subs || []).map(async (sub) => {
+      if (!sub?.endpoint || !sub?.p256dh || !sub?.auth) {
+        return { sent: false };
       }
-    }
-  }
+      const prefs = prefsByUserId.get(sub.user_id) || {};
+      if (prefs.checkin_notifications === false) {
+        return { sent: false };
+      }
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
+        console.log('[checkin-alert] sent to:', sub.endpoint.slice(0, 50));
+        return { sent: true };
+      } catch (err) {
+        console.error('[checkin-alert] FAILED for:', sub.endpoint, 'status:', err.statusCode, err.body);
+
+        // 410 = subscription expired/invalid — delete it from DB
+        if (err.statusCode === 410) {
+          console.log('[checkin-alert] Removing stale subscription:', sub.endpoint);
+          await fetch(
+            `${supabaseUrl}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(sub.endpoint)}`,
+            {
+              method: 'DELETE',
+              headers: {
+                apikey: serviceKey,
+                Authorization: `Bearer ${serviceKey}`,
+              },
+            }
+          );
+        }
+        return { sent: false };
+      }
+    })
+  );
+  const sent = results.filter((r) => r.status === 'fulfilled' && r.value?.sent).length;
 
   return {
     statusCode: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sent, attempted: subsList.length }),
+    body: JSON.stringify({ sent, attempted: results.length }),
   };
 };

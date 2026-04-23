@@ -444,11 +444,11 @@ export default function CheckInPage() {
       try {
         const pushRes = await fetch(checkinAlertUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             family_id: family.id,
             user_id: currentUser.id,
-            user_name: currentUser.display_name || currentUser.full_name,
+            user_name:
+              currentUser.display_name || currentUser.full_name || currentUser.email,
             location: data.location,
           }),
         });
