@@ -139,10 +139,30 @@ exports.handler = async (event) => {
         url: '/feed',
       });
 
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        payload
-      );
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
+      } catch (err) {
+        console.error('[daily-reminder] FAILED for:', sub.endpoint, 'status:', err.statusCode, err.body);
+
+        // 410 = subscription expired/invalid — delete it from DB
+        if (err.statusCode === 410) {
+          console.log('[daily-reminder] Removing stale subscription:', sub.endpoint);
+          await fetch(
+            `${supabaseUrl}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(sub.endpoint)}`,
+            {
+              method: 'DELETE',
+              headers: {
+                apikey: serviceKey,
+                Authorization: `Bearer ${serviceKey}`,
+              },
+            }
+          );
+        }
+        throw err;
+      }
       return { outcome: 'sent' };
     })
   );

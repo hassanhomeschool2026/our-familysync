@@ -151,10 +151,30 @@ exports.handler = async function (event, context) {
         return { sent: false };
       }
       console.log('[Alert] Sending to endpoint:', sub.endpoint?.slice(0, 50));
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        payload
-      );
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
+      } catch (err) {
+        console.error('[Alert] FAILED for:', sub.endpoint, 'status:', err.statusCode, err.body);
+
+        // 410 = subscription expired/invalid — delete it from DB
+        if (err.statusCode === 410) {
+          console.log('[Alert] Removing stale subscription:', sub.endpoint);
+          await fetch(
+            `${supabaseUrl}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(sub.endpoint)}`,
+            {
+              method: 'DELETE',
+              headers: {
+                apikey: serviceKey,
+                Authorization: `Bearer ${serviceKey}`,
+              },
+            }
+          );
+        }
+        throw err;
+      }
       console.log('[Alert] Sent successfully');
       return { sent: true };
     })

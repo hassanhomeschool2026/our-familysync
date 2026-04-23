@@ -165,14 +165,22 @@ exports.handler = async function (event, context) {
       sent++;
       console.log('[checkin-alert] sent to:', sub.endpoint.slice(0, 50));
     } catch (err) {
-      console.error(
-        '[checkin-alert] FAILED for:',
-        sub.endpoint.slice(0, 50),
-        'status:',
-        err.statusCode,
-        'message:',
-        err.message
-      );
+      console.error('[checkin-alert] FAILED for:', sub.endpoint, 'status:', err.statusCode, err.body);
+
+      // 410 = subscription expired/invalid — delete it from DB
+      if (err.statusCode === 410) {
+        console.log('[checkin-alert] Removing stale subscription:', sub.endpoint);
+        await fetch(
+          `${supabaseUrl}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(sub.endpoint)}`,
+          {
+            method: 'DELETE',
+            headers: {
+              apikey: serviceKey,
+              Authorization: `Bearer ${serviceKey}`,
+            },
+          }
+        );
+      }
     }
   }
 
