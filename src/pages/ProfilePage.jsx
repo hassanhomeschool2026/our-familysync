@@ -12,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { MEMBER_COLORS } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import {
-  Settings, Shield, LogOut, Crown, Bell, ChevronRight, Trash2, Camera, X, Sun, Moon, Monitor, Check,
+  Settings, Shield, LogOut, Crown, Bell, ChevronRight, ChevronDown, Trash2, Camera, X, Sun, Moon, Monitor, Check,
 } from 'lucide-react';
 
 const sectionHeaderBarStyle = {
@@ -465,22 +465,13 @@ export default function ProfilePage() {
         </div>
         <div
           onClick={() => setShowNotifPrefs(!showNotifPrefs)}
-          className="relative flex items-center justify-between w-full overflow-hidden text-left transition-opacity hover:opacity-95 cursor-pointer"
-          style={sectionHeaderBarStyle}
+          className="flex items-center justify-between w-full p-4 hover:bg-secondary/50 transition-colors cursor-pointer"
         >
-          <GradientHeaderStarField />
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={sectionHeaderOverlayStyle}
-            aria-hidden
-          />
-          <div className="relative z-[1] flex items-center gap-3">
-            <Bell className="w-5 h-5 shrink-0 text-[rgba(255,255,255,0.9)]" />
-            <span className="text-sm font-medium text-white">Notification Preferences</span>
+          <div className="flex items-center gap-3">
+            <Bell className="w-5 h-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Notification Preferences</span>
           </div>
-          <ChevronRight
-            className={`relative z-[1] w-4 h-4 shrink-0 text-[rgba(255,255,255,0.9)] transition-transform ${showNotifPrefs ? 'rotate-90' : ''}`}
-          />
+          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showNotifPrefs ? 'rotate-180' : ''}`} />
         </div>
 
         {showNotifPrefs && (

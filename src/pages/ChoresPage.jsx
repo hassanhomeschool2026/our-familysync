@@ -118,8 +118,22 @@ function choreFrequencyToFormArray(frequency) {
   return [];
 }
 
+async function adjustMemberChorePoints(userId, delta) {
+  if (!userId || delta === 0) return;
+  const { data: profile, error: selErr } = await supabase
+    .from('profiles')
+    .select('chore_points')
+    .eq('id', userId)
+    .maybeSingle();
+  if (selErr) throw selErr;
+  const cur = profile?.chore_points != null ? Number(profile.chore_points) : 0;
+  const next = Math.max(0, cur + delta);
+  const { error: upErr } = await supabase.from('profiles').update({ chore_points: next }).eq('id', userId);
+  if (upErr) throw upErr;
+}
+
 export default function ChoresPage() {
-  const { family, currentUser, members, isAdmin, isPremium, getMemberColor } = useFamily();
+  const { family, currentUser, members, isAdmin, isPremium, getMemberColor, reload } = useFamily();
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingChore, setEditingChore] = useState(null);
@@ -251,15 +265,46 @@ export default function ChoresPage() {
         type: 'task_completed',
         message: `${name} completed "${chore.title}"`,
       });
+
+      await adjustMemberChorePoints(currentUser.id, chore.point_value ?? 1);
     },
     onSuccess: (_data, chore) => {
       playChoreCompleteSound();
       queryClient.invalidateQueries({ queryKey: ['chores'] });
+      reload({ silent: true });
       toast.success(
         `Great job! +${chore.point_value ?? 1} pts ${String.fromCodePoint(0x1f389)}`
       );
     },
     onError: () => toast.error('Could not mark complete'),
+  });
+
+  const undoCompleteChore = useMutation({
+    mutationFn: async (chore) => {
+      const pts = chore.point_value ?? 1;
+      const memberId = chore.completed_by;
+
+      const { error: upErr } = await supabase
+        .from('chores')
+        .update({
+          completed: false,
+          completed_at: null,
+          completed_by: null,
+          streak_count: Math.max(0, (chore.streak_count || 0) - 1),
+        })
+        .eq('id', chore.id);
+      if (upErr) throw upErr;
+
+      if (memberId) {
+        await adjustMemberChorePoints(memberId, -pts);
+      }
+    },
+    onSuccess: async () => {
+      queryClient.invalidateQueries({ queryKey: ['chores'] });
+      await reload({ silent: true });
+      toast.success('Chore marked incomplete. Points removed.');
+    },
+    onError: () => toast.error('Could not undo completion'),
   });
 
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 0 });
@@ -631,7 +676,24 @@ export default function ChoresPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
+                    {canComplete(chore) && (
+                      <button
+                        type="button"
+                        className="w-9 h-9 rounded-full flex items-center justify-center bg-emerald-50 text-emerald-600 border border-emerald-200 disabled:opacity-50 disabled:pointer-events-none shrink-0"
+                        disabled={
+                          completeChore.isPending ||
+                          (chore.completed && choreNeedsReset(chore))
+                        }
+                        onClick={() => {
+                          if (chore.completed && choreNeedsReset(chore)) return;
+                          completeChore.mutate(chore);
+                        }}
+                        aria-label="Mark complete"
+                      >
+                        <CheckCircle2 className="w-5 h-5" aria-hidden />
+                      </button>
+                    )}
                     {isAdmin && (
                       <>
                         <Button
@@ -659,25 +721,6 @@ export default function ChoresPage() {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </>
-                    )}
-                    {canComplete(chore) && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-primary"
-                        disabled={
-                          completeChore.isPending ||
-                          (chore.completed && choreNeedsReset(chore))
-                        }
-                        onClick={() => {
-                          if (chore.completed && choreNeedsReset(chore)) return;
-                          completeChore.mutate(chore);
-                        }}
-                        aria-label="Mark complete"
-                      >
-                        <CheckCircle2 className="w-6 h-6" />
-                      </Button>
                     )}
                   </div>
                 </li>
@@ -722,14 +765,28 @@ export default function ChoresPage() {
                   key={chore.id}
                   className="surface-2 px-3 py-2 text-sm text-muted-foreground"
                 >
-                  <p className="line-through text-foreground/70">{chore.title}</p>
-                  <p className="mt-1 text-xs">
-                    {by ? memberDisplayName(by) : 'Someone'} · {when}
-                    {' · '}
-                    <span>
-                      {String.fromCodePoint(0x2b50)} {chore.point_value ?? 1} pts
-                    </span>
-                  </p>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="line-through text-foreground/70">{chore.title}</p>
+                      <p className="mt-1 text-xs">
+                        {by ? memberDisplayName(by) : 'Someone'} · {when}
+                        {' · '}
+                        <span>
+                          {String.fromCodePoint(0x2b50)} {chore.point_value ?? 1} pts
+                        </span>
+                      </p>
+                    </div>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        className="text-xs text-amber-600 border border-amber-200 bg-amber-50 rounded-full px-2 py-1 font-medium shrink-0 disabled:opacity-50"
+                        onClick={() => undoCompleteChore.mutate(chore)}
+                        disabled={undoCompleteChore.isPending}
+                      >
+                        Undo
+                      </button>
+                    )}
+                  </div>
                 </li>
               );
             })}
