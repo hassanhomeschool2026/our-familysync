@@ -1,4 +1,4 @@
-const CACHE_NAME = 'familysync-v1';
+const CACHE_NAME = 'familysync-v2';
 const STATIC_ASSETS = ['/', '/checkin', '/calendar', '/todo', '/chores', '/feed'];
 
 self.addEventListener('install', (event) => {
