@@ -722,6 +722,31 @@ export default function CheckInPage() {
       )}
 
       <div
+        className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3"
+        style={{
+          background: 'rgba(1, 220, 186, 0.08)',
+          border: '1px solid rgba(1, 220, 186, 0.25)',
+        }}
+      >
+        <span
+          className="shrink-0"
+          style={{
+            background: 'rgba(14, 165, 233, 0.12)',
+            color: '#0284c7',
+            borderRadius: 999,
+            padding: '2px 10px',
+            fontSize: 12,
+            fontWeight: 500,
+          }}
+        >
+          Improving
+        </span>
+        <p className="text-xs" style={{ color: '#1f2937' }}>
+          Stay connected with live tracking, zones, and check-ins. Real-time updates are getting even better!
+        </p>
+      </div>
+
+      <div
         style={{
           background: 'white',
           borderRadius: 16,

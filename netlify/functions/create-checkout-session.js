@@ -74,6 +74,7 @@ exports.handler = async (event) => {
       customer_email: email,
       line_items: [{ price: priceId, quantity: 1 }],
       metadata: { userId: userId != null ? String(userId) : '' },
+      allow_promotion_codes: true,
       success_url: `${origin}/upgrade?success=true`,
       cancel_url: `${origin}/upgrade?cancelled=true`,
     };
@@ -81,6 +82,7 @@ exports.handler = async (event) => {
     const trimmedPromo =
       typeof promoCode === 'string' && promoCode.trim() !== '' ? promoCode.trim() : '';
     if (trimmedPromo) {
+      delete sessionParams.allow_promotion_codes;
       sessionParams.discounts = [{ coupon: trimmedPromo }];
     }
 

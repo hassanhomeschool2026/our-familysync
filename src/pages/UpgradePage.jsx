@@ -128,7 +128,7 @@ export default function UpgradePage() {
         </div>
         <h1 className="font-heading text-2xl font-extrabold text-foreground">Upgrade to Premium</h1>
         <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-          Unlock powerful features that keep your family connected and safe.
+        Unlock powerful features that helpkeep your family connected and in sync.
         </p>
       </div>
 
@@ -181,7 +181,7 @@ export default function UpgradePage() {
             </div>
             <h2 className="font-heading text-2xl font-bold text-white">Premium</h2>
             <p className="text-white/80 text-xs mt-1 max-w-sm mx-auto">
-              Everything in Free, plus advanced tools for a safer, smarter family.
+            Everything in Free, plus powerful tools for a more connected, organized family.
             </p>
           </div>
 

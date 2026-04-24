@@ -178,6 +178,11 @@ export default function GeofencePage({ embedded = false }) {
         Get notified when family members arrive or leave saved zones.
       </p>
 
+      <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3">
+        <span className="text-amber-500 text-xs font-bold uppercase tracking-wide">Beta</span>
+        <p className="text-xs text-amber-700">Live tracking and geofence zones are in beta. Full real-time tracking is coming in our native app.</p>
+      </div>
+
       {showForm && isAdmin && (
         <div className="bg-gradient-to-br from-card to-[#2f9db6]/[0.05] border border-border rounded-xl p-4 space-y-3">
           <h3 className="font-semibold text-sm">New Geofence Zone</h3>
