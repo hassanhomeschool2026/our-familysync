@@ -14,7 +14,11 @@ export const MEMBER_COLORS = [
   { label: 'Rose',    value: '#e11d48', bg: 'bg-rose-600',    text: 'text-rose-600',    border: 'border-rose-600',    light: 'bg-rose-100' },
 ];
 
-export const AVATARS = ['😊','😎','🤗','👨','👩','👦','👧','👶','🧑','👴','👵','🐱','🐶','🦊','🐻','🌸','🌟','🏠','❤️','🎉'];
+export const AVATARS = [
+  'Star', 'Heart', 'Sun', 'Moon', 'Flower2', 'Leaf', 'Sparkles',
+  'Cloud', 'Snowflake', 'Flame', 'Zap', 'Rainbow', 'Crown',
+  'Diamond', 'Music', 'Smile', 'Ghost', 'Rocket', 'Shield', 'Home',
+];
 
 export function getColorObj(hex) {
   return MEMBER_COLORS.find(c => c.value === hex) || MEMBER_COLORS[0];

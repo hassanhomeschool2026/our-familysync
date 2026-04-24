@@ -21,6 +21,19 @@ export default function LoginPage() {
   const [signInError, setSignInError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showVerifyMessage, setShowVerifyMessage] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState('');
+
+  const isEmailAlreadyInUseError = (e) => {
+    const status = e?.status ?? e?.statusCode;
+    if (status === 422) return true;
+    const msg = (e?.message || String(e) || '').toLowerCase();
+    return (
+      msg.includes('already registered') ||
+      msg.includes('already exists') ||
+      msg.includes('user already')
+    );
+  };
 
   const handleValidateCode = async () => {
     if (!inviteCode.trim()) {
@@ -106,8 +119,7 @@ export default function LoginPage() {
       toast.success('Welcome to the family!');
       window.location.href = '/';
     } catch (e) {
-      const msg = (e?.message || String(e) || '').toLowerCase();
-      if (msg.includes('already registered') || msg.includes('already exists')) {
+      if (isEmailAlreadyInUseError(e)) {
         toast.error('An account with this email already exists. Try signing in instead.');
       } else {
         toast.error('Something went wrong. Please try again.');
@@ -149,11 +161,10 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-      toast.success('Account created! Please sign in.');
-      setMode('signin');
+      setVerifyEmail(email.trim());
+      setShowVerifyMessage(true);
     } catch (e) {
-      const msg = (e?.message || String(e) || '').toLowerCase();
-      if (msg.includes('already registered') || msg.includes('already exists')) {
+      if (isEmailAlreadyInUseError(e)) {
         toast.error('An account with this email already exists. Try signing in instead.');
       } else {
         toast.error('Something went wrong. Please try again.');
@@ -161,6 +172,11 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const goToSignInAfterVerify = () => {
+    setShowVerifyMessage(false);
+    setMode('signin');
   };
 
   const switchMode = (m) => {
@@ -176,6 +192,8 @@ export default function LoginPage() {
     setSignInError('');
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setShowVerifyMessage(false);
+    setVerifyEmail('');
   };
 
   const handleForgotPassword = async () => {
@@ -307,7 +325,25 @@ export default function LoginPage() {
           </div>
         )}
 
-        {mode === 'signup' && (
+        {mode === 'signup' && showVerifyMessage && (
+          <div
+            className="rounded-2xl border border-[#0d9488]/20 bg-gradient-to-b from-[#ecfdf5]/90 to-white dark:from-teal-950/40 dark:to-card p-5 shadow-sm space-y-4 text-center"
+            role="status"
+            aria-live="polite"
+          >
+            <p className="text-sm text-foreground leading-relaxed">
+              <span className="font-heading font-bold text-[#0d9488] dark:text-teal-400">Almost there! </span>
+              We sent a verification link to{' '}
+              <span className="font-semibold text-foreground break-all">{verifyEmail}</span>. Please check your
+              inbox and click the link to activate your account.
+            </p>
+            <Button variant="authSubmit" onClick={goToSignInAfterVerify} className="w-full">
+              Back to Sign In
+            </Button>
+          </div>
+        )}
+
+        {mode === 'signup' && !showVerifyMessage && (
           <div className="space-y-5">
             <div>
               <Label>Email</Label>

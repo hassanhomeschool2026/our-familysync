@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Home, Users, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MEMBER_COLORS, AVATARS, generateInviteCode } from '@/lib/memberColors';
+import AvatarIconGrid from '@/components/shared/AvatarIconGrid';
 export default function Welcome() {
   const navigate = useNavigate();
   const { currentUser, reload } = useFamily();
@@ -249,11 +250,7 @@ export default function Welcome() {
               </div>
               <div>
                 <Label className="mb-2 block">Pick an Avatar</Label>
-                <div className="flex flex-wrap gap-2">
-                  {AVATARS.map((a) => (
-                    <button key={a} onClick={() => setSelectedAvatar(a)} className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center ${selectedAvatar === a ? 'bg-primary/20 ring-2 ring-primary' : 'bg-secondary'}`}>{a}</button>
-                  ))}
-                </div>
+                <AvatarIconGrid value={selectedAvatar} onChange={setSelectedAvatar} />
               </div>
               <div>
                 <Label className="mb-2 block">Pick a Color</Label>
@@ -299,11 +296,7 @@ export default function Welcome() {
               </div>
               <div>
                 <Label className="mb-2 block">Pick an Avatar</Label>
-                <div className="flex flex-wrap gap-2">
-                  {AVATARS.map((a) => (
-                    <button key={a} onClick={() => setSelectedAvatar(a)} className={`w-10 h-10 rounded-xl text-xl flex items-center justify-center ${selectedAvatar === a ? 'bg-primary/20 ring-2 ring-primary' : 'bg-secondary'}`}>{a}</button>
-                  ))}
-                </div>
+                <AvatarIconGrid value={selectedAvatar} onChange={setSelectedAvatar} />
               </div>
               <div>
                 <Label className="mb-2 block">Pick a Color</Label>

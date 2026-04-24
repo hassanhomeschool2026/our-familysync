@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { MEMBER_COLORS } from '@/lib/memberColors';
+import { AVATARS, MEMBER_COLORS } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
+import AvatarIconGrid from '@/components/shared/AvatarIconGrid';
 import {
   Settings, Shield, LogOut, Crown, Bell, ChevronRight, ChevronDown, Trash2, Camera, X, Sun, Moon, Monitor, Check,
 } from 'lucide-react';
@@ -112,6 +113,7 @@ export default function ProfilePage() {
         : 'denied'
   );
   const [enablingNotif, setEnablingNotif] = useState(false);
+  const [editAvatar, setEditAvatar] = useState(AVATARS[0]);
 
   const prefs = currentUser?.notification_prefs || {};
 
@@ -131,7 +133,7 @@ export default function ProfilePage() {
     setSaving(true);
     await supabase
       .from('profiles')
-      .update({ display_name: displayName, member_color: color })
+      .update({ display_name: displayName, member_color: color, avatar: editAvatar })
       .eq('id', currentUser.id);
     await reload();
     setSaving(false);
@@ -339,7 +341,18 @@ export default function ProfilePage() {
         </div>
 
         {!editing ? (
-          <Button variant="outline" onClick={() => setEditing(true)} className="w-full mt-4 rounded-xl">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setEditAvatar(
+                currentUser?.avatar && AVATARS.includes(currentUser.avatar)
+                  ? currentUser.avatar
+                  : AVATARS[0]
+              );
+              setEditing(true);
+            }}
+            className="w-full mt-4 rounded-xl"
+          >
             <Settings className="w-4 h-4 mr-2" /> Edit Profile
           </Button>
         ) : (
@@ -347,6 +360,10 @@ export default function ProfilePage() {
             <div>
               <Label>Display Name</Label>
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1" />
+            </div>
+            <div>
+              <Label className="mb-2 block">Avatar</Label>
+              <AvatarIconGrid value={editAvatar} onChange={setEditAvatar} />
             </div>
             {(avatarUrl || currentUser?.avatar_url) && (
               <button
