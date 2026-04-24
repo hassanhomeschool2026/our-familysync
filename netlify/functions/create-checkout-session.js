@@ -1,6 +1,22 @@
+function getRequestOrigin(event) {
+  const h = event.headers || {};
+  const direct = h.origin || h.Origin;
+  if (direct) return String(direct).replace(/\/$/, '');
+  const host = String(h['x-forwarded-host'] || h.Host || h.host || '')
+    .split(',')[0]
+    .trim();
+  if (!host) return null;
+  const proto = String(h['x-forwarded-proto'] || 'https')
+    .split(',')[0]
+    .trim();
+  return `${proto}://${host}`;
+}
+
 exports.handler = async (event) => {
+  const jsonHeaders = { 'Content-Type': 'application/json' };
+
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers: jsonHeaders, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
   try {
@@ -8,8 +24,8 @@ exports.handler = async (event) => {
     console.log('isBase64Encoded:', event.isBase64Encoded);
 
     const bodyStr = event.isBase64Encoded
-      ? Buffer.from(event.body, 'base64').toString('utf8')
-      : event.body;
+      ? Buffer.from(event.body || '', 'base64').toString('utf8')
+      : event.body || '{}';
 
     console.log('Parsed body string:', bodyStr);
 
@@ -23,7 +39,29 @@ exports.handler = async (event) => {
     if (!priceId) {
       return {
         statusCode: 400,
+        headers: jsonHeaders,
         body: JSON.stringify({ error: 'priceId is required' }),
+      };
+    }
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY is not set');
+      return {
+        statusCode: 500,
+        headers: jsonHeaders,
+        body: JSON.stringify({ error: 'Stripe is not configured on the server' }),
+      };
+    }
+
+    const origin = getRequestOrigin(event);
+    if (!origin) {
+      console.error('Could not resolve request origin from headers:', Object.keys(event.headers || {}));
+      return {
+        statusCode: 500,
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          error: 'Could not build checkout redirect URLs (missing Origin/Host).',
+        }),
       };
     }
 
@@ -35,9 +73,9 @@ exports.handler = async (event) => {
       mode: 'subscription',
       customer_email: email,
       line_items: [{ price: priceId, quantity: 1 }],
-      metadata: { userId },
-      success_url: `${event.headers.origin}/upgrade?success=true`,
-      cancel_url: `${event.headers.origin}/upgrade?cancelled=true`,
+      metadata: { userId: userId != null ? String(userId) : '' },
+      success_url: `${origin}/upgrade?success=true`,
+      cancel_url: `${origin}/upgrade?cancelled=true`,
     };
 
     const trimmedPromo =
@@ -52,13 +90,15 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
+      headers: jsonHeaders,
       body: JSON.stringify({ url: session.url }),
     };
   } catch (error) {
-    console.error('Full error:', error.message);
+    console.error('Full error:', error.message, error.type || '', error.code || '');
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      headers: jsonHeaders,
+      body: JSON.stringify({ error: error.message || 'Checkout failed' }),
     };
   }
 };

@@ -248,8 +248,8 @@ export default function UpgradePage() {
               onClick={() =>
                 handleCheckout(
                   billingCycle === 'monthly'
-                    ? 'price_1TMdjsCh1f5OvEBZH8Y3XVGg'
-                    : 'price_1TMdlACh1f5OvEBZ0OCECvbq',
+                    ? import.meta.env.VITE_STRIPE_MONTHLY_PRICE_ID
+                    : import.meta.env.VITE_STRIPE_YEARLY_PRICE_ID,
                   billingCycle
                 )
               }
