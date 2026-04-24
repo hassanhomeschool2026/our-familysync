@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin } from 'lucide-react';
+import { MapPin, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { generateInviteCode } from '@/lib/memberColors';
 
@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [forgotMode, setForgotMode] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [signInError, setSignInError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleValidateCode = async () => {
     if (!inviteCode.trim()) {
@@ -104,7 +106,12 @@ export default function LoginPage() {
       toast.success('Welcome to the family!');
       window.location.href = '/';
     } catch (e) {
-      toast.error('Invalid email or password. Please try again.');
+      const msg = (e?.message || String(e) || '').toLowerCase();
+      if (msg.includes('already registered') || msg.includes('already exists')) {
+        toast.error('An account with this email already exists. Try signing in instead.');
+      } else {
+        toast.error('Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -122,7 +129,7 @@ export default function LoginPage() {
       if (error) throw error;
       window.location.href = '/';
     } catch (e) {
-      setSignInError('Invalid email or password. Please try again.');
+      setSignInError('Incorrect email or password. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -145,7 +152,12 @@ export default function LoginPage() {
       toast.success('Account created! Please sign in.');
       setMode('signin');
     } catch (e) {
-      toast.error('Something went wrong. Please try again.');
+      const msg = (e?.message || String(e) || '').toLowerCase();
+      if (msg.includes('already registered') || msg.includes('already exists')) {
+        toast.error('An account with this email already exists. Try signing in instead.');
+      } else {
+        toast.error('Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -162,6 +174,8 @@ export default function LoginPage() {
     setForgotMode(false);
     setPasswordError('');
     setSignInError('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleForgotPassword = async () => {
@@ -239,9 +253,25 @@ export default function LoginPage() {
             </div>
             <div>
               <Label>Password</Label>
-              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
+              <div className="relative mt-1">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="auth-screen-input h-12 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-[#64748b] hover:text-foreground dark:text-slate-400 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {signInError && <p className="text-destructive text-sm mt-1.5">{signInError}</p>}
             </div>
-            {signInError && <p className="text-destructive text-sm text-center">{signInError}</p>}
             <Button variant="authSubmit" onClick={handleSignIn} disabled={loading} className="w-full">
               {loading ? 'Please wait...' : 'Sign In'}
             </Button>
@@ -285,11 +315,43 @@ export default function LoginPage() {
             </div>
             <div>
               <Label>Password</Label>
-              <Input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
+              <div className="relative mt-1">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="auth-screen-input h-12 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-[#64748b] hover:text-foreground dark:text-slate-400 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <div>
               <Label>Confirm Password</Label>
-              <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
+              <div className="relative mt-1">
+                <Input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="auth-screen-input h-12 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-[#64748b] hover:text-foreground dark:text-slate-400 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             {passwordError && <p className="text-destructive text-sm">{passwordError}</p>}
             <Button variant="authSubmit" onClick={handleSignUp} disabled={loading} className="w-full">
@@ -333,11 +395,43 @@ export default function LoginPage() {
             </div>
             <div>
               <Label>Password</Label>
-              <Input type="password" placeholder="Create a password" value={password} onChange={(e) => setPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
+              <div className="relative mt-1">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="auth-screen-input h-12 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-[#64748b] hover:text-foreground dark:text-slate-400 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             <div>
               <Label>Confirm Password</Label>
-              <Input type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="auth-screen-input h-12 mt-1" />
+              <div className="relative mt-1">
+                <Input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="auth-screen-input h-12 pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md text-[#64748b] hover:text-foreground dark:text-slate-400 dark:hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
             {passwordError && <p className="text-destructive text-sm">{passwordError}</p>}
             <Button variant="authSubmit" onClick={handleJoinSubmit} disabled={loading} className="w-full">
