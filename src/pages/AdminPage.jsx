@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useFamily } from '@/lib/familyContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -86,7 +86,7 @@ function GradientHeaderStarField() {
 }
 
 export default function AdminPage() {
-  const { family, setFamily, members, setMembers, currentUser, isAdmin, reload } = useFamily();
+  const { family, setFamily, members, setMembers, currentUser, isAdmin, reload, isPremium } = useFamily();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [familyName, setFamilyName] = useState('');
@@ -330,21 +330,31 @@ export default function AdminPage() {
             Send Family Update
           </p>
         </div>
-        <Textarea
-          value={alertMessage}
-          onChange={(e) => setAlertMessage(e.target.value)}
-          placeholder="Type a message to broadcast to all family members..."
-          rows={3}
-        />
-        <Button
-          onClick={sendFamilyAlert}
-          disabled={!alertMessage.trim() || sendingAlert}
-          className="mt-2 rounded-xl"
-          size="sm"
-        >
-          <Megaphone className="w-4 h-4 mr-1" />
-          {sendingAlert ? 'Sending...' : 'Send Update'}
-        </Button>
+        {isPremium ? (
+          <>
+            <Textarea
+              value={alertMessage}
+              onChange={(e) => setAlertMessage(e.target.value)}
+              placeholder="Type a message to broadcast to all family members..."
+              rows={3}
+            />
+            <Button
+              onClick={sendFamilyAlert}
+              disabled={!alertMessage.trim() || sendingAlert}
+              className="mt-2 rounded-xl"
+              size="sm"
+            >
+              <Megaphone className="w-4 h-4 mr-1" />
+              {sendingAlert ? 'Sending...' : 'Send Update'}
+            </Button>
+          </>
+        ) : (
+          <div className="bg-accent/10 border border-accent/20 rounded-xl p-4 text-center text-sm">
+            <p className="text-foreground font-medium mb-1">Premium Feature</p>
+            <p className="text-muted-foreground text-xs mb-3">Upgrade to send broadcast messages to all family members.</p>
+            <Link to="/upgrade" className="text-xs font-medium text-primary hover:underline">Upgrade to Premium</Link>
+          </div>
+        )}
       </div>
 
       {/* Members List */}

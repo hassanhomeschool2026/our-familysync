@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
@@ -11,7 +12,7 @@ import SkeletonCard from '@/components/shared/SkeletonCard';
 import { format, isSameDay } from 'date-fns';
 
 export default function CalendarPage() {
-  const { family, currentUser } = useFamily();
+  const { family, currentUser, isPremium } = useFamily();
   const queryClient = useQueryClient();
   const [view, setView] = useState('month');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -33,6 +34,8 @@ export default function CalendarPage() {
     enabled: !!family?.id,
   });
 
+  const canAddEvent = isPremium || events.length < 10;
+
   const createEvent = useMutation({
     mutationFn: async (data) => {
       const { data: newEvent, error } = await supabase
@@ -53,6 +56,19 @@ export default function CalendarPage() {
         type: 'event_added',
         message: `${currentUser.display_name || currentUser.full_name} added "${newEvent.title}" on ${format(new Date(newEvent.date + 'T00:00:00'), 'MM/dd/yyyy')}`,
       });
+      try {
+        await fetch('/.netlify/functions/send-event-alert', {
+          method: 'POST',
+          body: JSON.stringify({
+            family_id: family.id,
+            excludeUserId: currentUser.id,
+            user_name: currentUser.display_name || currentUser.full_name,
+            event_title: newEvent.title,
+          }),
+        });
+      } catch (e) {
+        console.error('send-event-alert:', e);
+      }
     },
   });
 
@@ -126,12 +142,22 @@ export default function CalendarPage() {
         <div className="flex justify-end mb-2">
           <button
             type="button"
-            onClick={handleAddEvent}
-            className="bg-primary text-white font-semibold text-sm px-4 py-1.5 rounded-full shadow-sm"
+            onClick={() => {
+              if (!canAddEvent) return;
+              handleAddEvent();
+            }}
+            disabled={!canAddEvent}
+            className="bg-primary text-white font-semibold text-sm px-4 py-1.5 rounded-full shadow-sm disabled:opacity-50 disabled:pointer-events-none"
           >
             + Event
           </button>
         </div>
+        {!canAddEvent && (
+          <div className="bg-accent/10 border border-accent/20 rounded-xl p-3 mb-2 text-sm flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+            <span className="text-foreground">Free plan limit reached (10 events). Upgrade to Premium for unlimited.</span>
+            <Link to="/upgrade" className="text-xs font-medium text-primary hover:underline whitespace-nowrap">Upgrade</Link>
+          </div>
+        )}
       </CalendarHeader>
 
       {view === 'month' && (

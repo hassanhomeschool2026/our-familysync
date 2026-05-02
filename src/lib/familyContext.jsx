@@ -12,47 +12,71 @@ export const FamilyProvider = ({ children }) => {
   const [family, setFamily] = useState(null);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [familyLoadError, setFamilyLoadError] = useState('');
   const pushSubKeyRef = useRef(null);
 
   const reload = async (opts = {}) => {
     const silent = opts.silent === true;
     if (!user) return;
     if (!silent) setLoading(true);
+    setFamilyLoadError('');
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    const resolvedUser = profile || { id: user.id, email: user.email };
-    setCurrentUser(resolvedUser);
-
-    if (profile?.family_id) {
-      const { data: familyData } = await supabase
-        .from('families')
-        .select('*')
-        .eq('id', profile.family_id)
-        .single();
-      setFamily(familyData);
-
-      const { data: membersData } = await supabase
+    try {
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('family_id', profile.family_id);
-      setMembers(membersData || []);
-    } else {
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      const resolvedUser = profile
+        ? { ...profile, email: profile.email || user.email }
+        : { id: user.id, email: user.email };
+      setCurrentUser(resolvedUser);
+
+      if (profile?.family_id) {
+        const { data: familyData, error: familyError } = await supabase
+          .from('families')
+          .select('*')
+          .eq('id', profile.family_id)
+          .maybeSingle();
+
+        if (familyError) throw familyError;
+        if (!familyData) {
+          throw new Error('Your family record could not be loaded. Please contact the family admin or try again.');
+        }
+        setFamily(familyData);
+
+        const { data: membersData, error: membersError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('family_id', profile.family_id);
+
+        if (membersError) throw membersError;
+        setMembers(membersData || []);
+      } else {
+        setFamily(null);
+        setMembers([]);
+      }
+    } catch (error) {
+      console.error('Family reload failed:', error);
       setFamily(null);
       setMembers([]);
+      setFamilyLoadError(error?.message || 'Could not load your family. Please try again.');
+    } finally {
+      if (!silent) setLoading(false);
     }
-
-    if (!silent) setLoading(false);
   };
 
   useEffect(() => {
     if (isAuthenticated && user) {
       reload();
     } else {
+      setCurrentUser(null);
+      setFamily(null);
+      setMembers([]);
+      setFamilyLoadError('');
       setLoading(false);
     }
   }, [isAuthenticated, user]);
@@ -106,6 +130,7 @@ export const FamilyProvider = ({ children }) => {
       members,
       setMembers,
       loading,
+      familyLoadError,
       isAdmin,
       isPremium,
       getMemberColor,

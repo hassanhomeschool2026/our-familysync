@@ -10,15 +10,16 @@ import { format } from 'date-fns';
 
 const generateTimeOptions = () => {
   const times = [];
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 15) {
-      const hour = h % 12 === 0 ? 12 : h % 12;
-      const minute = m.toString().padStart(2, '0');
-      const period = h < 12 ? 'AM' : 'PM';
-      const label = `${hour}:${minute} ${period}`;
-      const value = `${h.toString().padStart(2, '0')}:${minute}`;
-      times.push({ label, value });
-    }
+  for (let i = 0; i < 96; i++) {
+    const totalMinutes = ((5 * 60) + (i * 15)) % (24 * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const hour = h % 12 === 0 ? 12 : h % 12;
+    const minute = m.toString().padStart(2, '0');
+    const period = h < 12 ? 'AM' : 'PM';
+    const label = `${hour}:${minute} ${period}`;
+    const value = `${h.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+    times.push({ label, value });
   }
   return times;
 };
@@ -34,9 +35,9 @@ function toHHMM(t) {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
-const emptyForm = (selectedDate) => ({
+const emptyForm = () => ({
   title: '',
-  date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+  date: '',
   start_time: '',
   end_time: '',
   location: '',
@@ -47,7 +48,7 @@ const emptyForm = (selectedDate) => ({
 
 export default function AddEventSheet({ open, onClose, onCreate, onUpdate, selectedDate, editingEvent }) {
   const { members, isAdmin } = useFamily();
-  const [form, setForm] = useState(() => emptyForm(selectedDate));
+  const [form, setForm] = useState(() => emptyForm());
   const [saving, setSaving] = useState(false);
 
   const isEditing = !!editingEvent?.id;
@@ -66,7 +67,7 @@ export default function AddEventSheet({ open, onClose, onCreate, onUpdate, selec
         assigned_to: Array.isArray(editingEvent.assigned_to) ? editingEvent.assigned_to : [],
       });
     } else {
-      setForm(emptyForm(selectedDate));
+      setForm(emptyForm());
     }
   }, [open, editingEvent, selectedDate]);
 
@@ -88,7 +89,7 @@ export default function AddEventSheet({ open, onClose, onCreate, onUpdate, selec
       } else {
         await onCreate(payload);
       }
-      setForm(emptyForm(selectedDate));
+      setForm(emptyForm());
       onClose();
     } finally {
       setSaving(false);
@@ -182,11 +183,10 @@ export default function AddEventSheet({ open, onClose, onCreate, onUpdate, selec
                     key={m.id}
                     type="button"
                     onClick={() => toggleAssignee(m.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                       form.assigned_to.includes(m.id) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'
                     }`}
                   >
-                    <span>{m.avatar || String.fromCodePoint(0x1f464)}</span>
                     {m.display_name || m.full_name}
                   </button>
                 ))}

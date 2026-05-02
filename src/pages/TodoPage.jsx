@@ -264,7 +264,7 @@ function AddTaskSheet({ open, onClose, onSave, editingTask }) {
                   <SelectItem value={null}>Unassigned</SelectItem>
                   {members.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
-                      {m.avatar} {m.display_name || m.full_name}
+                      {m.display_name || m.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -445,6 +445,7 @@ export default function TodoPage() {
 
   const activeTasks = tasks.filter((t) => !t.completed);
   const canAddTask = isPremium || activeTasks.length < 10;
+  const canAddShopItem = isPremium || shopItems.length < 15;
 
   const filtered = tasks.filter((t) => {
     if (filter === 'mine') return t.assigned_to === currentUser?.id || t.created_by === currentUser?.id;
@@ -751,13 +752,24 @@ export default function TodoPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setShowAddShop(true)}
-                className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5"
+                onClick={() => {
+                  if (!canAddShopItem) return;
+                  setShowAddShop(true);
+                }}
+                disabled={!canAddShopItem}
+                className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
               >
                 <Plus className="w-3 h-3 shrink-0 text-primary" aria-hidden /> Add item
               </button>
             </div>
           </div>
+
+          {!canAddShopItem && (
+            <div className="bg-accent/10 border border-accent/20 rounded-xl p-3 mb-4 text-sm flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+              <span className="text-foreground">Free plan limit reached (15 items). Upgrade to Premium for unlimited.</span>
+              <Link to="/upgrade" className="text-xs font-medium text-primary hover:underline whitespace-nowrap">Upgrade</Link>
+            </div>
+          )}
 
           {shopItems.length === 0 ? (
             <div className="text-center py-6 text-sm text-muted-foreground">
@@ -883,13 +895,25 @@ export default function TodoPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setShowAddShop(true)}
-                className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5"
+                onClick={() => {
+                  if (!canAddShopItem) return;
+                  setShowAddShop(true);
+                }}
+                disabled={!canAddShopItem}
+                className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
               >
                 <Plus className="w-3 h-3 shrink-0 text-primary" aria-hidden /> Add item
               </button>
             </div>
           </div>
+
+          {!canAddShopItem && (
+            <div className="bg-accent/10 border border-accent/20 rounded-xl p-3 mb-4 text-sm flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+              <span className="text-foreground">Free plan limit reached (15 items). Upgrade to Premium for unlimited.</span>
+              <Link to="/upgrade" className="text-xs font-medium text-primary hover:underline whitespace-nowrap">Upgrade</Link>
+            </div>
+          )}
+
           {shopItems.length === 0 ? (
             <div className="text-center py-12 text-sm text-muted-foreground">
               No items yet. Tap + to start your shopping list.

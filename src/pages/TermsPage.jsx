@@ -48,12 +48,12 @@ export default function TermsPage() {
 
         <section>
           <h2 className="font-heading font-bold text-base mb-2">5. Location Data</h2>
-          <p>Our FamilySync uses location services for family check-ins, live tracking, and geofence zone alerts. Location data is shared only within your family group and is never sold or shared with third parties. Location is only collected when you actively use check-in features or enable live tracking. You may disable location sharing at any time through your device settings.</p>
+          <p>Our FamilySync uses location services for family check-ins. Location data is shared only within your family group and is never sold or shared with third parties. Location is only collected when you actively use the check-in feature. You may disable location sharing at any time through your device settings.</p>
         </section>
 
         <section>
           <h2 className="font-heading font-bold text-base mb-2">6. Subscription and Payments</h2>
-          <p>Our FamilySync offers a free plan and a Premium plan. Premium subscriptions are billed at $4.99/month or $45.99/year and are processed securely through Stripe. Subscriptions automatically renew until cancelled. You may cancel at any time through your account settings. Refunds are handled on a case-by-case basis — please contact legal@zencora.org for refund requests. Zencora reserves the right to change pricing with reasonable advance notice.</p>
+          <p>Our FamilySync offers a free plan and a Premium plan. Premium subscriptions are billed at $5.99/month or $45.99/year and are processed securely through Stripe. Subscriptions automatically renew until cancelled. You may cancel at any time through your account settings. Refunds are handled on a case-by-case basis — please contact legal@zencora.org for refund requests. Zencora reserves the right to change pricing with reasonable advance notice.</p>
         </section>
 
         <section>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { supabase } from '@/lib/supabaseClient';
 import { subscribeToPush } from '@/lib/pushNotifications';
@@ -9,11 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { AVATARS, MEMBER_COLORS } from '@/lib/memberColors';
+import { MEMBER_COLORS } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
-import AvatarIconGrid from '@/components/shared/AvatarIconGrid';
 import {
-  Settings, Shield, LogOut, Crown, Bell, ChevronRight, ChevronDown, Trash2, Camera, X, Sun, Moon, Monitor, Check,
+  Settings, Shield, LogOut, Crown, Bell, ChevronRight, ChevronDown, Trash2, Camera, Sun, Moon, Monitor, Check,
 } from 'lucide-react';
 
 const sectionHeaderBarStyle = {
@@ -113,12 +112,18 @@ export default function ProfilePage() {
         : 'denied'
   );
   const [enablingNotif, setEnablingNotif] = useState(false);
-  const [editAvatar, setEditAvatar] = useState(AVATARS[0]);
 
   const prefs = currentUser?.notification_prefs || {};
 
   const memberList = members || [];
   const otherMembers = memberList.filter((m) => m.id !== currentUser?.id);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    setDisplayName(currentUser.display_name || currentUser.full_name || '');
+    setColor(currentUser.member_color || MEMBER_COLORS[0].value);
+  }, [currentUser]);
+
   const deleteAccountDescription = (() => {
     if (isAdmin && otherMembers.length > 0) {
       return `You are the admin of this family. Another member will be promoted to admin, then your profile will be removed from the family. This cannot be undone.`;
@@ -131,13 +136,21 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     setSaving(true);
-    await supabase
-      .from('profiles')
-      .update({ display_name: displayName, member_color: color, avatar: editAvatar })
-      .eq('id', currentUser.id);
-    await reload();
-    setSaving(false);
-    setEditing(false);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ display_name: displayName, member_color: color })
+        .eq('id', currentUser.id);
+      if (error) throw error;
+      await reload();
+      setEditing(false);
+      toast.success('Profile updated.');
+    } catch (error) {
+      console.error('Profile update failed:', error);
+      toast.error('Could not save your profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleNotifPref = async (key, value) => {
@@ -272,7 +285,8 @@ export default function ProfilePage() {
       if (uploadError) throw uploadError;
       const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
       const publicUrl = pub.publicUrl;
-      await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', currentUser.id);
+      if (updateError) throw updateError;
       setAvatarUrl(publicUrl);
       await reload();
       toast.success('Photo updated!');
@@ -343,14 +357,7 @@ export default function ProfilePage() {
         {!editing ? (
           <Button
             variant="outline"
-            onClick={() => {
-              setEditAvatar(
-                currentUser?.avatar && AVATARS.includes(currentUser.avatar)
-                  ? currentUser.avatar
-                  : AVATARS[0]
-              );
-              setEditing(true);
-            }}
+            onClick={() => setEditing(true)}
             className="w-full mt-4 rounded-xl"
           >
             <Settings className="w-4 h-4 mr-2" /> Edit Profile
@@ -361,24 +368,6 @@ export default function ProfilePage() {
               <Label>Display Name</Label>
               <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1" />
             </div>
-            <div>
-              <Label className="mb-2 block">Avatar</Label>
-              <AvatarIconGrid value={editAvatar} onChange={setEditAvatar} />
-            </div>
-            {(avatarUrl || currentUser?.avatar_url) && (
-              <button
-                type="button"
-                onClick={async () => {
-                  setAvatarUrl(null);
-                  await supabase.from('profiles').update({ avatar_url: null }).eq('id', currentUser.id);
-                  await reload();
-                  toast.success('Photo removed.');
-                }}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded-full px-3 py-1.5 hover:border-destructive hover:text-destructive transition-colors w-full justify-center"
-              >
-                <X className="w-3 h-3" /> Remove current photo
-              </button>
-            )}
             <div>
               <Label className="mb-2 block">Color</Label>
               <div className="flex flex-wrap gap-1.5">

@@ -8,14 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Home, Users, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MEMBER_COLORS, AVATARS, generateInviteCode } from '@/lib/memberColors';
-import AvatarIconGrid from '@/components/shared/AvatarIconGrid';
+import AvatarCarousel from '@/components/shared/AvatarIconGrid';
 export default function Welcome() {
   const navigate = useNavigate();
   const { currentUser, reload } = useFamily();
   const [step, setStep] = useState('welcome');
   const [familyName, setFamilyName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
-  const [displayName, setDisplayName] = useState(currentUser?.full_name || '');
+  const [displayName, setDisplayName] = useState(
+    currentUser?.display_name || currentUser?.full_name || currentUser?.email?.split('@')[0] || ''
+  );
   const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0]);
   const [selectedColor, setSelectedColor] = useState(MEMBER_COLORS[0].value);
   const [error, setError] = useState('');
@@ -44,7 +46,8 @@ export default function Welcome() {
 
       if (familyError) throw familyError;
 
-      const displayOrName = displayName.trim() || currentUser?.full_name;
+      const displayOrName =
+        displayName.trim() || currentUser?.display_name || currentUser?.full_name || currentUser?.email?.split('@')[0];
 
       const { error: profileError } = await supabase
         .from('profiles')
@@ -67,7 +70,7 @@ export default function Welcome() {
 
       if (profileError) throw profileError;
 
-      await supabase.from('feed_items').insert({
+      const { error: feedError } = await supabase.from('feed_items').insert({
         family_id: family.id,
         user_id: userId,
         user_name: displayOrName,
@@ -75,6 +78,7 @@ export default function Welcome() {
         type: 'member_joined',
         message: `${displayOrName} created the family!`,
       });
+      if (feedError) throw feedError;
 
       await reload();
       navigate('/');
@@ -112,10 +116,11 @@ export default function Welcome() {
 
       const family = families[0];
 
-      const { data: existingMembers } = await supabase
+      const { data: existingMembers, error: membersError } = await supabase
         .from('profiles')
         .select('id, plan')
         .eq('family_id', family.id);
+      if (membersError) throw membersError;
 
       const memberCount = existingMembers?.length ?? 0;
       const familyHasPremium = (existingMembers || []).some((m) => m.plan === 'premium');
@@ -128,7 +133,8 @@ export default function Welcome() {
         return;
       }
 
-      const displayOrName = displayName.trim() || currentUser?.full_name;
+      const displayOrName =
+        displayName.trim() || currentUser?.display_name || currentUser?.full_name || currentUser?.email?.split('@')[0];
 
       const { error: profileError } = await supabase
         .from('profiles')
@@ -151,12 +157,13 @@ export default function Welcome() {
 
       if (profileError) throw profileError;
 
-      await supabase
+      const { error: familyUpdateError } = await supabase
         .from('families')
         .update({ invite_code: generateInviteCode() })
         .eq('id', family.id);
+      if (familyUpdateError) throw familyUpdateError;
 
-      await supabase.from('feed_items').insert({
+      const { error: feedError } = await supabase.from('feed_items').insert({
         family_id: family.id,
         user_id: userId,
         user_name: displayOrName,
@@ -164,6 +171,7 @@ export default function Welcome() {
         type: 'member_joined',
         message: `${displayOrName} joined the family!`,
       });
+      if (feedError) throw feedError;
 
       await reload();
       navigate('/');
@@ -250,7 +258,7 @@ export default function Welcome() {
               </div>
               <div>
                 <Label className="mb-2 block">Pick an Avatar</Label>
-                <AvatarIconGrid value={selectedAvatar} onChange={setSelectedAvatar} />
+                <AvatarCarousel value={selectedAvatar} onChange={setSelectedAvatar} />
               </div>
               <div>
                 <Label className="mb-2 block">Pick a Color</Label>
@@ -296,7 +304,7 @@ export default function Welcome() {
               </div>
               <div>
                 <Label className="mb-2 block">Pick an Avatar</Label>
-                <AvatarIconGrid value={selectedAvatar} onChange={setSelectedAvatar} />
+                <AvatarCarousel value={selectedAvatar} onChange={setSelectedAvatar} />
               </div>
               <div>
                 <Label className="mb-2 block">Pick a Color</Label>

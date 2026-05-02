@@ -6,7 +6,7 @@ import { GoogleMap, useJsApiLoader, Circle, Marker, Autocomplete } from '@react-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin, Plus, Trash2, Radio, Pencil, ArrowLeft } from 'lucide-react';
+import { MapPin, Plus, Trash2, Pencil, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -21,13 +21,6 @@ export default function GeofencePage({ embedded = false }) {
   const [radius, setRadius] = useState('200');
   const [selectedCoords, setSelectedCoords] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
-  const [monitoring, setMonitoring] = useState(() => {
-    try {
-      return localStorage.getItem('fs_geofence_monitoring') === 'true';
-    } catch {
-      return false;
-    }
-  });
   const [editingZone, setEditingZone] = useState(null);
   const [editName, setEditName] = useState('');
   const [editRadius, setEditRadius] = useState('');
@@ -35,14 +28,11 @@ export default function GeofencePage({ embedded = false }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem('fs_geofence_monitoring', String(monitoring));
-    } catch {}
-  }, [monitoring]);
-
-  useEffect(() => {
-    const onSync = (e) => setMonitoring(e.detail);
-    window.addEventListener('fs_zone_monitoring_change', onSync);
-    return () => window.removeEventListener('fs_zone_monitoring_change', onSync);
+      localStorage.setItem('fs_geofence_monitoring', 'false');
+    } catch {
+      // Ignore storage failures; saved zones still work without monitoring.
+    }
+    window.dispatchEvent(new CustomEvent('fs_zone_monitoring_change', { detail: false }));
   }, []);
 
   useEffect(() => {
@@ -142,30 +132,15 @@ export default function GeofencePage({ embedded = false }) {
           <ArrowLeft className="w-5 h-5" />
         </button>
       )}
-      <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-        <p className="mb-0.5 text-xs font-semibold text-blue-800">About Zone Alerts</p>
-        <p className="text-xs text-blue-700 leading-relaxed">
-          Zone alerts are active while the app is open or running in your browser. On iOS, alerts continue with the screen locked as long as the app has not been fully closed. For best results, keep the app running in the background.
+      <div className="mb-4 rounded-xl border border-teal-200 bg-teal-50 px-4 py-3">
+        <p className="mb-0.5 text-xs font-semibold text-teal-800">About Saved Zones</p>
+        <p className="text-xs text-teal-700 leading-relaxed">
+          Zones are saved places your family can reference from check-ins. Automatic arrive/leave alerts are a foreground-only beta and may vary by device or browser.
         </p>
       </div>
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-xl font-bold">Geofences</h2>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              const next = !monitoring;
-              setMonitoring(next);
-              try {
-                localStorage.setItem('fs_geofence_monitoring', String(next));
-              } catch {}
-              window.dispatchEvent(new CustomEvent('fs_zone_monitoring_change', { detail: next }));
-            }}
-            className={`flex items-center gap-1 text-xs rounded-full px-3 py-1 border transition-colors ${monitoring ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground'}`}
-          >
-            <Radio className="w-3 h-3" />
-            {monitoring ? 'Monitoring On' : 'Monitoring Off'}
-          </button>
           {isAdmin && (
             <Button size="sm" onClick={() => setShowForm(v => !v)} className="rounded-full">
               <Plus className="w-4 h-4 mr-1" /> Add Zone
@@ -175,12 +150,12 @@ export default function GeofencePage({ embedded = false }) {
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Get notified when family members arrive or leave saved zones.
+        Create named places like home, school, or work for easier family check-ins.
       </p>
 
-      <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3">
-        <span className="text-amber-500 text-xs font-bold uppercase tracking-wide">Beta</span>
-        <p className="text-xs text-amber-700">Live tracking and geofence zones are in beta. Full real-time tracking is coming in our native app.</p>
+      <div className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3 bg-[rgba(1,220,186,0.08)] border border-[rgba(1,220,186,0.25)]">
+        <span className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium bg-[rgba(14,165,233,0.12)] text-sky-700">Improving</span>
+        <p className="text-xs text-gray-800">Automatic zone alerts work best while the app is open and are still being improved.</p>
       </div>
 
       {showForm && isAdmin && (

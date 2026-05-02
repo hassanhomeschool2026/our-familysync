@@ -14,11 +14,48 @@ export const MEMBER_COLORS = [
   { label: 'Rose',    value: '#e11d48', bg: 'bg-rose-600',    text: 'text-rose-600',    border: 'border-rose-600',    light: 'bg-rose-100' },
 ];
 
+// Human avatar seeds — prefixed with "avatar:" so MemberAvatar can identify them
 export const AVATARS = [
+  'avatar:mom1',
+  'avatar:dad1',
+  'avatar:girl1',
+  'avatar:boy1',
+  'avatar:grandma1',
+  'avatar:grandpa1',
+  'avatar:teen1',
+  'avatar:teen2',
+  'avatar:mom2',
+  'avatar:dad2',
+  'avatar:girl2',
+  'avatar:boy2',
+  'avatar:mom3',
+  'avatar:dad3',
+  'avatar:girl3',
+  'avatar:boy3',
+  'avatar:grandma2',
+  'avatar:grandpa2',
+  'avatar:teen3',
+  'avatar:teen4',
+  'avatar:mom4',
+  'avatar:dad4',
+  'avatar:girl4',
+  'avatar:boy4',
+];
+
+/** Old Lucide-based picker options — some profiles still store these strings. MemberAvatar only. */
+export const LUCIDE_AVATARS = [
   'Star', 'Heart', 'Sun', 'Moon', 'Flower2', 'Leaf', 'Sparkles',
   'Cloud', 'Snowflake', 'Flame', 'Zap', 'Rainbow', 'Crown',
   'Diamond', 'Music', 'Smile', 'Ghost', 'Rocket', 'Shield', 'Home',
 ];
+
+export function getAvatarUrl(avatarValue) {
+  if (!avatarValue || !avatarValue.startsWith('avatar:')) return null;
+  const seed = encodeURIComponent(avatarValue.replace('avatar:', ''));
+  // 7.x avataaars: backgroundType is only "solid" | "gradientLinear" (not "circle").
+  // Circular crop uses style=circle per schema.
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&style=circle&backgroundType=gradientLinear&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+}
 
 export function getColorObj(hex) {
   return MEMBER_COLORS.find(c => c.value === hex) || MEMBER_COLORS[0];

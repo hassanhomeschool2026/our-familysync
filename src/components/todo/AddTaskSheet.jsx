@@ -62,7 +62,7 @@ export default function AddTaskSheet({ open, onClose, onSave }) {
                   <SelectItem value={null}>Unassigned</SelectItem>
                   {members.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
-                      {m.avatar} {m.display_name || m.full_name}
+                      {m.display_name || m.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>

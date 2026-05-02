@@ -41,7 +41,7 @@ export default function PrivacyPage() {
           </ul>
           <p className="font-medium mb-1 mt-3">Information collected automatically:</p>
           <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-            <li>Location data: GPS coordinates when you use check-in or live tracking features</li>
+            <li>Location data: GPS coordinates when you use check-in features</li>
             <li>Device information: browser type, operating system, IP address</li>
             <li>Usage data: features used, pages visited, timestamps of activity</li>
           </ul>
@@ -75,12 +75,12 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="font-heading font-bold text-base mb-2">5. Location Data</h2>
-          <p>Location data is one of the core features of Our FamilySync. We collect location information only when you actively use check-in or live tracking features. Location data is:</p>
+          <p>Location data is collected only when you actively use the check-in feature. Location data is:</p>
           <ul className="list-disc pl-5 space-y-1 mt-2 text-muted-foreground">
             <li>Shared only with members of your family group within the App</li>
             <li>Never sold or shared with advertisers or third-party data brokers</li>
             <li>Stored securely in our database and retained for up to 90 days for history purposes</li>
-            <li>Controllable by you — you can stop sharing at any time by clearing your check-in pin or disabling live tracking</li>
+            <li>Controllable by you — you can stop sharing at any time by clearing your check-in</li>
           </ul>
         </section>
 

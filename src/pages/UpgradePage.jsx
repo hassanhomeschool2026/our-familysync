@@ -5,11 +5,12 @@ import {
   Crown,
   Users,
   ListChecks,
+  ShoppingCart,
+  Calendar,
   Bell,
   Megaphone,
   Clock,
   MapPin,
-  Shield,
   ShieldCheck,
   Mail,
   Headphones,
@@ -144,11 +145,12 @@ export default function UpgradePage() {
           <div className="border-t border-gray-100 mb-4" />
 
           {[
-            [Users, 'Up to 5 household members'],
+            [Users, 'Up to 4 household members'],
             [ListChecks, 'Up to 10 tasks'],
+            [ShoppingCart, 'Up to 15 shopping items'],
+            [Calendar, 'Up to 10 events'],
             [MapPin, 'Basic check-ins'],
-            [Shield, 'Safe zones (up to 3)'],
-            [Clock, 'Activity history (7 days)'],
+            [Clock, 'Activity history (3 days)'],
             [Mail, 'Email support'],
           ].map(([Icon, text]) => (
             <div key={text} className="flex items-start justify-start gap-3 py-2">
@@ -190,10 +192,12 @@ export default function UpgradePage() {
               {[
                 [Users, 'Unlimited household members'],
                 [ListChecks, 'Unlimited tasks with priorities'],
-                [Bell, 'Push notifications (reminders & alerts)'],
-                [Megaphone, 'Family Update broadcasts'],
-                [Shield, 'Unlimited safe zones'],
-                [Clock, 'Full activity history'],
+                [ShoppingCart, 'Unlimited shopping items'],
+                [Calendar, 'Unlimited events'],
+                [MapPin, 'Check-ins with push notifications'],
+                [Megaphone, 'Family broadcast messages'],
+                [Bell, 'Push notifications for check-ins & events'],
+                [Clock, 'Activity history (15 days)'],
                 [Crown, 'Premium badge on profile'],
                 [Headphones, 'Priority support'],
               ].map(([Icon, text]) => (
@@ -224,14 +228,14 @@ export default function UpgradePage() {
                 ))}
               </div>
               <span className="text-[10px] font-semibold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
-                Save 33%
+                Save 36%
               </span>
             </div>
 
             <div className="text-center">
               <div className="flex items-end gap-1 justify-center">
                 <span className="text-4xl font-extrabold text-foreground">
-                  {billingCycle === 'monthly' ? '$9.99' : '$79.99'}
+                  {billingCycle === 'monthly' ? '$5.99' : '$45.99'}
                 </span>
                 <span className="text-sm text-muted-foreground mb-1">
                   {billingCycle === 'monthly' ? '/month' : '/year'}

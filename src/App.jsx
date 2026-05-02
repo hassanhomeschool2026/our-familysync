@@ -25,7 +25,7 @@ import GeofencePage from './pages/GeofencePage';
 import AppLayout from './components/layout/AppLayout';
 
 const FamilyGate = ({ children }) => {
-  const { currentUser, loading, family } = useFamily();
+  const { currentUser, loading, family, familyLoadError, reload } = useFamily();
 
   if (loading) {
     return (
@@ -36,6 +36,23 @@ const FamilyGate = ({ children }) => {
   }
 
   if (!currentUser?.family_id || !family) {
+    if (familyLoadError && currentUser?.family_id) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background px-6">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5 text-center shadow-sm">
+            <h1 className="font-heading text-xl font-bold mb-2">We couldn&apos;t load your family</h1>
+            <p className="text-sm text-muted-foreground mb-4">{familyLoadError}</p>
+            <button
+              type="button"
+              onClick={() => reload()}
+              className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
     return <Welcome />;
   }
 
@@ -78,7 +95,7 @@ const AuthenticatedApp = () => {
             <Route path="/todo" element={<TodoPage />} />
             <Route path="/chores" element={<ChoresPage />} />
             <Route path="/checkin" element={<CheckInPage />} />
-            <Route path="/geofence" element={<GeofencePage />} />
+            {/* <Route path="/geofence" element={<GeofencePage />} /> */}
             <Route path="/feed" element={<FeedPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/admin" element={<AdminPage />} />

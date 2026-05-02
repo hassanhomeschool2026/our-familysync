@@ -93,33 +93,25 @@ const getTimeDisplay = (dateString) => {
 export default function FeedPage() {
   const { family, isPremium, getMemberColor, members } = useFamily();
 
-  const fiveDaysAgo = new Date();
-  fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+  const feedCutoff = new Date();
+  feedCutoff.setDate(feedCutoff.getDate() - (isPremium ? 15 : 3));
 
   const { data: feedItems = [], isLoading } = useQuery({
     queryKey: ['feed', family?.id, isPremium],
     queryFn: async () => {
-      const base = supabase
+      const { data } = await supabase
         .from('feed_items')
         .select('*')
         .eq('family_id', family?.id)
-        .gte('created_at', fiveDaysAgo.toISOString())
-        .order('created_at', { ascending: false });
-      const { data } = await base.limit(isPremium ? 200 : 100);
+        .gte('created_at', feedCutoff.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(isPremium ? 200 : 50);
       return data || [];
     },
     enabled: !!family?.id,
   });
 
-  const thirtyDaysAgoMs = Date.now() - 30 * 24 * 60 * 60 * 1000;
-
-  const filtered = isPremium
-    ? feedItems
-    : feedItems.filter((item) => new Date(item.created_at).getTime() >= thirtyDaysAgoMs);
-
-  const freeUserHasOlderActivity =
-    !isPremium &&
-    feedItems.some((item) => new Date(item.created_at).getTime() < thirtyDaysAgoMs);
+  const filtered = feedItems;
 
   if (isLoading) return <SkeletonCard count={5} />;
 
@@ -184,12 +176,10 @@ export default function FeedPage() {
         </div>
       )}
 
-      {freeUserHasOlderActivity && (
+      {!isPremium && (
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          Upgrade to Premium to see your full activity history.{' '}
-          <Link to="/upgrade" className="text-primary font-medium hover:underline">
-            Upgrade
-          </Link>
+          Showing the last 3 days. Upgrade to Premium to see up to 15 days of activity.{' '}
+          <Link to="/upgrade" className="text-primary font-medium hover:underline">Upgrade</Link>
         </p>
       )}
     </div>

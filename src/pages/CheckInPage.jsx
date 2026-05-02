@@ -6,12 +6,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MapPin, Navigation, X, Clock, Radio, Shield } from 'lucide-react';
+import { MapPin, Navigation, X, Clock } from 'lucide-react';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import SkeletonCard from '@/components/shared/SkeletonCard';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 import { DEFAULT_MEMBER_ACCENT } from '@/lib/memberColors';
 import { playCheckInSound } from '@/lib/sounds';
 
@@ -132,7 +131,6 @@ function formatHistoryExactTime(iso) {
 }
 
 export default function CheckInPage() {
-  const navigate = useNavigate();
   const { family, currentUser, members, getMemberColor } = useFamily();
   const queryClient = useQueryClient();
   const autocompleteRef = useRef(null);
@@ -157,13 +155,7 @@ export default function CheckInPage() {
   const insideZonesRef = useRef(loadInsideZonesSetFromStorage());
   const [locationPermission, setLocationPermission] = useState('unknown');
   const [historyExpanded, setHistoryExpanded] = useState(false);
-  const [zoneMonitoring, setZoneMonitoring] = useState(() => {
-    try {
-      return localStorage.getItem('fs_geofence_monitoring') === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [zoneMonitoring, setZoneMonitoring] = useState(false);
 
   useEffect(() => {
     if (!navigator.permissions) return;
@@ -174,6 +166,11 @@ export default function CheckInPage() {
   }, []);
 
   useEffect(() => {
+    try {
+      localStorage.setItem('fs_geofence_monitoring', 'false');
+    } catch {
+      // Ignore storage failures; foreground-only location remains available.
+    }
     const onSync = (e) => setZoneMonitoring(e.detail);
     window.addEventListener('fs_zone_monitoring_change', onSync);
     return () => window.removeEventListener('fs_zone_monitoring_change', onSync);
@@ -722,27 +719,14 @@ export default function CheckInPage() {
       )}
 
       <div
-        className="flex items-center gap-2 rounded-xl px-3 py-2 mb-3"
+        className="rounded-xl px-3 py-2 mb-3 text-center"
         style={{
           background: 'rgba(1, 220, 186, 0.08)',
           border: '1px solid rgba(1, 220, 186, 0.25)',
         }}
       >
-        <span
-          className="shrink-0"
-          style={{
-            background: 'rgba(14, 165, 233, 0.12)',
-            color: '#0284c7',
-            borderRadius: 999,
-            padding: '2px 10px',
-            fontSize: 12,
-            fontWeight: 500,
-          }}
-        >
-          Improving
-        </span>
-        <p className="text-xs" style={{ color: '#1f2937' }}>
-          Stay connected with live tracking, zones, and check-ins. Real-time updates are getting even better!
+        <p className="text-xs m-0" style={{ color: '#1f2937' }}>
+          Share Location for check-ins your family can trust! Live tracking and Geofencing Coming soon.
         </p>
       </div>
 
@@ -846,116 +830,6 @@ export default function CheckInPage() {
           </div>
         )}
       </div>
-
-      <div
-        style={{
-          background: 'white',
-          borderRadius: 16,
-          padding: 16,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 14,
-        }}
-      >
-        <div
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: 12,
-            flexShrink: 0,
-            background: 'linear-gradient(135deg, rgba(1,220,186,0.12), rgba(30,58,138,0.12))',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Shield style={{ width: 20, height: 20, color: '#0d9488' }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 13, fontWeight: 800, color: '#1a2030', marginBottom: 2 }}>Zones</p>
-          <p style={{ fontSize: 11, color: '#64748b' }}>
-            {zoneMonitoring ? '● Monitoring active' : 'Manage family safe places'}
-          </p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
-          <button
-            type="button"
-            onClick={() => {
-              const next = !zoneMonitoring;
-              setZoneMonitoring(next);
-              try {
-                localStorage.setItem('fs_geofence_monitoring', String(next));
-              } catch {}
-              window.dispatchEvent(new CustomEvent('fs_zone_monitoring_change', { detail: next }));
-            }}
-            style={{
-              background: zoneMonitoring ? '#0d9488' : '#e8edf8',
-              color: zoneMonitoring ? 'white' : '#1e3a8a',
-              fontSize: 11,
-              fontWeight: 700,
-              borderRadius: 8,
-              padding: '5px 10px',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            {zoneMonitoring ? 'Zones On ✓' : 'Zones Off'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/geofence')}
-            style={{
-              background: '#e8edf8',
-              color: '#1e3a8a',
-              fontSize: 11,
-              fontWeight: 700,
-              borderRadius: 8,
-              padding: '5px 10px',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            Manage Zones →
-          </button>
-        </div>
-      </div>
-
-      {myCheckIn && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'white',
-            borderRadius: 12,
-            padding: '10px 16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Radio style={{ width: 14, height: 14, color: '#0d9488' }} />
-            <p style={{ fontSize: 12, fontWeight: 700, color: '#1a2030' }}>Live Tracking</p>
-            <p style={{ fontSize: 11, color: '#94a3b8' }}>Updates location continuously</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setLiveTracking((v) => !v)}
-            style={{
-              background: liveTracking ? '#0d9488' : '#e8edf8',
-              color: liveTracking ? 'white' : '#1e3a8a',
-              fontSize: 11,
-              fontWeight: 700,
-              borderRadius: 8,
-              padding: '5px 10px',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            {liveTracking ? 'On' : 'Off'}
-          </button>
-        </div>
-      )}
 
       <div
         style={{

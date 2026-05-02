@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MapPin, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateInviteCode } from '@/lib/memberColors';
+import { AVATARS, generateInviteCode } from '@/lib/memberColors';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -52,10 +52,11 @@ export default function LoginPage() {
         return;
       }
       const family = families[0];
-      const { data: existingMembers } = await supabase
+      const { data: existingMembers, error: membersError } = await supabase
         .from('profiles')
         .select('id')
         .eq('family_id', family.id);
+      if (membersError) throw membersError;
       if (existingMembers && existingMembers.length >= 4) {
         toast.error('This family has reached the free plan limit. Ask the admin to upgrade.');
         return;
@@ -79,18 +80,29 @@ export default function LoginPage() {
       toast.error('Please enter your email and password.');
       return;
     }
+    if (!validatedFamily?.id) {
+      toast.error('Invite code was not loaded. Please enter the invite code again.');
+      setInviteStep('code');
+      return;
+    }
     setLoading(true);
     try {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password });
       if (signUpError) throw signUpError;
+      if (!signUpData?.session) {
+        setVerifyEmail(email.trim());
+        setShowVerifyMessage(true);
+        return;
+      }
       const userId = signUpData?.user?.id;
       if (!userId) throw new Error('Could not create account.');
+      const defaultAvatar = AVATARS[0];
 
-      await supabase.from('profiles').upsert({
+      const { error: profileError } = await supabase.from('profiles').upsert({
         id: userId,
         family_id: validatedFamily.id,
         display_name: email.split('@')[0],
-        avatar: '\u{1F60A}',
+        avatar: defaultAvatar,
         member_color: '#2f9db6',
         role: 'member',
         plan: 'free',
@@ -102,19 +114,22 @@ export default function LoginPage() {
           checkin_notifications: true,
         },
       });
+      if (profileError) throw profileError;
 
-      await supabase.from('families')
+      const { error: familyUpdateError } = await supabase.from('families')
         .update({ invite_code: generateInviteCode() })
         .eq('id', validatedFamily.id);
+      if (familyUpdateError) throw familyUpdateError;
 
-      await supabase.from('feed_items').insert({
+      const { error: feedError } = await supabase.from('feed_items').insert({
         family_id: validatedFamily.id,
         user_id: userId,
         user_name: email.split('@')[0],
-        user_avatar: '\u{1F60A}',
+        user_avatar: defaultAvatar,
         type: 'member_joined',
         message: `${email.split('@')[0]} joined the family!`,
       });
+      if (feedError) throw feedError;
 
       toast.success('Welcome to the family!');
       window.location.href = '/';
@@ -205,13 +220,14 @@ export default function LoginPage() {
         return;
       }
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://app.familysync.zencora.org/reset-password',
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (error) throw error;
       toast.success('Password reset email sent! Check your inbox.');
       setForgotMode(false);
     } catch (e) {
-      toast.error('No account found with that email address.');
+      console.error('Password reset failed:', e);
+      toast.error(e?.message || 'Could not send the password reset email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -221,8 +237,7 @@ export default function LoginPage() {
     <div className="rounded-xl px-3.5 py-3 flex items-start gap-2.5 bg-[rgba(59,130,246,0.08)] dark:bg-blue-500/10">
       <MapPin className="w-5 h-5 text-[#3b82f6] shrink-0 mt-0.5" aria-hidden />
       <p className="text-sm text-[#475569] dark:text-slate-300 leading-relaxed">
-        Our FamilySync uses your location for check-ins, live tracking, and family safety zones. You&apos;ll be prompted to enable it
-        after signing in.
+        Our FamilySync can use your location for manual check-ins and saved family places. You&apos;ll be prompted before sharing.
       </p>
     </div>
   );
@@ -325,7 +340,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {mode === 'signup' && showVerifyMessage && (
+        {(mode === 'signup' || mode === 'join') && showVerifyMessage && (
           <div
             className="rounded-2xl border border-[#0d9488]/20 bg-gradient-to-b from-[#ecfdf5]/90 to-white dark:from-teal-950/40 dark:to-card p-5 shadow-sm space-y-4 text-center"
             role="status"
@@ -335,7 +350,7 @@ export default function LoginPage() {
               <span className="font-heading font-bold text-[#0d9488] dark:text-teal-400">Almost there! </span>
               We sent a verification link to{' '}
               <span className="font-semibold text-foreground break-all">{verifyEmail}</span>. Please check your
-              inbox and click the link to activate your account.
+              inbox and click the link to activate your account. Then sign in to finish joining your family.
             </p>
             <Button variant="authSubmit" onClick={goToSignInAfterVerify} className="w-full">
               Back to Sign In
@@ -397,7 +412,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {mode === 'join' && inviteStep === 'code' && (
+        {mode === 'join' && !showVerifyMessage && inviteStep === 'code' && (
           <div className="space-y-5">
             <p className="text-sm text-[#64748b] dark:text-slate-400 text-center">Enter the invite code sent by your family admin.</p>
             <div>
@@ -417,7 +432,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        {mode === 'join' && inviteStep === 'account' && (
+        {mode === 'join' && !showVerifyMessage && inviteStep === 'account' && (
           <div className="space-y-5">
             <div className="surface-1 p-3.5 text-center border border-black/[0.06] dark:border-white/10">
               <p className="text-sm font-medium text-[#0d9488] dark:text-teal-400">{'\u{2705}'} Code accepted!</p>

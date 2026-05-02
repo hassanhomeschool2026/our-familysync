@@ -475,7 +475,7 @@ export default function ChoresPage() {
                 <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
                 {members.map((m) => (
                   <SelectItem key={m.id} value={m.id}>
-                    {m.avatar} {memberDisplayName(m)}
+                    {memberDisplayName(m)}
                   </SelectItem>
                 ))}
               </SelectContent>
