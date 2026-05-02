@@ -6,6 +6,15 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+/** Notify for new events unless user opted out of both social alerts and calendar reminders. */
+function shouldSendNewEventPush(prefs) {
+  const p = prefs && typeof prefs === 'object' ? prefs : {};
+  if (p.family_alerts !== false) return true;
+  const sdr = p.same_day_reminder;
+  if (sdr === false || sdr === 'off') return false;
+  return sdr != null && sdr !== '';
+}
+
 async function fetchNotificationPrefsMap(supabaseUrl, headers, userIds) {
   const unique = [...new Set([...userIds].filter(Boolean))];
   const map = new Map();
@@ -54,6 +63,8 @@ exports.handler = async function (event) {
   if (!res.ok) return { statusCode: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Database error' }) };
 
   const subs = await res.json();
+  console.log('[send-event-alert] subscriptions for family', family_id, 'count', (subs || []).length);
+
   const prefsByUserId = await fetchNotificationPrefsMap(supabaseUrl, { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }, (subs || []).map((s) => s.user_id));
 
   const name = user_name?.trim() || 'Someone';
@@ -69,9 +80,9 @@ exports.handler = async function (event) {
   const results = await Promise.allSettled(
     (subs || []).map(async (sub) => {
       if (!sub?.endpoint || !sub?.p256dh || !sub?.auth) return { sent: false };
-      if (sub.user_id === excludeUserId) return { sent: false };
+      if (String(sub.user_id) === String(excludeUserId)) return { sent: false };
       const prefs = prefsByUserId.get(sub.user_id) || {};
-      if (prefs.family_alerts === false) return { sent: false };
+      if (!shouldSendNewEventPush(prefs)) return { sent: false };
       try {
         await webpush.sendNotification({ endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } }, payload);
         return { sent: true };
@@ -88,5 +99,6 @@ exports.handler = async function (event) {
   );
 
   const sent = results.filter((r) => r.status === 'fulfilled' && r.value?.sent).length;
+  console.log('[send-event-alert] sent', sent, '/', results.length);
   return { statusCode: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }, body: JSON.stringify({ sent, attempted: results.length }) };
 };

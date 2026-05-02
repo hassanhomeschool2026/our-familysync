@@ -11,6 +11,12 @@ import AddEventSheet from '@/components/calendar/AddEventSheet';
 import SkeletonCard from '@/components/shared/SkeletonCard';
 import { format, isSameDay } from 'date-fns';
 
+/** Plain `vite` (5173) does not serve Functions; `npm run dev:netlify` proxies 8888 → 5173 (see netlify.toml). */
+const eventAlertUrl =
+  import.meta.env.DEV
+    ? 'http://localhost:8888/.netlify/functions/send-event-alert'
+    : '/.netlify/functions/send-event-alert';
+
 export default function CalendarPage() {
   const { family, currentUser, isPremium } = useFamily();
   const queryClient = useQueryClient();
@@ -57,8 +63,9 @@ export default function CalendarPage() {
         message: `${currentUser.display_name || currentUser.full_name} added "${newEvent.title}" on ${format(new Date(newEvent.date + 'T00:00:00'), 'MM/dd/yyyy')}`,
       });
       try {
-        await fetch('/.netlify/functions/send-event-alert', {
+        const pushRes = await fetch(eventAlertUrl, {
           method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             family_id: family.id,
             excludeUserId: currentUser.id,
@@ -66,6 +73,10 @@ export default function CalendarPage() {
             event_title: newEvent.title,
           }),
         });
+        const pushBody = await pushRes.json().catch(() => ({}));
+        if (!pushRes.ok) {
+          console.error('send-event-alert:', pushRes.status, pushBody);
+        }
       } catch (e) {
         console.error('send-event-alert:', e);
       }

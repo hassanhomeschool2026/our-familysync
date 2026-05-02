@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:vite-netlify": "vite --mode netlify-dev",
     "dev:force": "vite --force",
     "dev:netlify": "npx --yes netlify-cli dev",
     "build": "vite build",

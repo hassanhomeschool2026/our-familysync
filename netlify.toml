@@ -2,10 +2,12 @@
   command = "npm run build"
   publish = "dist"
 
-# Local Stripe checkout: plain `vite` does not run Functions. Use `npm run dev:netlify`
-# and open the proxy URL (default http://localhost:8888) so `/.netlify/functions/*` resolves.
+# Local: plain `vite` (5173) has no Functions. Use `npm run dev:netlify` → http://localhost:8888
+# so `/.netlify/functions/*` works. Vite must use `--mode netlify-dev` (see vite.config.js) so HMR
+# and module URLs go through the proxy — otherwise JS loads with wrong/empty MIME types (blank page).
 [dev]
-  command = "npm run dev"
+  framework = "vite"
+  command = "npm run dev:vite-netlify"
   targetPort = 5173
   port = 8888
 
