@@ -439,13 +439,8 @@ const BRAND = {
   gradient: 'linear-gradient(90deg, #7f30cb, #01dcba)',
 };
 
-const quickActionTileStyle = {
-  background: 'linear-gradient(135deg, rgba(1, 220, 186, 0.12), rgba(14, 165, 233, 0.10))',
-  boxShadow: '0 6px 16px rgba(0,0,0,0.05)',
-};
-
 const secondaryCardNavButtonClass =
-  'flex items-center gap-1 rounded-lg border-0 bg-[#e8edf8] py-[5px] px-[12px] font-bold text-[#1e3a8a] shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a8a]/25';
+  'flex items-center gap-1 rounded-lg border-0 bg-[#e8edf8] dark:bg-secondary py-[5px] px-[12px] font-bold text-[#1e3a8a] dark:text-primary shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a8a]/25 dark:focus-visible:ring-primary/35';
 
 const GRADIENT_HEADER_STAR_TWINKLE_CSS = `
 @keyframes starTwinkle {
@@ -1130,7 +1125,7 @@ export default function HomePage() {
           />
         </div>
         {topHelper && (
-          <div className="flex items-center gap-2 rounded-lg px-3 py-2 bg-[rgba(127,48,203,0.08)]">
+          <div className="flex items-center gap-2 rounded-lg px-3 py-2 bg-[rgba(127,48,203,0.08)] dark:bg-[rgba(167,139,250,0.1)]">
             <MemberAvatar
               avatar={topHelper.member.avatar}
               avatarUrl={topHelper.member?.avatar_url}
@@ -1138,10 +1133,10 @@ export default function HomePage() {
               size="sm"
               name={topHelper.member.display_name || topHelper.member.full_name}
             />
-            <p className="text-xs font-medium flex-1 text-[#7f30cb]">
+            <p className="text-xs font-medium flex-1 text-[#7f30cb] dark:text-violet-300">
               Top helper: {topHelper.member.display_name || topHelper.member.full_name}
             </p>
-            <p className="text-xs font-bold text-[#7f30cb]">⭐ {topHelper.pts} pts</p>
+            <p className="text-xs font-bold text-[#7f30cb] dark:text-violet-300">⭐ {topHelper.pts} pts</p>
           </div>
         )}
         <motion.button
@@ -1217,21 +1212,14 @@ export default function HomePage() {
                 whileTap={tapSmall}
                 whileHover={reduceMotion ? undefined : { scale: 1.03 }}
                 transition={{ duration: 0.18, ease: easeOut }}
-                style={quickActionTileStyle}
-                className="flex flex-col items-center p-3 gap-1.5 h-auto w-full rounded-2xl border-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9488]/25"
+                className="flex flex-col items-center p-3 gap-1.5 h-auto w-full rounded-2xl border border-border/60 dark:border-white/10 bg-gradient-to-br from-teal-500/[0.12] to-sky-500/[0.10] dark:from-teal-400/20 dark:to-sky-500/15 shadow-[0_6px_16px_rgba(0,0,0,0.05)] dark:shadow-[0_6px_20px_rgba(0,0,0,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0d9488]/25 dark:focus-visible:ring-primary/40"
               >
                 <div
-                  className="flex items-center justify-center shrink-0"
-                  style={{
-                    background: 'white',
-                    borderRadius: '50%',
-                    padding: '8px',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                  }}
+                  className="flex items-center justify-center shrink-0 rounded-full bg-white p-2 shadow-md dark:bg-card dark:shadow-black/20"
                 >
-                  <a.icon className="w-4 h-4 shrink-0 text-[#0d9488]" aria-hidden />
+                  <a.icon className="w-4 h-4 shrink-0 text-primary" aria-hidden />
                 </div>
-                <p className="text-[9px] font-bold text-center text-[#0f172a]">{a.label}</p>
+                <p className="text-[9px] font-bold text-center text-foreground leading-tight">{a.label}</p>
               </motion.button>
             ))}
         </div>

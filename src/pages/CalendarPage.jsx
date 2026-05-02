@@ -165,10 +165,7 @@ export default function CalendarPage() {
           <MonthView currentDate={currentDate} events={events} onDayClick={handleDayClick} selectedDay={selectedDay} />
           <div className="mt-4">
             {selectedDayEventCount > 0 && (
-              <div
-                className="rounded-xl px-4 py-3 mb-2 font-semibold text-sm text-purple-700"
-                style={{ background: '#f3f0ff', border: '1px solid #e9d5ff' }}
-              >
+              <div className="rounded-xl px-4 py-3 mb-2 font-semibold text-sm text-violet-800 dark:text-violet-200 bg-violet-100/90 dark:bg-violet-950/45 border border-violet-200 dark:border-violet-800">
                 {selectedDayEventCount} event{selectedDayEventCount !== 1 ? 's' : ''}
               </div>
             )}

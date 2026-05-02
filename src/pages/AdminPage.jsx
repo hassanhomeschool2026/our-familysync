@@ -164,12 +164,18 @@ export default function AdminPage() {
   };
 
   const removeMember = async (memberId) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ family_id: null, role: 'member' })
-      .eq('id', memberId);
-    if (error) {
-      toast.error('Could not remove member: ' + error.message);
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/.netlify/functions/remove-member', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ member_id: memberId }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast.error(data.error || 'Could not remove member');
       setRemovingMember(null);
       return;
     }
@@ -397,7 +403,7 @@ export default function AdminPage() {
                   <span
                     className={`text-[10px] px-1.5 py-0.5 rounded-full capitalize ${
                       member.role === 'admin'
-                        ? 'bg-[rgba(127,48,203,0.14)] text-[#7f30cb]'
+                        ? 'bg-[rgba(127,48,203,0.14)] dark:bg-[rgba(167,139,250,0.12)] text-[#7f30cb] dark:text-violet-300'
                         : 'bg-secondary text-secondary-foreground'
                     }`}
                   >
@@ -506,7 +512,20 @@ export default function AdminPage() {
                       size="sm"
                       className="text-xs"
                       onClick={async () => {
-                        await supabase.from('profiles').update({ family_id: null, role: 'member' }).eq('id', requesterId);
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const res = await fetch('/.netlify/functions/remove-member', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${session.access_token}`,
+                          },
+                          body: JSON.stringify({ member_id: requesterId }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                          toast.error(data.error || 'Could not remove member');
+                          return;
+                        }
                         await supabase.from('notifications').update({ read: true }).eq('id', req.id);
                         await supabase.from('feed_items').insert({
                           family_id: family.id,
@@ -563,7 +582,20 @@ export default function AdminPage() {
                       size="sm"
                       className="text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90"
                       onClick={async () => {
-                        await supabase.from('profiles').update({ family_id: null, role: 'member' }).eq('id', requesterId);
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const res = await fetch('/.netlify/functions/remove-member', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${session.access_token}`,
+                          },
+                          body: JSON.stringify({ member_id: requesterId }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) {
+                          toast.error(data.error || 'Could not remove member');
+                          return;
+                        }
                         await supabase.from('notifications').update({ read: true }).eq('id', req.id);
                         await supabase.from('feed_items').insert({
                           family_id: family.id,

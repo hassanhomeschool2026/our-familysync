@@ -21,9 +21,9 @@ import { toast } from 'sonner';
 import { playTaskCompleteSound } from '@/lib/sounds';
 
 const priorityStyles = {
-  high: 'bg-[rgba(239,68,68,0.12)] text-red-700',
-  medium: 'bg-[rgba(245,158,11,0.16)] text-amber-900',
-  low: 'bg-[rgba(47,157,182,0.12)] text-[#247a8f]',
+  high: 'bg-[rgba(239,68,68,0.12)] text-red-700 dark:bg-red-950/40 dark:text-red-300',
+  medium: 'bg-[rgba(245,158,11,0.16)] text-amber-900 dark:bg-amber-950/35 dark:text-amber-200',
+  low: 'bg-[rgba(47,157,182,0.12)] text-[#247a8f] dark:bg-teal-950/35 dark:text-teal-300',
 };
 
 const GRADIENT_HEADER_STAR_TWINKLE_CSS = `
@@ -495,7 +495,7 @@ export default function TodoPage() {
               setShowAdd(true);
             }}
             disabled={!canAddTask}
-            className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+            className="bg-white dark:bg-card text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none border border-transparent dark:border-border"
           >
             <Plus className="w-3 h-3 shrink-0 text-primary" aria-hidden />
             Add Task
@@ -514,7 +514,7 @@ export default function TodoPage() {
         </div>
       )}
 
-      <div className="mb-4 flex gap-2 px-4 py-2 bg-[#f3f0ff] border-b border-border overflow-x-auto">
+      <div className="mb-4 flex gap-2 px-4 py-2 bg-violet-100/90 dark:bg-violet-950/50 border-b border-border overflow-x-auto">
         {filters.map((f) => (
           <button
             key={f}
@@ -525,8 +525,8 @@ export default function TodoPage() {
             }}
             className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all capitalize whitespace-nowrap ${
               shopTab !== 'shop' && filter === f
-                ? 'bg-[#7c3aed] text-white'
-                : 'text-[#7c3aed] bg-transparent'
+                ? 'bg-violet-600 text-white dark:bg-violet-500'
+                : 'text-violet-700 dark:text-violet-300 bg-transparent'
             }`}
           >
             {f}
@@ -536,10 +536,10 @@ export default function TodoPage() {
           type="button"
           onClick={() => setShopTab('shop')}
           className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all whitespace-nowrap flex items-center gap-1 ${
-            shopTab === 'shop' ? 'bg-[#7c3aed] text-white' : 'text-[#7c3aed] bg-transparent'
+            shopTab === 'shop' ? 'bg-violet-600 text-white dark:bg-violet-500' : 'text-violet-700 dark:text-violet-300 bg-transparent'
           }`}
         >
-          <ShoppingCart className={`w-3 h-3 shrink-0 ${shopTab === 'shop' ? 'text-white' : 'text-[#7c3aed]'}`} aria-hidden />
+          <ShoppingCart className={`w-3 h-3 shrink-0 ${shopTab === 'shop' ? 'text-white' : 'text-violet-700 dark:text-violet-300'}`} aria-hidden />
           Shop
         </button>
       </div>
@@ -757,7 +757,7 @@ export default function TodoPage() {
                   setShowAddShop(true);
                 }}
                 disabled={!canAddShopItem}
-                className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+                className="bg-white dark:bg-card text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none border border-transparent dark:border-border"
               >
                 <Plus className="w-3 h-3 shrink-0 text-primary" aria-hidden /> Add item
               </button>
@@ -900,7 +900,7 @@ export default function TodoPage() {
                   setShowAddShop(true);
                 }}
                 disabled={!canAddShopItem}
-                className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none"
+                className="bg-white dark:bg-card text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 disabled:opacity-50 disabled:pointer-events-none border border-transparent dark:border-border"
               >
                 <Plus className="w-3 h-3 shrink-0 text-primary" aria-hidden /> Add item
               </button>

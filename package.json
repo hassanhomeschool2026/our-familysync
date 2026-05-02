@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:force": "vite --force",
     "dev:netlify": "npx --yes netlify-cli dev",
     "build": "vite build",
     "lint": "eslint . --quiet",

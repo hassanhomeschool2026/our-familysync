@@ -27,7 +27,8 @@ function eventCardStyle(accentHex, leftWidthPx) {
     borderLeftWidth: `${leftWidthPx}px`,
     borderLeftStyle: 'solid',
     borderLeftColor: accentHex,
-    background: `linear-gradient(${hexToTintBg8(accentHex)}, ${hexToTintBg8(accentHex)}), #ffffff`,
+    // Base uses theme card so title/time respect dark mode (white base broke contrast).
+    background: `linear-gradient(${hexToTintBg8(accentHex)}, ${hexToTintBg8(accentHex)}), hsl(var(--card))`,
   };
 }
 

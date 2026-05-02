@@ -143,7 +143,7 @@ export default function NotificationsPage() {
             <button
               type="button"
               onClick={() => markAllRead.mutate()}
-              className="bg-white text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 shrink-0"
+              className="bg-white dark:bg-card text-primary font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 shrink-0 border border-white/30 dark:border-white/10"
             >
               <Check className="w-3 h-3 shrink-0 text-primary" aria-hidden /> Mark all read
             </button>
@@ -162,7 +162,7 @@ export default function NotificationsPage() {
                 key={notif.id}
                 onClick={() => !notif.read && markRead.mutate(notif.id)}
                 className={`flex items-start gap-3 w-full text-left p-3 rounded-xl transition-colors pl-2.5 border-l-[3px] ${
-                  notif.read ? 'opacity-60' : 'bg-[rgba(47,157,182,0.06)]'
+                  notif.read ? 'opacity-60' : 'bg-[rgba(47,157,182,0.06)] dark:bg-teal-950/35'
                 }`}
                 style={{ borderLeftColor: notifAccent(notif.type) }}
               >

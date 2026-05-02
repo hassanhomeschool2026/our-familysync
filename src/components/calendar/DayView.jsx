@@ -39,14 +39,9 @@ export default function DayView({ currentDate, events, onDeleteEvent, onEditEven
         return (
           <div
             key={ev.id}
-            className="rounded-xl overflow-hidden"
+            className="rounded-xl overflow-hidden bg-card border border-border shadow-md mb-2 p-3"
             style={{
-              borderLeft: '3px solid ' + getMemberColor(ev.assigned_to?.[0] ?? ev.created_by),
-              background: 'white',
-              padding: '10px 12px',
-              marginBottom: '8px',
-              borderRadius: '12px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04)',
+              borderLeft: `3px solid ${getMemberColor(ev.assigned_to?.[0] ?? ev.created_by)}`,
             }}
           >
             <div className="flex items-start justify-between gap-2">

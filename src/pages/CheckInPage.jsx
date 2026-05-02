@@ -637,7 +637,7 @@ export default function CheckInPage() {
               type="button"
               onClick={getLocation}
               disabled={gettingLocation}
-              className="flex items-center gap-2 bg-white text-primary text-sm font-semibold px-4 py-2.5 rounded-full transition-colors border border-white/30 shrink-0 whitespace-nowrap disabled:opacity-60"
+              className="flex items-center gap-2 bg-white dark:bg-card text-primary text-sm font-semibold px-4 py-2.5 rounded-full transition-colors border border-white/30 dark:border-white/15 shrink-0 whitespace-nowrap disabled:opacity-60"
             >
               <Navigation className="w-4 h-4 text-primary shrink-0" />
               {gettingLocation
@@ -651,7 +651,7 @@ export default function CheckInPage() {
               type="button"
               onClick={() => clearCheckIn.mutate()}
               disabled={clearCheckIn.isPending}
-              className="flex items-center gap-1.5 bg-white text-primary text-xs font-semibold px-3 py-2 rounded-full transition-colors border border-white/30 shrink-0 disabled:opacity-60"
+              className="flex items-center gap-1.5 bg-white dark:bg-card text-primary text-xs font-semibold px-3 py-2 rounded-full transition-colors border border-white/30 dark:border-white/15 shrink-0 disabled:opacity-60"
             >
               <X className="w-3.5 h-3.5 text-primary" />
               {clearCheckIn.isPending ? 'Clearing...' : 'Clear Pin'}
@@ -663,32 +663,16 @@ export default function CheckInPage() {
       {showForm && (
         <div
           ref={formSectionRef}
-          className="scroll-mt-24"
+          className="scroll-mt-24 rounded-2xl p-[18px] border-2 border-teal-600 dark:border-teal-500 bg-gradient-to-b from-teal-50 via-slate-50 to-white dark:from-teal-950/45 dark:via-card dark:to-card shadow-[0_10px_40px_rgba(13,148,136,0.18)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.35)]"
           role="region"
           aria-label="Confirm check-in"
-          style={{
-            background: 'linear-gradient(180deg, #ecfdf5 0%, #f8fafc 50%, #ffffff 100%)',
-            borderRadius: 16,
-            padding: 18,
-            border: '2px solid #0d9488',
-            boxShadow:
-              '0 10px 40px rgba(13, 148, 136, 0.18), 0 2px 8px rgba(30, 58, 138, 0.08)',
-          }}
         >
-          <p
-            style={{
-              fontSize: 16,
-              fontWeight: 800,
-              color: '#0f766e',
-              margin: '0 0 6px',
-              fontFamily: 'var(--font-heading)',
-            }}
-          >
+          <p className="font-heading text-base font-extrabold text-teal-700 dark:text-teal-400 m-0 mb-1.5">
             Confirm your check-in
           </p>
-          <p style={{ fontSize: 12, color: '#475569', margin: '0 0 14px', lineHeight: 1.45 }}>
+          <p className="text-xs text-muted-foreground m-0 mb-3.5 leading-snug">
             Your location was found. Check the place name below, then tap{' '}
-            <strong style={{ color: '#0f172a' }}>Check In</strong> so your family can see you on the map.
+            <strong className="text-foreground font-semibold">Check In</strong> so your family can see you on the map.
           </p>
           <Input
             placeholder="Location name (e.g. Home, Work)"
@@ -718,39 +702,15 @@ export default function CheckInPage() {
         </div>
       )}
 
-      <div
-        className="rounded-xl px-3 py-2 mb-3 text-center"
-        style={{
-          background: 'rgba(1, 220, 186, 0.08)',
-          border: '1px solid rgba(1, 220, 186, 0.25)',
-        }}
-      >
-        <p className="text-xs m-0" style={{ color: '#1f2937' }}>
+      <div className="rounded-xl px-3 py-2 mb-3 text-center bg-teal-500/[0.08] dark:bg-teal-400/10 border border-teal-500/25 dark:border-teal-400/20">
+        <p className="text-xs m-0 text-foreground">
           Share Location for check-ins your family can trust! Live tracking and Geofencing Coming soon.
         </p>
       </div>
 
-      <div
-        style={{
-          background: 'white',
-          borderRadius: 16,
-          padding: 12,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
-          marginTop: 4,
-        }}
-      >
-        <p
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: '#1a2030',
-            marginBottom: 10,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          <MapPin style={{ width: 14, height: 14, color: '#0d9488' }} />
+      <div className="rounded-2xl p-3 mt-1 bg-card border border-border shadow-md">
+        <p className="text-[13px] font-bold text-foreground mb-2.5 flex items-center gap-1.5">
+          <MapPin className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
           Your Location
         </p>
         {isLoaded ? (
@@ -813,7 +773,7 @@ export default function CheckInPage() {
                         {trimAddress(infoCheckIn.address, 240)}
                       </p>
                     ) : null}
-                    {infoCheckIn.note ? <p className="text-xs mt-1">{infoCheckIn.note}</p> : null}
+                    {infoCheckIn.note ? <p className="text-xs mt-1 text-foreground">{infoCheckIn.note}</p> : null}
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {formatCheckInDetailTime(infoCheckIn.created_at)}
                     </p>
@@ -831,57 +791,31 @@ export default function CheckInPage() {
         )}
       </div>
 
-      <div
-        style={{
-          background: 'white',
-          borderRadius: 16,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 16px 10px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981' }} />
-            <p style={{ fontSize: 14, fontWeight: 800, color: '#1a2030' }}>Active Check-Ins</p>
+      <div className="rounded-2xl bg-card border border-border shadow-md overflow-hidden">
+        <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" aria-hidden />
+            <p className="text-sm font-extrabold text-foreground">Active Check-Ins</p>
           </div>
           <button
             type="button"
             onClick={() => setHistoryExpanded((s) => !s)}
-            style={{
-              background: '#e8edf8',
-              color: '#1e3a8a',
-              fontSize: 11,
-              fontWeight: 700,
-              borderRadius: 8,
-              padding: '4px 10px',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
+            className="flex items-center gap-1 text-[11px] font-bold rounded-lg px-2.5 py-1 bg-secondary text-secondary-foreground border-0 cursor-pointer"
           >
-            <Clock style={{ width: 11, height: 11 }} />
+            <Clock className="w-[11px] h-[11px] shrink-0" aria-hidden />
             {historyExpanded ? 'Less' : 'History'}
           </button>
         </div>
 
         {activeCheckIns.length === 0 ? (
-          <div style={{ padding: '14px 16px' }}>
-            <p style={{ fontSize: 12, color: '#94a3b8', margin: 0 }}>
-              No active check-ins tap <strong style={{ color: '#0d9488' }}>Share Location</strong> to appear here.
+          <div className="px-4 py-3.5">
+            <p className="text-xs text-muted-foreground m-0">
+              No active check-ins tap <strong className="text-primary font-semibold">Share Location</strong> to appear here.
             </p>
           </div>
         ) : (
-          <div>
-            {activeCheckIns.map((ci, index) => {
+          <div className="divide-y divide-border">
+            {activeCheckIns.map((ci) => {
               const member = getMemberForUser(ci.user_id);
               const color = getMemberColor(ci.user_id) || member?.member_color || '#6366f1';
               const displayName = member?.display_name || member?.full_name || ci.user_name || 'Member';
@@ -889,15 +823,9 @@ export default function CheckInPage() {
               return (
                 <div
                   key={ci.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '12px 16px',
-                    borderTop: index === 0 ? '1px solid #f1f5f9' : '1px solid #f1f5f9',
-                  }}
+                  className="flex items-center gap-3 px-4 py-3"
                 >
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div className="relative shrink-0">
                     <MemberAvatar
                       avatar={avatar}
                       avatarUrl={member?.avatar_url}
@@ -906,26 +834,18 @@ export default function CheckInPage() {
                       name={displayName}
                     />
                     <div
-                      style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        right: 0,
-                        width: 10,
-                        height: 10,
-                        borderRadius: '50%',
-                        background: '#10b981',
-                        border: '2px solid white',
-                      }}
+                      className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-card"
+                      aria-hidden
                     />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#1a2030', marginBottom: 2 }}>{displayName}</p>
-                    <p style={{ fontSize: 11, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <MapPin style={{ width: 10, height: 10, flexShrink: 0 }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-bold text-foreground mb-0.5">{displayName}</p>
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                      <MapPin className="w-2.5 h-2.5 shrink-0 text-muted-foreground" aria-hidden />
                       {trimAddress(ci.location ?? '')}
                     </p>
                   </div>
-                  <p style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0, textAlign: 'right' }}>
+                  <p className="text-[11px] text-muted-foreground shrink-0 text-right">
                     {formatCheckInDetailTime(ci.created_at).split('·')[0].trim()}
                   </p>
                 </div>
@@ -935,17 +855,8 @@ export default function CheckInPage() {
         )}
 
         {historyExpanded && (
-          <div style={{ borderTop: '1px solid #f1f5f9', padding: '12px 16px' }}>
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: '#94a3b8',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                marginBottom: 10,
-              }}
-            >
+          <div className="border-t border-border px-4 py-3">
+            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide mb-2.5">
               History
             </p>
             <div className="space-y-2" aria-label="Check-in history">

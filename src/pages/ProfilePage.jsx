@@ -342,7 +342,7 @@ export default function ProfilePage() {
               <span
                 className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${
                   currentUser?.role === 'admin'
-                    ? 'bg-[rgba(127,48,203,0.14)] text-[#7f30cb]'
+                    ? 'bg-[rgba(127,48,203,0.14)] dark:bg-[rgba(167,139,250,0.12)] text-[#7f30cb] dark:text-violet-300'
                     : 'bg-secondary text-secondary-foreground'
                 }`}
               >

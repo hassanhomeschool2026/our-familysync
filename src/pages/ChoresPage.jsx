@@ -421,7 +421,7 @@ export default function ChoresPage() {
               className={`flex items-center gap-1.5 font-semibold text-sm px-3 py-1.5 rounded-full disabled:opacity-50 disabled:pointer-events-none ${
                 showAddForm || editingChore
                   ? 'border border-white/90 text-white bg-transparent hover:bg-white/10'
-                  : 'bg-white text-primary'
+                  : 'bg-white dark:bg-card text-primary border border-transparent dark:border-border'
               }`}
             >
               {showAddForm || editingChore ? (
@@ -574,7 +574,7 @@ export default function ChoresPage() {
             {topHelpers.map((h, idx) => (
               <li
                 key={h.id}
-                className="flex items-center gap-3 rounded-lg border border-border bg-[rgba(127,48,203,0.04)] px-3 py-2"
+                className="flex items-center gap-3 rounded-lg border border-border bg-[rgba(127,48,203,0.04)] dark:bg-violet-950/25 px-3 py-2"
               >
                 <MemberAvatar
                   avatar={h.member.avatar}
@@ -591,7 +591,7 @@ export default function ChoresPage() {
                     <p className="text-xs text-muted-foreground">{h.maxStreak}-day streak</p>
                   )}
                 </div>
-                <span className="text-sm font-semibold tabular-nums text-[#7f30cb]">{h.points} pts</span>
+                <span className="text-sm font-semibold tabular-nums text-[#7f30cb] dark:text-violet-300">{h.points} pts</span>
               </li>
             ))}
           </ul>
@@ -681,7 +681,7 @@ export default function ChoresPage() {
                       ) : (
                         <span>Unassigned</span>
                       )}
-                      <span className="text-[#7f30cb] font-medium">
+                      <span className="text-[#7f30cb] dark:text-violet-300 font-medium">
                         {'\u2B50'} {chore.point_value ?? 1} pts
                       </span>
                       <span className="text-xs capitalize bg-muted px-2 py-0.5 rounded-full">

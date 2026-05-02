@@ -75,11 +75,16 @@ const typeIcons = {
 };
 
 const typeColors = {
-  event_added: 'text-[#247a8f] bg-[rgba(47,157,182,0.12)]',
-  task_completed: 'text-[#247a8f] bg-[rgba(47,157,182,0.14)]',
-  checkin: 'text-[#2f9db6] bg-[rgba(47,157,182,0.12)]',
-  member_joined: 'text-[#7f30cb] bg-[rgba(127,48,203,0.12)]',
-  family_alert: 'text-[#b91c1c] bg-[rgba(239,68,68,0.1)]',
+  event_added:
+    'text-[#247a8f] dark:text-teal-300 bg-[rgba(47,157,182,0.12)] dark:bg-[rgba(45,212,191,0.12)]',
+  task_completed:
+    'text-[#247a8f] dark:text-teal-300 bg-[rgba(47,157,182,0.14)] dark:bg-[rgba(45,212,191,0.14)]',
+  checkin:
+    'text-[#2f9db6] dark:text-cyan-300 bg-[rgba(47,157,182,0.12)] dark:bg-[rgba(34,211,238,0.1)]',
+  member_joined:
+    'text-[#7f30cb] dark:text-violet-300 bg-[rgba(127,48,203,0.12)] dark:bg-[rgba(167,139,250,0.14)]',
+  family_alert:
+    'text-[#b91c1c] dark:text-red-300 bg-[rgba(239,68,68,0.1)] dark:bg-[rgba(248,113,113,0.12)]',
 };
 
 const getTimeDisplay = (dateString) => {

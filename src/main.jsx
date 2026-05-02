@@ -10,6 +10,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </ThemeProvider>
 )
 
+// Avoid registering the app SW during `vite` — it can cause 404s on optimized deps.
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js')
+  if (import.meta.env.DEV) {
+    navigator.serviceWorker.getRegistrations().then((regs) => {
+      regs.forEach((reg) => reg.unregister())
+    })
+  } else {
+    navigator.serviceWorker.register('/sw.js')
+  }
 }

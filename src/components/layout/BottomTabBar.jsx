@@ -33,7 +33,7 @@ export default function BottomTabBar() {
               whileTap={{ scale: reduceMotion ? 1 : 0.97 }}
               transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
               className={`flex flex-col items-center justify-center flex-1 h-full transition-colors duration-200 ${
-                isActive ? 'text-[#2f9db6]' : 'text-muted-foreground'
+                isActive ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
               <motion.span
