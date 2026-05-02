@@ -42,7 +42,7 @@ export default function MemberAvatar({ avatar, avatarUrl, color, size = 'md', na
       }}
       title={name}
     >
-      {getInitials(name || avatar)}
+      {getInitials(name)}
     </div>
   );
 }

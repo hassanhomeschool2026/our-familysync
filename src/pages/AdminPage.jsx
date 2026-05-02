@@ -142,7 +142,7 @@ export default function AdminPage() {
     }
     toast.success('Family name updated!');
     setFamily((prev) => (prev ? { ...prev, name: value } : prev));
-    await reload();
+    await reload({ silent: true });
     queryClient.invalidateQueries();
   };
 
@@ -164,10 +164,15 @@ export default function AdminPage() {
   };
 
   const removeMember = async (memberId) => {
-    await supabase
+    const { error } = await supabase
       .from('profiles')
       .update({ family_id: null, role: 'member' })
       .eq('id', memberId);
+    if (error) {
+      toast.error('Could not remove member: ' + error.message);
+      setRemovingMember(null);
+      return;
+    }
     setMembers(members.filter(m => m.id !== memberId));
     setRemovingMember(null);
     toast.success('Member removed');
@@ -407,13 +412,23 @@ export default function AdminPage() {
                 <div className="flex items-center gap-1">
                   {member.role !== 'admin' && (
                     <Button
+                      type="button"
                       size="sm"
                       variant="ghost"
                       className="text-xs text-muted-foreground"
-                      onClick={async () => {
-                        await supabase.from('profiles').update({ role: 'admin' }).eq('id', member.id);
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const { error } = await supabase
+                          .from('profiles')
+                          .update({ role: 'admin' })
+                          .eq('id', member.id);
+                        if (error) {
+                          toast.error(error.message || 'Could not promote to admin. Check database permissions.');
+                          return;
+                        }
                         toast.success(`${member.display_name || member.full_name} is now an admin`);
-                        reload();
+                        await reload({ silent: true });
                       }}
                     >
                       Make Admin
@@ -421,13 +436,23 @@ export default function AdminPage() {
                   )}
                   {member.role === 'admin' && member.id !== currentUser.id && (
                     <Button
+                      type="button"
                       size="sm"
                       variant="ghost"
                       className="text-xs text-muted-foreground"
-                      onClick={async () => {
-                        await supabase.from('profiles').update({ role: 'member' }).eq('id', member.id);
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const { error } = await supabase
+                          .from('profiles')
+                          .update({ role: 'member' })
+                          .eq('id', member.id);
+                        if (error) {
+                          toast.error(error.message || 'Could not update role. Check database permissions.');
+                          return;
+                        }
                         toast.success(`${member.display_name || member.full_name} is now a member`);
-                        reload();
+                        await reload({ silent: true });
                       }}
                     >
                       Make Member

@@ -7,8 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Home, Users, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MEMBER_COLORS, AVATARS, generateInviteCode } from '@/lib/memberColors';
-import AvatarCarousel from '@/components/shared/AvatarIconGrid';
+import { MEMBER_COLORS, generateInviteCode } from '@/lib/memberColors';
 export default function Welcome() {
   const navigate = useNavigate();
   const { currentUser, reload } = useFamily();
@@ -18,7 +17,6 @@ export default function Welcome() {
   const [displayName, setDisplayName] = useState(
     currentUser?.display_name || currentUser?.full_name || currentUser?.email?.split('@')[0] || ''
   );
-  const [selectedAvatar, setSelectedAvatar] = useState(AVATARS[0]);
   const [selectedColor, setSelectedColor] = useState(MEMBER_COLORS[0].value);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,7 +53,7 @@ export default function Welcome() {
           id: userId,
           family_id: family.id,
           display_name: displayOrName,
-          avatar: selectedAvatar,
+          avatar: '',
           member_color: selectedColor,
           role: 'admin',
           plan: 'free',
@@ -74,7 +72,7 @@ export default function Welcome() {
         family_id: family.id,
         user_id: userId,
         user_name: displayOrName,
-        user_avatar: selectedAvatar,
+        user_avatar: '',
         type: 'member_joined',
         message: `${displayOrName} created the family!`,
       });
@@ -142,7 +140,7 @@ export default function Welcome() {
           id: userId,
           family_id: family.id,
           display_name: displayOrName,
-          avatar: selectedAvatar,
+          avatar: '',
           member_color: selectedColor,
           role: 'member',
           plan: 'free',
@@ -167,7 +165,7 @@ export default function Welcome() {
         family_id: family.id,
         user_id: userId,
         user_name: displayOrName,
-        user_avatar: selectedAvatar,
+        user_avatar: '',
         type: 'member_joined',
         message: `${displayOrName} joined the family!`,
       });
@@ -257,10 +255,6 @@ export default function Welcome() {
                 <Input placeholder="Your name" value={displayName} onChange={(e) => { setDisplayName(e.target.value); setError(''); }} className="auth-screen-input h-12 mt-1" />
               </div>
               <div>
-                <Label className="mb-2 block">Pick an Avatar</Label>
-                <AvatarCarousel value={selectedAvatar} onChange={setSelectedAvatar} />
-              </div>
-              <div>
                 <Label className="mb-2 block">Pick a Color</Label>
                 <div className="flex flex-wrap gap-2">
                   {MEMBER_COLORS.map((c) => (
@@ -301,10 +295,6 @@ export default function Welcome() {
               <div>
                 <Label>Invite Code</Label>
                 <Input placeholder="e.g. HOME-1234" value={inviteCode} onChange={(e) => { setInviteCode(e.target.value); setError(''); }} className="auth-screen-input h-12 mt-1" />
-              </div>
-              <div>
-                <Label className="mb-2 block">Pick an Avatar</Label>
-                <AvatarCarousel value={selectedAvatar} onChange={setSelectedAvatar} />
               </div>
               <div>
                 <Label className="mb-2 block">Pick a Color</Label>

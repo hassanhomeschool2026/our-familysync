@@ -134,7 +134,7 @@ export default function UpgradePage() {
       </div>
 
       <div className="flex flex-col lg:flex-row lg:items-stretch gap-4 max-w-4xl mx-auto">
-        <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-5 flex flex-col w-full lg:flex-1 lg:basis-0 min-h-0">
+        <div className="bg-card rounded-[20px] shadow-sm border border-border p-5 flex flex-col w-full lg:flex-1 lg:basis-0 min-h-0">
           <div className="w-12 h-12 rounded-2xl bg-teal-50 flex items-center justify-center mx-auto mb-3">
             <Leaf className="w-5 h-5 text-teal-500" />
           </div>
@@ -155,20 +155,20 @@ export default function UpgradePage() {
           ].map(([Icon, text]) => (
             <div key={text} className="flex items-start justify-start gap-3 py-2">
               <Icon className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
-              <span className="text-sm text-foreground/80 text-left flex-1 min-w-0">{text}</span>
+              <span className="text-sm text-foreground text-left flex-1 min-w-0">{text}</span>
             </div>
           ))}
 
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="mt-4 self-center w-fit min-w-[11rem] px-6 h-11 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-foreground/60 hover:bg-gray-50 transition-colors inline-flex items-center justify-center text-center"
+            className="mt-4 self-center w-fit min-w-[11rem] px-6 h-11 rounded-xl border bg-background border-border text-sm font-semibold text-muted-foreground hover:bg-secondary transition-colors inline-flex items-center justify-center text-center"
           >
             Continue with Free
           </button>
         </div>
 
-        <div className="bg-white rounded-[20px] shadow-md border border-gray-100 flex flex-col w-full lg:flex-1 lg:basis-0 min-h-0 overflow-hidden">
+        <div className="bg-card rounded-[20px] shadow-md border border-border flex flex-col w-full lg:flex-1 lg:basis-0 min-h-0 overflow-hidden">
           <div
             className="relative rounded-t-[20px] p-5 pb-6 overflow-hidden text-center"
             style={{
@@ -203,7 +203,7 @@ export default function UpgradePage() {
               ].map(([Icon, text]) => (
                 <div key={text} className="flex items-start justify-start gap-3 py-2">
                   <Icon className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
-                  <span className="text-sm text-foreground/80 text-left flex-1 min-w-0">{text}</span>
+                  <span className="text-sm text-foreground text-left flex-1 min-w-0">{text}</span>
                 </div>
               ))}
             </div>
@@ -211,7 +211,7 @@ export default function UpgradePage() {
             <div className="border-t border-gray-100" />
 
             <div className="flex flex-wrap items-center justify-center gap-2">
-              <div className="flex bg-gray-100 rounded-full p-0.5">
+              <div className="flex bg-secondary rounded-full p-0.5">
                 {['monthly', 'yearly'].map((cycle) => (
                   <button
                     key={cycle}
@@ -219,8 +219,8 @@ export default function UpgradePage() {
                     onClick={() => setBillingCycle(cycle)}
                     className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all capitalize ${
                       billingCycle === cycle
-                        ? 'bg-white text-foreground shadow-sm'
-                        : 'text-muted-foreground'
+                        ? 'bg-background text-foreground shadow-sm'
+                        : 'text-foreground/60'
                     }`}
                   >
                     {cycle.charAt(0).toUpperCase() + cycle.slice(1)}
@@ -274,7 +274,7 @@ export default function UpgradePage() {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto mt-4 bg-white rounded-2xl shadow-sm border border-gray-100 px-4 py-4">
+      <div className="max-w-md mx-auto mt-4 bg-card rounded-2xl shadow-sm border border-border px-4 py-4">
         <div className="flex flex-col items-center text-center gap-3">
           <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
             <ShieldCheck className="w-5 h-5 text-purple-500" />

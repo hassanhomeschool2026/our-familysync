@@ -210,28 +210,29 @@ export default function ProfilePage() {
     }
     setDeletingAccount(true);
     try {
-      if (isAdmin) {
-        if (otherMembers.length === 0) {
-          await supabase.from('families').delete().eq('id', family.id);
-        } else {
-          const nextAdmin = otherMembers[0];
-          await supabase.from('profiles').update({ role: 'admin' }).eq('id', nextAdmin.id);
-          toast.info(`${nextAdmin.display_name || nextAdmin.full_name} has been promoted to admin.`);
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('No session');
+
+      // Handle admin family transfer before deletion
+      if (isAdmin && otherMembers.length > 0) {
+        const nextAdmin = otherMembers[0];
+        await supabase.from('profiles').update({ role: 'admin' }).eq('id', nextAdmin.id);
+        toast.info(`${nextAdmin.display_name || nextAdmin.full_name} has been promoted to admin.`);
       }
-      await supabase.from('profiles').update({ family_id: null, role: 'member' }).eq('id', currentUser.id);
-      await supabase.from('feed_items').insert({
-        family_id: family.id,
-        user_id: currentUser.id,
-        user_name: currentUser?.display_name || currentUser?.full_name || 'A member',
-        user_avatar: currentUser.avatar,
-        type: 'family_alert',
-        message: `${currentUser?.display_name || currentUser?.full_name || 'A member'} deleted their account.`,
+
+      const res = await fetch('/.netlify/functions/delete-account', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete failed');
+
       toast.success('Your account has been deleted.');
       await supabase.auth.signOut();
     } catch (e) {
       toast.error('Something went wrong. Please try again.');
+      console.error(e);
       setDeletingAccount(false);
     }
   };
