@@ -11,7 +11,7 @@ import AddEventSheet from '@/components/calendar/AddEventSheet';
 import SkeletonCard from '@/components/shared/SkeletonCard';
 import { format, isSameDay } from 'date-fns';
 
-/** Plain `vite` (5173) does not serve Functions; `npm run dev:netlify` proxies 8888 → 5173 (see netlify.toml). */
+/** Same pattern as Admin (family alert) and Check-In push: relative function URL in prod; Netlify Dev on 8888 locally. */
 const eventAlertUrl =
   import.meta.env.DEV
     ? 'http://localhost:8888/.netlify/functions/send-event-alert'
@@ -68,14 +68,13 @@ export default function CalendarPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             family_id: family.id,
-            excludeUserId: currentUser.id,
             user_name: currentUser.display_name || currentUser.full_name,
             event_title: newEvent.title,
           }),
         });
-        const pushBody = await pushRes.json().catch(() => ({}));
         if (!pushRes.ok) {
-          console.error('send-event-alert:', pushRes.status, pushBody);
+          const errText = await pushRes.text().catch(() => '');
+          console.error('send-event-alert:', pushRes.status, errText);
         }
       } catch (e) {
         console.error('send-event-alert:', e);
