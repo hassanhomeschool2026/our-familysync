@@ -136,8 +136,8 @@ exports.handler = async function (event, context) {
   );
 
   const payload = JSON.stringify({
-    title: '📅 New event',
-    body: `${name} added "${evTitle}"`,
+    title: 'New Event Added to the Calendar!',
+    body: `${name} added "${evTitle}".`,
     tag: `event-${Date.now()}`,
     url: '/calendar',
   });
