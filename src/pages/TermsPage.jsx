@@ -32,7 +32,7 @@ export default function TermsPage() {
 
         <section>
           <h2 className="font-heading font-bold text-base mb-2">2. Description of Service</h2>
-          <p>Our FamilySync is a family coordination and organization platform developed by Zencora. It provides features including shared calendars, task and chore management, family check-ins with location sharing, shopping lists, family activity feeds, and household member management. The App is intended for use by family households.</p>
+          <p>Our FamilySync is a family coordination and organization platform developed by Zencora. It provides features including shared calendars, task and chore management, family check-ins with location sharing, shopping lists, family activity feeds, and household member management. The App is intended for use by family households. Our FamilySync is a product of Zencora. By using this App, you also agree to Zencora's general Terms of Service at zencora.org/terms.</p>
         </section>
 
         <section>
@@ -53,7 +53,7 @@ export default function TermsPage() {
 
         <section>
           <h2 className="font-heading font-bold text-base mb-2">6. Subscription and Payments</h2>
-          <p>Our FamilySync offers a free plan and a Premium plan. Premium subscriptions are billed at $5.99/month or $45.99/year and are processed securely through Stripe. Subscriptions automatically renew until cancelled. You may cancel at any time through your account settings. Refunds are handled on a case-by-case basis — please contact legal@zencora.org for refund requests. Zencora reserves the right to change pricing with reasonable advance notice.</p>
+          <p>Our FamilySync offers a free plan and a Premium plan. Premium subscriptions are billed at $5.99/month or $45.99/year and are processed securely through Stripe. Subscriptions automatically renew until cancelled. You may cancel at any time through your account settings. Annual subscriptions are eligible for a full refund if cancelled within 3 days of purchase; you must cancel inside the app first, then contact billing@zencora.org to request a refund. Monthly subscriptions are non-refundable but may be cancelled at any time. Zencora reserves the right to change pricing with reasonable advance notice.</p>
         </section>
 
         <section>

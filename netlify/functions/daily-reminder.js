@@ -132,7 +132,7 @@ exports.handler = async (event) => {
     process.env.VAPID_PRIVATE_KEY
   );
 
-  const title = "Good morning! Here's your day";
+  const title = 'You have Events Today:';
 
   const results = await Promise.allSettled(
     (subscriptions || []).map(async (sub) => {
@@ -149,14 +149,11 @@ exports.handler = async (event) => {
         return { outcome: 'skipped' };
       }
 
-      const parts = [];
-      if (eventTitles.length) parts.push(`Events: ${eventTitles.join(', ')}`);
-      if (taskTitles.length) parts.push(`Tasks due: ${taskTitles.join(', ')}`);
-      const textBody = parts.join(' · ');
+      const allTitles = [...eventTitles, ...taskTitles].join(', ');
 
       const payload = JSON.stringify({
         title,
-        body: textBody,
+        body: allTitles,
         tag: 'daily-reminder',
         url: '/feed',
       });

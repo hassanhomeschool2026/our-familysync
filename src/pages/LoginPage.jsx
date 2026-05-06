@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { toast } from 'sonner';
 import { AVATARS, generateInviteCode } from '@/lib/memberColors';
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState('signin');
@@ -132,7 +134,7 @@ export default function LoginPage() {
       if (feedError) throw feedError;
 
       toast.success('Welcome to the family!');
-      window.location.href = '/';
+      navigate('/');
     } catch (e) {
       if (isEmailAlreadyInUseError(e)) {
         toast.error('An account with this email already exists. Try signing in instead.');
@@ -154,7 +156,7 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      window.location.href = '/';
+      navigate('/');
     } catch (e) {
       setSignInError('Incorrect email or password. Please try again.');
     } finally {
@@ -174,8 +176,16 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data: signUpData, error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
+
+      // Supabase returns no error but empty identities when email is already registered
+      if (signUpData?.user?.identities?.length === 0) {
+        toast.error('An account with this email already exists. Try signing in instead.');
+        return;
+      }
+
+      // No session means email confirmation is required — good
       setVerifyEmail(email.trim());
       setShowVerifyMessage(true);
     } catch (e) {

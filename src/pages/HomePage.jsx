@@ -1295,18 +1295,16 @@ export default function HomePage() {
         )}
       </motion.div>
 
-      {isAdmin && (
-        <button
-          type="button"
-          onClick={() => setShowAlertSheet(true)}
-          className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #7f30cb 100%)' }}
-        >
-          <Megaphone className="w-6 h-6" />
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => setShowAlertSheet(true)}
+        className="fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full text-white shadow-lg flex items-center justify-center bg-red-500"
+        aria-label="Send Family Alert"
+      >
+        <Megaphone className="w-6 h-6" />
+      </button>
 
-      {isAdmin && showAlertSheet && (
+      {showAlertSheet && (
         <div
           className="fixed inset-0 z-50 flex items-end"
           onClick={() => setShowAlertSheet(false)}

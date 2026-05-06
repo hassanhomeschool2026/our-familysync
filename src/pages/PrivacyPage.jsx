@@ -37,7 +37,7 @@ export default function PrivacyPage() {
             <li>Account information: email address, password, display name</li>
             <li>Profile information: avatar photo, member color, role</li>
             <li>Family content: events, tasks, chores, check-in notes, shopping lists, family feed posts</li>
-            <li>Payment information: processed securely by Stripe — we do not store card numbers</li>
+            <li>Payment information: processed securely by Stripe - we do not store card numbers</li>
           </ul>
           <p className="font-medium mb-1 mt-3">Information collected automatically:</p>
           <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
@@ -80,16 +80,16 @@ export default function PrivacyPage() {
             <li>Shared only with members of your family group within the App</li>
             <li>Never sold or shared with advertisers or third-party data brokers</li>
             <li>Stored securely in our database and retained for up to 90 days for history purposes</li>
-            <li>Controllable by you — you can stop sharing at any time by clearing your check-in</li>
+            <li>Controllable by you - you can stop sharing at any time by clearing your check-in</li>
           </ul>
         </section>
 
         <section>
           <h2 className="font-heading font-bold text-base mb-2">6. Data Sharing</h2>
-          <p>We share your data only in the following limited circumstances:</p>
+          <p>We will never sell your personal data or use it for advertising. We may share limited data with trusted third-party providers strictly as necessary to operate our Services:</p>
           <ul className="list-disc pl-5 space-y-1 mt-2 text-muted-foreground">
             <li><span className="font-medium text-foreground">Within your family group:</span> Family content, check-ins, and activity are visible to all members of your household in the App</li>
-            <li><span className="font-medium text-foreground">Service providers:</span> We use Supabase for database and authentication, Stripe for payments, and Netlify for hosting — all under strict data processing agreements</li>
+            <li><span className="font-medium text-foreground">Service providers:</span> We use Supabase for database and authentication, Stripe for payments, and Netlify for hosting - all under strict data processing agreements</li>
             <li><span className="font-medium text-foreground">Legal requirements:</span> We may disclose data if required by law or to protect the safety of users</li>
           </ul>
         </section>
@@ -135,13 +135,17 @@ export default function PrivacyPage() {
 
         <section>
           <h2 className="font-heading font-bold text-base mb-2">12. Contact Us</h2>
-          <p>If you have any questions, concerns, or requests regarding this Privacy Policy or your personal data — including requests related to children&apos;s data — please contact us at:</p>
+          <p>If you have any questions, concerns, or requests regarding this Privacy Policy or your personal data - including requests related to children&apos;s data - please contact us at:</p>
           <p className="mt-2 font-medium">legal@zencora.org</p>
           <p className="mt-1 text-muted-foreground">Zencora · Our FamilySync</p>
           <p className="mt-1 text-muted-foreground">Response time: within 5 business days</p>
         </section>
 
       </div>
+
+      <p className="text-sm text-center text-foreground font-medium mt-8">
+        Your data belongs to you. We are committed to designing our systems to keep it that way.
+      </p>
 
       <div className="mt-10 pt-6 border-t border-border text-center">
         <p className="text-[11px] text-muted-foreground">© 2026 Zencora. All Rights Reserved.</p>
