@@ -67,7 +67,10 @@ export default function AddEventSheet({ open, onClose, onCreate, onUpdate, selec
         assigned_to: Array.isArray(editingEvent.assigned_to) ? editingEvent.assigned_to : [],
       });
     } else {
-      setForm(emptyForm());
+      setForm({
+        ...emptyForm(),
+        date: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '',
+      });
     }
   }, [open, editingEvent, selectedDate]);
 

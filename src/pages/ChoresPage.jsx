@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -12,10 +12,16 @@ import EmptyState from '@/components/shared/EmptyState';
 import SkeletonCard from '@/components/shared/SkeletonCard';
 import { CheckCircle2, Circle, Plus, Pencil, Trash2, Flame } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, isToday, startOfWeek, isAfter, formatDistanceToNow } from 'date-fns';
+import { format, startOfWeek, isAfter, formatDistanceToNow } from 'date-fns';
 import { playChoreCompleteSound } from '@/lib/sounds';
 import confetti from 'canvas-confetti';
-import { choreNeedsReset } from '@/lib/choresRecurrence';
+import {
+  choreNeedsReset,
+  choreIsScheduledToday,
+  choreCompletedToday,
+  getChoreScheduledDays,
+} from '@/lib/choresRecurrence';
+import { useChoreReset } from '@/lib/useChoreReset';
 
 const UNASSIGNED = '__unassigned__';
 
@@ -127,35 +133,7 @@ export default function ChoresPage() {
     enabled: !!family?.id,
   });
 
-  useEffect(() => {
-    if (!family?.id || !chores.length) return;
-    const stale = chores.filter(choreNeedsReset);
-    if (!stale.length) return;
-
-    let cancelled = false;
-    (async () => {
-      await Promise.all(
-        stale.map((chore) =>
-          supabase
-            .from('chores')
-            .update({
-              completed: false,
-              completed_by: null,
-              completed_at: null,
-              last_reset_at: new Date().toISOString(),
-            })
-            .eq('id', chore.id)
-        )
-      );
-      if (!cancelled) {
-        queryClient.invalidateQueries({ queryKey: ['chores', family.id] });
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [chores, family?.id, queryClient]);
+  useChoreReset(chores, family?.id);
 
   const emptyForm = () => ({
     title: '',
@@ -340,13 +318,30 @@ export default function ChoresPage() {
   const hasWeekPoints = topHelpers.some((h) => h.points > 0);
 
   const completedTodayCount = chores.filter(
-    (c) => c.completed && c.completed_at && isToday(new Date(c.completed_at))
+    (c) => choreCompletedToday(c)
   ).length;
-  const totalChores = chores.length;
-  const dailyPct = totalChores ? Math.round((completedTodayCount / totalChores) * 100) : 0;
+  const choresTodayCount = chores.filter(
+    (c) => choreIsScheduledToday(c)
+  ).length;
+  const totalChores = chores.length; // keep for reference elsewhere if needed
+  const dailyPct = choresTodayCount
+    ? Math.round((completedTodayCount / choresTodayCount) * 100)
+    : 0;
 
-  const activeChores = chores.filter((c) => !c.completed || choreNeedsReset(c));
-  const completedChores = chores.filter((c) => c.completed && !choreNeedsReset(c));
+  // Active = scheduled today and not yet completed today
+  const activeChores = chores.filter(
+    (c) => choreIsScheduledToday(c) && !choreCompletedToday(c)
+  );
+
+  // Completed = completed today
+  const completedChores = chores.filter(
+    (c) => choreCompletedToday(c)
+  );
+
+  // Not due today = scheduled on other days only
+  const notDueTodayChores = chores.filter(
+    (c) => !choreIsScheduledToday(c)
+  );
 
   const canComplete = (chore) =>
     isAdmin || (chore.assigned_to && chore.assigned_to === currentUser?.id);
@@ -620,7 +615,7 @@ export default function ChoresPage() {
           </div>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          {completedTodayCount} of {totalChores} chores done today
+          {completedTodayCount} of {choresTodayCount} chores due today
         </p>
         <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
           <div
@@ -810,9 +805,40 @@ export default function ChoresPage() {
           </ul>
         )}
         {doneExpanded && completedChores.length === 0 && (
-          <p className="text-sm text-muted-foreground">Nothing completed yet this period.</p>
+          <p className="text-sm text-muted-foreground">Nothing completed today yet.</p>
         )}
       </section>
+
+      {notDueTodayChores.length > 0 && (
+        <section className="mt-4">
+          <div className="rounded-xl px-4 py-2 mb-2 bg-muted/50 border border-border">
+            <p className="text-xs font-medium text-muted-foreground">Not due today</p>
+          </div>
+          <ul className="space-y-2 opacity-50">
+            {notDueTodayChores.map((chore) => {
+              const assignee = members.find((m) => m.id === chore.assigned_to);
+              const days = getChoreScheduledDays(chore);
+              return (
+                <li
+                  key={chore.id}
+                  className="flex items-start gap-3 surface-2 p-3"
+                  style={{ borderLeftWidth: '3px', borderLeftColor: getMemberColor(chore.assigned_to) }}
+                >
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <p className="font-medium text-muted-foreground">{chore.title}</p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      {assignee && <span>{memberDisplayName(assignee)}</span>}
+                      <span className="bg-muted px-2 py-0.5 rounded-full">
+                        {days.join(', ') || 'Any day'}
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

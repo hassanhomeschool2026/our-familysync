@@ -13,6 +13,7 @@ import { MEMBER_COLORS } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
 import {
   Settings, Shield, LogOut, Crown, Bell, ChevronRight, ChevronDown, Trash2, Camera, Sun, Moon, Monitor, Check,
+  KeyRound,
 } from 'lucide-react';
 
 const sectionHeaderBarStyle = {
@@ -93,7 +94,6 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [showNotifPrefs, setShowNotifPrefs] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [requestDeleteConfirmText, setRequestDeleteConfirmText] = useState('');
@@ -112,6 +112,12 @@ export default function ProfilePage() {
         : 'denied'
   );
   const [enablingNotif, setEnablingNotif] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const prefs = currentUser?.notification_prefs || {};
 
@@ -265,6 +271,59 @@ export default function ProfilePage() {
     setShowRequestDeleteModal(false);
     setRequestDeleteConfirmText('');
     toast.success('Your request has been sent to the admin.');
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+
+    if (!currentPassword) {
+      setPasswordError('Please enter your current password.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+    if (currentPassword === newPassword) {
+      setPasswordError('New password must be different from your current password.');
+      return;
+    }
+
+    setChangingPassword(true);
+
+    // Re-authenticate with current password first
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: currentUser.email,
+      password: currentPassword,
+    });
+
+    if (signInError) {
+      setPasswordError('Current password is incorrect.');
+      setChangingPassword(false);
+      return;
+    }
+
+    // Now update to new password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (updateError) {
+      setPasswordError(updateError.message);
+      setChangingPassword(false);
+      return;
+    }
+
+    setChangingPassword(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowChangePassword(false);
+    toast.success('Password updated successfully!');
   };
 
   const handleAvatarUpload = async (e) => {
@@ -536,6 +595,75 @@ export default function ProfilePage() {
             </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </Link>
+        )}
+      </div>
+
+      <div className="bg-card border border-border rounded-xl overflow-hidden mb-4">
+        <button
+          type="button"
+          onClick={() => {
+            setShowChangePassword(!showChangePassword);
+            setPasswordError('');
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+          }}
+          className="flex items-center justify-between w-full p-4 hover:bg-secondary/50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <KeyRound className="w-5 h-5 text-muted-foreground" />
+            <span className="text-sm font-medium">Change Password</span>
+          </div>
+          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showChangePassword ? 'rotate-180' : ''}`} />
+        </button>
+
+        {showChangePassword && (
+          <div className="px-4 pb-4 space-y-3 border-t border-border pt-4">
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground font-medium">Current Password</label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Enter current password"
+                className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground font-medium">New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-muted-foreground font-medium">Confirm New Password</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repeat new password"
+                className="w-full border border-border rounded-xl px-3 py-2.5 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+
+            {passwordError && (
+              <p className="text-xs text-red-500 font-medium">{passwordError}</p>
+            )}
+
+            <Button
+              type="button"
+              onClick={handleChangePassword}
+              disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
+              className="w-full rounded-xl"
+              size="sm"
+            >
+              {changingPassword ? 'Updating...' : 'Update Password'}
+            </Button>
+          </div>
         )}
       </div>
 

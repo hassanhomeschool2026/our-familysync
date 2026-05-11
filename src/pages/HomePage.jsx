@@ -11,6 +11,7 @@ import { MapPin, Calendar, CheckSquare, Megaphone, Zap, ChevronRight, X } from '
 import { toast } from 'sonner';
 import { format, isToday, startOfWeek, isAfter } from 'date-fns';
 import { choreNeedsReset } from '@/lib/choresRecurrence';
+import { useChoreReset } from '@/lib/useChoreReset';
 
 const alertUrl = import.meta.env.DEV
   ? 'http://localhost:8888/.netlify/functions/send-family-alert'
@@ -499,7 +500,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
   const [themeMounted, setThemeMounted] = useState(false);
-  const { currentUser, family, members, isAdmin, getMemberColor } = useFamily();
+  const { currentUser, family, members, isAdmin, getMemberColor, isPremium } = useFamily();
   const [showAlertSheet, setShowAlertSheet] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [sendingAlert, setSendingAlert] = useState(false);
@@ -667,6 +668,8 @@ export default function HomePage() {
     enabled: !!family?.id,
   });
 
+  useChoreReset(chores, family?.id);
+
   const { data: checkins = [] } = useQuery({
     queryKey: ['checkins-home', family?.id],
     queryFn: async () => {
@@ -740,6 +743,39 @@ export default function HomePage() {
   };
 
   const weatherSearchUrl = `https://www.google.com/search?q=weather+${encodeURIComponent(cityName || 'today')}`;
+
+  const sendFamilyAlert = async () => {
+    setSendingAlert(true);
+    try {
+      await supabase.from('feed_items').insert({
+        family_id: family.id,
+        user_id: currentUser.id,
+        user_name: currentUser.display_name || currentUser.full_name,
+        user_avatar: currentUser.avatar,
+        type: 'family_alert',
+        message: `Family Update: ${alertMessage.trim()}`,
+      });
+      const pushRes = await fetch(alertUrl, {
+        method: 'POST',
+        body: JSON.stringify({
+          family_id: family.id,
+          title: 'Family Update',
+          body: alertMessage.trim(),
+        }),
+      });
+      if (!pushRes.ok) {
+        const errText = await pushRes.text().catch(() => '');
+        throw new Error(errText || `push ${pushRes.status}`);
+      }
+      toast.success('Update sent!');
+      setAlertMessage('');
+      setShowAlertSheet(false);
+    } catch {
+      toast.error('Failed to send update.');
+    } finally {
+      setSendingAlert(false);
+    }
+  };
 
   return (
     <motion.div
@@ -1324,51 +1360,36 @@ export default function HomePage() {
                 <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
-            <textarea
-              className="w-full border border-border rounded-xl p-3 text-sm resize-none h-24 bg-background"
-              placeholder="Type a message to send to your family..."
-              value={alertMessage}
-              onChange={(e) => setAlertMessage(e.target.value)}
-            />
-            <Button
-              className="w-full rounded-full text-white font-semibold border-0 hover:opacity-95"
-              style={{ background: 'linear-gradient(135deg, #01dcba 0%, #0ea5e9 45%, #7f30cb 100%)' }}
-              disabled={!alertMessage.trim() || sendingAlert}
-              onClick={async () => {
-                setSendingAlert(true);
-                try {
-                  await supabase.from('feed_items').insert({
-                    family_id: family.id,
-                    user_id: currentUser.id,
-                    user_name: currentUser.display_name || currentUser.full_name,
-                    user_avatar: currentUser.avatar,
-                    type: 'family_alert',
-                    message: `Family Update: ${alertMessage.trim()}`,
-                  });
-                  const pushRes = await fetch(alertUrl, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                      family_id: family.id,
-                      title: 'Family Update',
-                      body: alertMessage.trim(),
-                    }),
-                  });
-                  if (!pushRes.ok) {
-                    const errText = await pushRes.text().catch(() => '');
-                    throw new Error(errText || `push ${pushRes.status}`);
-                  }
-                  toast.success('Update sent!');
-                  setAlertMessage('');
-                  setShowAlertSheet(false);
-                } catch {
-                  toast.error('Failed to send update.');
-                } finally {
-                  setSendingAlert(false);
-                }
-              }}
-            >
-              {sendingAlert ? 'Sending...' : 'Send Update'}
-            </Button>
+            {isPremium ? (
+              <>
+                <textarea
+                  className="w-full border border-border rounded-xl p-3 text-sm resize-none h-24 bg-background"
+                  placeholder="Type a message to send to your family..."
+                  value={alertMessage}
+                  onChange={(e) => setAlertMessage(e.target.value)}
+                />
+                <Button
+                  className="w-full rounded-full text-white font-semibold border-0 hover:opacity-95"
+                  style={{ background: 'linear-gradient(135deg, #01dcba 0%, #7f30cb 100%)' }}
+                  disabled={!alertMessage.trim() || sendingAlert}
+                  onClick={sendFamilyAlert}
+                >
+                  {sendingAlert ? 'Sending...' : 'Send Update'}
+                </Button>
+              </>
+            ) : (
+              <div className="rounded-xl bg-accent/10 border border-accent/20 p-4 text-center space-y-2">
+                <p className="text-sm font-semibold text-foreground">Premium Feature</p>
+                <p className="text-xs text-muted-foreground">Upgrade to send broadcast messages to your whole family instantly.</p>
+                <button
+                  type="button"
+                  onClick={() => { setShowAlertSheet(false); navigate('/upgrade'); }}
+                  className="mt-1 text-xs font-semibold text-primary hover:underline"
+                >
+                  Upgrade to Premium →
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
