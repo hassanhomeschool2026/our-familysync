@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Autocomplete } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
 
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -133,13 +133,64 @@ function formatHistoryExactTime(iso) {
 export default function CheckInPage() {
   const { family, currentUser, members, getMemberColor } = useFamily();
   const queryClient = useQueryClient();
-  const autocompleteRef = useRef(null);
+  const inputRef = useRef(null);
+  const placesAutocompleteRef = useRef(null);
   const formSectionRef = useRef(null);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '',
     libraries: ['places'],
   });
+
+  const initPlacesSearchAutocomplete = useCallback(() => {
+    const el = inputRef.current;
+    if (!el || !isLoaded || placesAutocompleteRef.current) return;
+
+    const autocomplete = new google.maps.places.Autocomplete(el, {
+      fields: ['geometry', 'name', 'formatted_address'],
+    });
+    placesAutocompleteRef.current = autocomplete;
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      const loc = place?.geometry?.location;
+      if (!loc) return;
+      const lat = loc.lat();
+      const lng = loc.lng();
+      const center = { lat, lng };
+      setCoords(center);
+      const formatted = (place.formatted_address || '').trim();
+      const name = (place.name || '').trim();
+      setLocationName(name || formatted || '');
+      setLocationAddress(formatted || '');
+      setOverrideMapView({ center, zoom: 15 });
+      setShowForm(true);
+    });
+  }, [isLoaded]);
+
+  useEffect(() => {
+    initPlacesSearchAutocomplete();
+    return () => {
+      if (placesAutocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(placesAutocompleteRef.current);
+        placesAutocompleteRef.current = null;
+      }
+    };
+  }, [initPlacesSearchAutocomplete]);
+
+  const searchInputRef = useCallback(
+    (el) => {
+      inputRef.current = el;
+      if (!el) {
+        if (placesAutocompleteRef.current) {
+          google.maps.event.clearInstanceListeners(placesAutocompleteRef.current);
+          placesAutocompleteRef.current = null;
+        }
+        return;
+      }
+      initPlacesSearchAutocomplete();
+    },
+    [initPlacesSearchAutocomplete]
+  );
 
   const [locationName, setLocationName] = useState('');
   const [locationAddress, setLocationAddress] = useState('');
@@ -544,24 +595,6 @@ export default function CheckInPage() {
     });
   };
 
-  const onPlaceChanged = () => {
-    const ac = autocompleteRef.current;
-    if (!ac) return;
-    const place = ac.getPlace();
-    const loc = place.geometry?.location;
-    if (!loc) return;
-    const lat = loc.lat();
-    const lng = loc.lng();
-    const center = { lat, lng };
-    setCoords(center);
-    const formatted = (place.formatted_address || '').trim();
-    const name = (place.name || '').trim();
-    setLocationName(name || formatted || '');
-    setLocationAddress(formatted || '');
-    setOverrideMapView({ center, zoom: 15 });
-    setShowForm(true);
-  };
-
   const cancelForm = () => {
     setShowForm(false);
     setOverrideMapView(null);
@@ -704,7 +737,7 @@ export default function CheckInPage() {
 
       <div className="rounded-xl px-3 py-2 mb-3 text-center bg-teal-500/[0.08] dark:bg-teal-400/10 border border-teal-500/25 dark:border-teal-400/20">
         <p className="text-xs m-0 text-foreground">
-          Share Location for check-ins your family can trust! Live tracking and Geofencing Coming soon.
+          Share your location with family for check-ins they can trust. Live tracking and geofencing are available in the native app — coming soon.
         </p>
       </div>
 
@@ -721,19 +754,11 @@ export default function CheckInPage() {
             zoom={mapZoom}
             options={{ fullscreenControl: false, mapTypeControl: false, styles: CLEAN_MAP_STYLE }}
           >
-            <Autocomplete
-              className="absolute top-3 left-0 right-0 z-10 px-3 w-full box-border"
-              onLoad={(ac) => {
-                autocompleteRef.current = ac;
-              }}
-              onPlaceChanged={onPlaceChanged}
-              fields={['geometry', 'name', 'formatted_address']}
-            >
-              <Input
-                placeholder="Search for a place..."
-                className="bg-background shadow-md border-border h-10 w-full"
-              />
-            </Autocomplete>
+            <Input
+              ref={searchInputRef}
+              placeholder="Search for a place..."
+              className="absolute top-3 left-0 right-0 z-10 px-3 w-full box-border bg-background shadow-md border-border h-10"
+            />
             {activeCheckIns.map((checkin) => {
               if (checkin.latitude == null || checkin.longitude == null) return null;
               const member = getMemberForUser(checkin.user_id);

@@ -132,8 +132,6 @@ exports.handler = async (event) => {
     process.env.VAPID_PRIVATE_KEY
   );
 
-  const title = 'You have Events Today:';
-
   const results = await Promise.allSettled(
     (subscriptions || []).map(async (sub) => {
       const fid = sub.family_id;
@@ -147,6 +145,15 @@ exports.handler = async (event) => {
       const taskTitles = prefs.task_due_reminders !== false ? taskTitlesRaw : [];
       if (eventTitles.length === 0 && taskTitles.length === 0) {
         return { outcome: 'skipped' };
+      }
+
+      let title;
+      if (eventTitles.length > 0 && taskTitles.length > 0) {
+        title = 'You have events & tasks today!';
+      } else if (eventTitles.length > 0) {
+        title = 'You have events today!';
+      } else {
+        title = 'You have tasks due today!';
       }
 
       const allTitles = [...eventTitles, ...taskTitles].join(', ');

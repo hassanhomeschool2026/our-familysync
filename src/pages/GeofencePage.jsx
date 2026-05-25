@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useFamily } from '@/lib/familyContext';
-import { GoogleMap, useJsApiLoader, Circle, Marker, Autocomplete } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Circle, Marker } from '@react-google-maps/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +24,8 @@ export default function GeofencePage({ embedded = false }) {
   const [editingZone, setEditingZone] = useState(null);
   const [editName, setEditName] = useState('');
   const [editRadius, setEditRadius] = useState('');
-  const autocompleteRef = useRef(null);
+  const inputRef = useRef(null);
+  const placesAutocompleteRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -47,6 +48,47 @@ export default function GeofencePage({ embedded = false }) {
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '',
     libraries: ['places'],
   });
+
+  const initPlacesSearchAutocomplete = useCallback(() => {
+    const el = inputRef.current;
+    if (!el || !isLoaded || !showForm || placesAutocompleteRef.current) return;
+
+    const autocomplete = new google.maps.places.Autocomplete(el, {
+      fields: ['geometry', 'name', 'formatted_address'],
+    });
+    placesAutocompleteRef.current = autocomplete;
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      const loc = place?.geometry?.location;
+      if (!loc) return;
+      setSelectedCoords({ lat: loc.lat(), lng: loc.lng() });
+    });
+  }, [isLoaded, showForm]);
+
+  useEffect(() => {
+    initPlacesSearchAutocomplete();
+    return () => {
+      if (placesAutocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(placesAutocompleteRef.current);
+        placesAutocompleteRef.current = null;
+      }
+    };
+  }, [initPlacesSearchAutocomplete]);
+
+  const searchInputRef = useCallback(
+    (el) => {
+      inputRef.current = el;
+      if (!el) {
+        if (placesAutocompleteRef.current) {
+          google.maps.event.clearInstanceListeners(placesAutocompleteRef.current);
+          placesAutocompleteRef.current = null;
+        }
+        return;
+      }
+      initPlacesSearchAutocomplete();
+    },
+    [initPlacesSearchAutocomplete]
+  );
 
   const { data: geofences = [] } = useQuery({
     queryKey: ['geofences', family?.id],
@@ -178,19 +220,7 @@ export default function GeofencePage({ embedded = false }) {
           </div>
           {isLoaded && (
             <div className="relative">
-              <Autocomplete
-                onLoad={(ac) => { autocompleteRef.current = ac; }}
-                onPlaceChanged={() => {
-                  const place = autocompleteRef.current?.getPlace();
-                  const loc = place?.geometry?.location;
-                  if (loc) {
-                    setSelectedCoords({ lat: loc.lat(), lng: loc.lng() });
-                  }
-                }}
-                fields={['geometry', 'name', 'formatted_address']}
-              >
-                <Input placeholder="Search for an address..." className="mb-2" />
-              </Autocomplete>
+              <Input ref={searchInputRef} placeholder="Search for an address..." className="mb-2" />
               <GoogleMap
                 mapContainerStyle={{ width: '100%', height: '200px', borderRadius: '12px' }}
                 center={selectedCoords || userLocation || DEFAULT_CENTER}
