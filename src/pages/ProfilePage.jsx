@@ -370,6 +370,7 @@ export default function ProfilePage() {
             'Billing portal needs Netlify Functions. Use npm run dev:netlify and open the URL it shows (not :5173 alone).'
           );
         } else {
+          console.error('[billing portal]', response.status, data.error || raw);
           toast.error(data.error || `Could not open billing portal (${response.status}).`);
         }
         return;

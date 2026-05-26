@@ -22,6 +22,13 @@ function parseJsonBody(event) {
   return JSON.parse(bodyStr);
 }
 
+function normalizeStripeCustomerId(value) {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value.id) return String(value.id);
+  return String(value);
+}
+
 exports.handler = async (event) => {
   const jsonHeaders = { 'Content-Type': 'application/json' };
 
@@ -31,9 +38,8 @@ exports.handler = async (event) => {
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !serviceKey || !anonKey) {
+  if (!supabaseUrl || !serviceKey) {
     return {
       statusCode: 500,
       headers: jsonHeaders,
@@ -61,16 +67,14 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: jsonHeaders, body: JSON.stringify({ error: 'userId is required' }) };
     }
 
-    const authClient = createClient(supabaseUrl, anonKey);
-    const { data: authData, error: authError } = await authClient.auth.getUser(token);
+    const supabase = createClient(supabaseUrl, serviceKey);
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
     if (authError || !authData?.user) {
       return { statusCode: 401, headers: jsonHeaders, body: JSON.stringify({ error: 'Invalid session' }) };
     }
     if (authData.user.id !== userId) {
       return { statusCode: 403, headers: jsonHeaders, body: JSON.stringify({ error: 'Forbidden' }) };
     }
-
-    const supabase = createClient(supabaseUrl, serviceKey);
 
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -83,7 +87,8 @@ exports.handler = async (event) => {
       return { statusCode: 500, headers: jsonHeaders, body: JSON.stringify({ error: 'Could not load billing profile' }) };
     }
 
-    if (!profile?.stripe_customer_id) {
+    const customerId = normalizeStripeCustomerId(profile?.stripe_customer_id);
+    if (!customerId) {
       return {
         statusCode: 400,
         headers: jsonHeaders,
@@ -106,24 +111,39 @@ exports.handler = async (event) => {
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
     const sessionParams = {
-      customer: profile.stripe_customer_id,
+      customer: customerId,
       return_url: `${origin}/profile`,
     };
-    const portalConfig =
-      process.env.STRIPE_PORTAL_CONFIGURATION_ID || 'bpc_1TbCEeCh1f5OVEBZewocvj9s';
+
+    const portalConfig = process.env.STRIPE_PORTAL_CONFIGURATION_ID;
     if (portalConfig) {
       sessionParams.configuration = portalConfig;
     }
 
-    const portalSession = await stripe.billingPortal.sessions.create(sessionParams);
+    let portalSession;
+    try {
+      portalSession = await stripe.billingPortal.sessions.create(sessionParams);
+    } catch (portalErr) {
+      if (sessionParams.configuration) {
+        console.warn('Portal config rejected, retrying with account default:', portalErr.message);
+        delete sessionParams.configuration;
+        portalSession = await stripe.billingPortal.sessions.create(sessionParams);
+      } else {
+        throw portalErr;
+      }
+    }
 
     return { statusCode: 200, headers: jsonHeaders, body: JSON.stringify({ url: portalSession.url }) };
   } catch (err) {
     console.error('Portal session error:', err);
+    const message =
+      err.type === 'StripeInvalidRequestError'
+        ? err.message
+        : err.message || 'Portal session failed';
     return {
       statusCode: 500,
       headers: jsonHeaders,
-      body: JSON.stringify({ error: err.message || 'Portal session failed' }),
+      body: JSON.stringify({ error: message }),
     };
   }
 };
