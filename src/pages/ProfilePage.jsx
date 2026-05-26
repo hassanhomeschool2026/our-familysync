@@ -3,7 +3,7 @@ import { useTheme } from 'next-themes';
 import { supabase } from '@/lib/supabaseClient';
 import { subscribeToPush } from '@/lib/pushNotifications';
 import { useFamily } from '@/lib/familyContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,6 +86,7 @@ const THEME_OPTIONS = [
 ];
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { currentUser, family, members, isAdmin, isPremium, reload } = useFamily();
   const [editing, setEditing] = useState(false);
@@ -486,6 +487,46 @@ export default function ProfilePage() {
               </button>
             ))}
           </div>
+        </div>
+        {/* Subscription */}
+        <div className="p-4 flex items-center justify-between gap-3">
+          <div className="space-y-0.5 min-w-0 pr-2">
+            <Label className="text-sm">Plan</Label>
+            <p className="text-xs text-muted-foreground">
+              {isPremium ? 'Premium — thank you for your support!' : 'Free plan'}
+            </p>
+          </div>
+          {isPremium ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 rounded-xl text-xs"
+              onClick={async () => {
+                try {
+                  const res = await fetch('/.netlify/functions/create-portal-session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUser.id }),
+                  });
+                  const data = await res.json();
+                  if (data.url) window.location.href = data.url;
+                  else toast.error('Could not open billing portal');
+                } catch {
+                  toast.error('Something went wrong');
+                }
+              }}
+            >
+              Manage Subscription
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className="shrink-0 rounded-xl text-xs"
+              onClick={() => navigate('/upgrade')}
+            >
+              Upgrade
+            </Button>
+          )}
         </div>
         <div className="p-4 flex items-center justify-between gap-3">
           <div className="space-y-0.5 min-w-0 pr-2">
