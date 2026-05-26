@@ -26,6 +26,10 @@ const sectionHeaderOverlayStyle = {
   background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0))',
 };
 
+const CREATE_PORTAL_SESSION_URL = import.meta.env.DEV
+  ? 'http://localhost:8888/.netlify/functions/create-portal-session'
+  : '/.netlify/functions/create-portal-session';
+
 const GRADIENT_HEADER_STAR_TWINKLE_CSS = `
 @keyframes starTwinkle {
   0%, 100% { opacity: 0.2; transform: scale(0.8); }
@@ -119,6 +123,7 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const prefs = currentUser?.notification_prefs || {};
 
@@ -327,6 +332,62 @@ export default function ProfilePage() {
     toast.success('Password updated successfully!');
   };
 
+  const handleOpenBillingPortal = async () => {
+    if (!currentUser?.id) {
+      toast.error('Could not load your account. Please refresh and try again.');
+      return;
+    }
+    setPortalLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Please sign out and sign back in, then try again.');
+        return;
+      }
+
+      const response = await fetch(CREATE_PORTAL_SESSION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ userId: currentUser.id }),
+      });
+
+      const raw = await response.text();
+      let data = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          // Non-JSON body (e.g. Vite 404 HTML)
+        }
+      }
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          toast.error(
+            'Billing portal needs Netlify Functions. Use npm run dev:netlify and open the URL it shows (not :5173 alone).'
+          );
+        } else {
+          toast.error(data.error || `Could not open billing portal (${response.status}).`);
+        }
+        return;
+      }
+
+      if (data.url) {
+        window.location.assign(data.url);
+      } else {
+        toast.error(data.error || 'Could not open billing portal');
+      }
+    } catch (err) {
+      console.error('Billing portal error:', err);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setPortalLoading(false);
+    }
+  };
+
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !currentUser?.id) return;
@@ -498,25 +559,14 @@ export default function ProfilePage() {
           </div>
           {isPremium ? (
             <Button
+              type="button"
               variant="outline"
               size="sm"
               className="shrink-0 rounded-xl text-xs"
-              onClick={async () => {
-                try {
-                  const res = await fetch('/.netlify/functions/create-portal-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: currentUser.id }),
-                  });
-                  const data = await res.json();
-                  if (data.url) window.location.href = data.url;
-                  else toast.error('Could not open billing portal');
-                } catch {
-                  toast.error('Something went wrong');
-                }
-              }}
+              disabled={portalLoading || !currentUser?.id}
+              onClick={handleOpenBillingPortal}
             >
-              Manage Subscription
+              {portalLoading ? 'Opening…' : 'Manage Subscription'}
             </Button>
           ) : (
             <Button
