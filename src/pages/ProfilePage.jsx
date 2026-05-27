@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { MEMBER_COLORS } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
+import { getPlanDisplayLabel } from '@/lib/subscriptionPlan';
 import {
   Settings, Shield, LogOut, Crown, Bell, ChevronRight, ChevronDown, Trash2, Camera, Sun, Moon, Monitor, Check,
   KeyRound,
@@ -555,7 +556,7 @@ export default function ProfilePage() {
           <div className="space-y-0.5 min-w-0 pr-2">
             <Label className="text-sm">Plan</Label>
             <p className="text-xs text-muted-foreground">
-              {isPremium ? 'Premium — thank you for your support!' : 'Free plan'}
+              {getPlanDisplayLabel(currentUser, isPremium)}
             </p>
           </div>
           {isPremium ? (
