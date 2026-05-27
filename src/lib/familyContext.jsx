@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/lib/AuthContext';
 import { DEFAULT_MEMBER_ACCENT } from '@/lib/memberColors';
 import { subscribeToPush } from '@/lib/pushNotifications';
+import { familyHasPremium } from '@/lib/subscriptionPlan';
 
 const FamilyContext = createContext();
 
@@ -114,7 +115,7 @@ export const FamilyProvider = ({ children }) => {
   }, [loading, isAuthenticated, user?.id, currentUser?.id, family?.id]);
 
   const isAdmin = currentUser?.role === 'admin';
-  const isPremium = currentUser?.plan === 'premium';
+  const isPremium = familyHasPremium(members, currentUser);
 
   const getMemberColor = (userId) => {
     const member = members.find(m => m.id === userId);

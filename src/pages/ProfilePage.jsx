@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { MEMBER_COLORS } from '@/lib/memberColors';
 import MemberAvatar from '@/components/shared/MemberAvatar';
-import { getPlanDisplayLabel } from '@/lib/subscriptionPlan';
+import { getPlanDisplayLabel, isFamilyBillingAdmin } from '@/lib/subscriptionPlan';
 import {
   Settings, Shield, LogOut, Crown, Bell, ChevronRight, ChevronDown, Trash2, Camera, Sun, Moon, Monitor, Check,
   KeyRound,
@@ -94,6 +94,7 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
   const { currentUser, family, members, isAdmin, isPremium, reload } = useFamily();
+  const isBillingAdmin = isFamilyBillingAdmin(currentUser);
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState(currentUser?.display_name || '');
   const [color, setColor] = useState(currentUser?.member_color || MEMBER_COLORS[0].value);
@@ -556,10 +557,10 @@ export default function ProfilePage() {
           <div className="space-y-0.5 min-w-0 pr-2">
             <Label className="text-sm">Plan</Label>
             <p className="text-xs text-muted-foreground">
-              {getPlanDisplayLabel(currentUser, isPremium)}
+              {getPlanDisplayLabel(currentUser, isPremium, members)}
             </p>
           </div>
-          {isPremium ? (
+          {isPremium && isBillingAdmin ? (
             <Button
               type="button"
               variant="outline"
@@ -570,7 +571,7 @@ export default function ProfilePage() {
             >
               {portalLoading ? 'Opening…' : 'Manage Subscription'}
             </Button>
-          ) : (
+          ) : !isPremium && isAdmin ? (
             <Button
               size="sm"
               className="shrink-0 rounded-xl text-xs"
@@ -578,7 +579,7 @@ export default function ProfilePage() {
             >
               Upgrade
             </Button>
-          )}
+          ) : null}
         </div>
         <div className="p-4 flex items-center justify-between gap-3">
           <div className="space-y-0.5 min-w-0 pr-2">
